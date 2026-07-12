@@ -1,0 +1,41 @@
+{
+    "name": "naokitsuchiya/ray-di-context",
+    "description": "Context, meta, and compile management for Ray.Di applications with separated read-only compile dir and writable tmp dir",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Naoki Tsuchiya"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "ray/di": "^2.19",
+        "ray/compiler": "^1.13"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5",
+        "carthage-software/mago": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "NaokiTsuchiya\\RayDiContext\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NaokiTsuchiya\\RayDiContext\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "lint": "mago lint --minimum-fail-level note",
+        "analyze": "mago analyze",
+        "fmt": "mago fmt --check",
+        "cs": ["@lint", "@fmt"],
+        "sa": "@analyze",
+        "tests": ["@cs", "@sa", "@test"]
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

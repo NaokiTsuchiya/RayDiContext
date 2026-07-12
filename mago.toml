@@ -1,0 +1,87 @@
+# Mago configuration — strictest settings: every analyzer strictness flag is on,
+# every applicable linter rule is enabled (rules gated on PHP >= 8.4 or on unused
+# framework integrations are unavailable by definition), and any issue of any
+# level ("note" is the lowest) fails both lint and analyze.
+
+php-version = "8.2"
+
+[source]
+paths = ["src", "tests"]
+includes = ["vendor"]
+excludes = ["tests/tmp"]
+
+[linter]
+integrations = ["phpunit"]
+minimum-fail-level = "note"
+
+[linter.rules]
+ambiguous-constant-access = { enabled = true }
+ambiguous-function-call = { enabled = true }
+disallowed-type-instantiation = { enabled = true }
+method-name = { enabled = true }
+no-redundant-else = { enabled = true }
+no-redundant-variable = { enabled = true }
+no-dead-store = { enabled = true }
+no-unused-static = { enabled = true }
+no-unused-global = { enabled = true }
+no-unused-closure-capture = { enabled = true }
+no-negated-ternary = { enabled = true }
+no-is-null = { enabled = true }
+no-iterator-to-array-in-foreach = { enabled = true }
+no-assign-in-argument = { enabled = true }
+no-fully-qualified-global-class-like = { enabled = true }
+no-fully-qualified-global-constant = { enabled = true }
+no-fully-qualified-global-function = { enabled = true }
+prefer-early-return = { enabled = true }
+variable-name = { enabled = true, camel = true }
+no-array-accumulation-in-loop = { enabled = true }
+prefer-array-spread = { enabled = true }
+no-parameter-shadowing = { enabled = true }
+no-inline = { enabled = true }
+no-side-effects-with-declarations = { enabled = true }
+property-name = { enabled = true }
+require-namespace = { enabled = true }
+sorted-integer-keys = { enabled = true }
+string-style = { enabled = true }
+yoda-conditions = { enabled = true, mode = "deny" }
+no-literal-namespace-string = { enabled = true }
+no-short-bool-cast = { enabled = true }
+no-alternative-syntax = { enabled = true }
+prefer-self-return-type = { enabled = true }
+switch-continue-to-break = { enabled = true }
+missing-docs = { enabled = true }
+no-null-property-init = { enabled = true }
+prefer-explode-over-preg-split = { enabled = true }
+prefer-test-attribute = { enabled = true }
+class-name = { enabled = true, psr = true }
+
+[analyzer]
+minimum-fail-level = "note"
+# PHPUnit assertion failures are the framework's control flow; they are the only
+# exceptions treated as unchecked. Package exceptions remain fully checked.
+unchecked-exception-classes = [
+    "PHPUnit\\Framework\\Exception",
+    "PHPUnit\\Framework\\AssertionFailedError",
+    "PHPUnit\\Framework\\ExpectationFailedException",
+    "PHPUnit\\Framework\\UnknownClassOrInterfaceException",
+]
+# PHPUnit initializes fixtures in setUp(), not in the constructor.
+class-initializers = ["setUp"]
+find-overly-wide-return-types = true
+analyze-dead-code = true
+check-throws = true
+strict-list-index-checks = true
+strict-array-index-existence = true
+no-boolean-literal-comparison = true
+check-missing-type-hints = true
+check-closure-missing-type-hints = true
+check-arrow-function-missing-type-hints = true
+check-missing-override = true
+find-unused-parameters = true
+check-property-initialization = true
+check-use-statements = true
+check-experimental = true
+check-name-casing = true
+enforce-class-finality = true
+require-api-or-internal = true
+allow-side-effects-in-conditions = false

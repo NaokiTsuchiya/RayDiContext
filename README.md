@@ -23,12 +23,12 @@ make that impossible.
 - `compileDir` defaults to `{appDir}/var/di/{context}`, overridable with `APP_COMPILE_DIR`
 - `tmpDir` defaults to `{appDir}/var/tmp/{context}`, overridable with `APP_TMP_DIR`
 
-A baked `compileDir` is safe under one invariant: **the compile step must run at the
-same path the runtime uses** (the same `APP_COMPILE_DIR` at image build and at run).
-Ray.Compiler loads scripts relative to the runtime-resolved script dir, but bindings
-that inject `#[ScriptDir]` or `InjectorInterface` freeze the build-time `compileDir`
-string into the scripts, so moving the scripts to a different path after compiling
-(multi-stage `COPY`, env drift between Dockerfile and manifest) breaks them.
+A baked `compileDir` is safe: Ray.Compiler resolves `#[ScriptDir]` and the
+`InjectorInterface` binding to `__DIR__` at compile time (ray/compiler
+[#136](https://github.com/ray-di/Ray.Compiler/issues/136), released in 1.14.0), so no
+compile-time absolute path is frozen into the scripts. The compile step and the
+runtime no longer need to agree on the `compileDir` path — a multi-stage build that
+`COPY`s the compiled scripts to a different path at runtime works.
 
 Paths bound with `toInstance()`, however, are never safe: they are frozen into the
 compiled scripts — including every path held by an object bound with `toInstance()`.
@@ -146,7 +146,7 @@ env:
 ## Requirements
 
 - PHP 8.2+
-- ray/di ^2.19, ray/compiler ^1.13
+- ray/di ^2.19, ray/compiler ^1.14
 
 ## License
 

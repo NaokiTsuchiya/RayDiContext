@@ -10,7 +10,7 @@
     "require": {
         "php": "^8.2",
         "ray/di": "^2.19",
-        "ray/compiler": "^1.13"
+        "ray/compiler": "^1.14"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.5",

@@ -60,7 +60,7 @@ jobs:
 
       - run: composer update --no-progress --prefer-dist
 
-      - run: composer test -- --coverage-clover=coverage.xml
+      - run: composer test -- --coverage-clover=coverage.xml --log-junit=junit.xml
 
       # after_n_builds in codecov.yml holds the status back until all four arrive,
       # so a partial upload can never post a misleading number.
@@ -71,6 +71,20 @@ jobs:
           disable_search: true
           flags: php-${{ matrix.php }}
           fail_ci_if_error: true
+
+      # Runs even when the suite failed: a run that went red is exactly the one
+      # test analytics needs in order to tell a flake from a real regression.
+      # An upload failure here is never fatal — unlike coverage, nothing gates on it,
+      # so a Codecov outage must not turn a passing run red.
+      - if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          use_oidc: true
+          report_type: test_results
+          files: junit.xml
+          disable_search: true
+          flags: php-${{ matrix.php }}
+          fail_ci_if_error: false
 
   # Verifies the declared lower bounds of the runtime dependencies. Only ray/di and
   # ray/compiler are lowered: a bare --prefer-lowest would also drag PHPUnit's own

@@ -2,44 +2,21 @@
 
 Context, meta, and compile management for [Ray.Di](https://github.com/ray-di/Ray.Di) applications.
 
-This package separates two directories that runtime frameworks often weld together:
+| Directory    | Role                    | Lifecycle                                      |
+|--------------|-------------------------|-------------------------------------------------|
+| `compileDir` | Pre-compiled DI scripts | Baked into the image, **read-only** at runtime   |
+| `tmpDir`     | Runtime scratch area    | **Writable** at runtime, never baked             |
 
-| Directory    | Role                                   | Lifecycle                                              |
-|--------------|----------------------------------------|--------------------------------------------------------|
-| `compileDir` | Pre-compiled DI scripts                | Baked into the container image, **read-only** at runtime |
-| `tmpDir`     | Runtime scratch area (e.g. `/tmp`)     | **Writable** at runtime, never baked into the image      |
-
-## Why
-
-Deploying a PHP application with `readOnlyRootFilesystem` (Kubernetes) requires that
-everything written at runtime goes to a mounted writable volume, while everything else
-is immutable. A DI compile step fits this model perfectly — *if* the compiled scripts
-live in their own directory that can be baked into the image. Frameworks that derive
-the script directory from the runtime tmp directory (`scriptDir = tmpDir . '/di'`)
-make that impossible.
-
-`AppMeta` keeps the two independent:
+`AppMeta` keeps the two independent, so `compileDir` can be baked into a
+`readOnlyRootFilesystem` container while `tmpDir` stays a writable volume.
 
 - `compileDir` defaults to `{appDir}/var/di/{context}`, overridable with `APP_COMPILE_DIR`
 - `tmpDir` defaults to `{appDir}/var/tmp/{context}`, overridable with `APP_TMP_DIR`
 
-A baked `compileDir` is safe: Ray.Compiler resolves `#[ScriptDir]` and the
-`InjectorInterface` binding to `__DIR__` at compile time (ray/compiler
-[#136](https://github.com/ray-di/Ray.Compiler/issues/136), released in 1.14.0), so no
-compile-time absolute path is frozen into the scripts. The compile step and the
-runtime no longer need to agree on the `compileDir` path — a multi-stage build that
-`COPY`s the compiled scripts to a different path at runtime works.
+**Never bind `AppMeta` with `toInstance()`** — Ray.Compiler freezes bound objects into
+the compiled scripts. `BakedPathGuard` fails the compile if `appDir`/`tmpDir` leaks in.
 
-Paths bound with `toInstance()`, however, are never safe: they are frozen into the
-compiled scripts — including every path held by an object bound with `toInstance()`.
-That is why:
-
-- **Never bind `AppMeta` with `toInstance()`.** Bind it with a provider that builds it
-  at runtime, or inject the individual values you need.
-- **`BakedPathGuard` fails the compile when a script contains an `appDir` or `tmpDir`
-  literal**, so the mistake is caught in CI, not in production.
-
-## Installation
+## Install
 
 ```
 composer require naokitsuchiya/ray-di-context
@@ -47,19 +24,7 @@ composer require naokitsuchiya/ray-di-context
 
 ## Usage
 
-Define one context per environment. A compiled (production) context composes
-`DiCompileModule` and reads from the read-only `compileDir`; a development context
-uses the regular runtime injector with the writable `tmpDir`. The `tmpDir` must
-exist — `Ray\Di\Injector` silently falls back to the system temp dir otherwise.
-
 ```php
-use NaokiTsuchiya\RayDiContext\AbstractContext;
-use Ray\Compiler\CompiledInjector;
-use Ray\Compiler\DiCompileModule;
-use Ray\Di\AbstractModule;
-use Ray\Di\Injector;
-use Ray\Di\InjectorInterface;
-
 final class ProdContext extends AbstractContext
 {
     public function __invoke(): AbstractModule
@@ -87,24 +52,14 @@ final class DevContext extends AbstractContext
 }
 ```
 
-Compile ahead of time (`bin/compile.php`), typically during the image build:
+Compile ahead of time (`bin/compile.php`):
 
 ```php
-use NaokiTsuchiya\RayDiContext\AppMeta;
-use NaokiTsuchiya\RayDiContext\CompileRunner;
-use NaokiTsuchiya\RayDiContext\MapContextProvider;
-
-require dirname(__DIR__) . '/vendor/autoload.php';
-
 $provider = new MapContextProvider(['prod' => ProdContext::class, 'dev' => DevContext::class]);
 $meta = AppMeta::fromAppDir('my-app', dirname(__DIR__), 'prod');
 
 exit((new CompileRunner($provider))->run('prod', $meta));
 ```
-
-`CompileRunner::run()` recreates the compile dir (`Cleaner`), compiles the context
-module, and verifies the output (`BakedPathGuard`). Stale scripts from renamed classes
-or changed bindings never survive a recompile.
 
 Bootstrap at runtime:
 
@@ -114,39 +69,13 @@ $context = $provider->get(getenv('APP_ENV') ?: 'prod', $meta);
 $injector = $context->getInjectorInstance();
 
 foreach ($context->getSavedSingleton() as $class) {
-    $injector->getInstance($class); // instantiated once per process, never unserialized
+    $injector->getInstance($class);
 }
-```
-
-`getSavedSingleton()` lists classes that are instantiated once at process start under
-the real environment. Because they are freshly constructed — not unserialized from a
-compile-time snapshot — they may hold runtime resources such as database connections.
-Note that singleton scope is per injector instance: they are shared through the
-bootstrap injector, not with any separate injector a class obtains by injecting
-`InjectorInterface`.
-
-### Container deployment
-
-```dockerfile
-ENV APP_COMPILE_DIR=/var/di
-RUN php bin/compile.php        # bake the DI scripts into the image
-```
-
-```yaml
-# Kubernetes
-securityContext:
-  readOnlyRootFilesystem: true
-env:
-  - name: APP_COMPILE_DIR
-    value: /var/di
-  - name: APP_TMP_DIR
-    value: /tmp/app            # emptyDir volume
 ```
 
 ## Requirements
 
-- PHP 8.2+
-- ray/di ^2.19, ray/compiler ^1.14
+PHP 8.2+, ray/di ^2.19, ray/compiler ^1.14
 
 ## License
 

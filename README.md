@@ -19,7 +19,7 @@ the compiled scripts. `BakedPathGuard` fails the compile if `appDir`/`tmpDir` le
 ## Install
 
 ```
-composer require naokitsuchiya/ray-di-context
+composer require naoki-tsuchiya/ray-di-context
 ```
 
 ## Usage

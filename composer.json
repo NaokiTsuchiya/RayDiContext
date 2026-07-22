@@ -1,5 +1,5 @@
 {
-    "name": "naokitsuchiya/ray-di-context",
+    "name": "naoki-tsuchiya/ray-di-context",
     "description": "Context, meta, and compile management for Ray.Di applications with separated read-only compile dir and writable tmp dir",
     "license": "MIT",
     "authors": [

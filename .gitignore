@@ -3,3 +3,5 @@
 /tests/tmp/
 /.phpunit.cache/
 /.phpunit.result.cache
+/coverage.xml
+/junit.xml

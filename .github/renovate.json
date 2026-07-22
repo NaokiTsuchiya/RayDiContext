@@ -1,0 +1,31 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "constraints": {
+    "php": "8.2.0"
+  },
+  "pinDigests": true,
+  "platformAutomerge": false,
+  "minimumReleaseAge": "3 days",
+  "description": "Everything Renovate touches is merged by Renovate itself once the required checks pass, so GitHub's repo-level \"Allow auto-merge\" setting stays out of the picture. minimumReleaseAge holds a release back for three days: nothing lands unread on the same day it is published.",
+  "packageRules": [
+    {
+      "description": "Dev tooling is pinned exactly so that every release shows up as a PR. CI fully verifies these: if lint, analyze and the tests pass on all four PHP versions, the bump is good.",
+      "matchManagers": ["composer"],
+      "matchDepTypes": ["require-dev"],
+      "rangeStrategy": "pin",
+      "automerge": true
+    },
+    {
+      "description": "Actions are pinned to a digest, so a moved tag cannot slip in between runs.",
+      "matchManagers": ["github-actions"],
+      "automerge": true
+    },
+    {
+      "description": "Runtime constraints are part of the public contract — never widen them automatically.",
+      "matchManagers": ["composer"],
+      "matchDepTypes": ["require"],
+      "enabled": false
+    }
+  ]
+}

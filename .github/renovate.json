@@ -4,27 +4,52 @@
   "constraints": {
     "php": "8.2.0"
   },
+  "constraintsFiltering": "strict",
   "pinDigests": true,
   "platformAutomerge": false,
   "minimumReleaseAge": "3 days",
-  "description": "Everything Renovate touches is merged by Renovate itself once the required checks pass, so GitHub's repo-level \"Allow auto-merge\" setting stays out of the picture. minimumReleaseAge holds a release back for three days: nothing lands unread on the same day it is published.",
+  "timezone": "Asia/Tokyo",
+  "schedule": ["before 5am"],
+  "automergeSchedule": ["at any time"],
+  "prHourlyLimit": 0,
+  "labels": ["renovate"],
+  "description": [
+    "constraints.php is the lowest PHP supported, not the newest; constraintsFiltering enforces it.",
+    "automergeSchedule is deliberate: schedule would otherwise hold a green PR to the next window."
+  ],
   "packageRules": [
     {
-      "description": "Dev tooling is pinned exactly so that every release shows up as a PR. CI fully verifies these: if lint, analyze and the tests pass on all four PHP versions, the bump is good.",
+      "description": "addLabels, not labels — labels is last-match-wins.",
+      "matchManagers": ["composer"],
+      "addLabels": ["composer"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["github-actions"]
+    },
+    {
+      "description": "Pinned, so every release is a PR that CI fully verifies.",
       "matchManagers": ["composer"],
       "matchDepTypes": ["require-dev"],
       "rangeStrategy": "pin",
-      "automerge": true
+      "automerge": true,
+      "addLabels": ["automerge"]
     },
     {
-      "description": "Actions are pinned to a digest, so a moved tag cannot slip in between runs.",
+      "description": "Digest-pinned: a moved tag cannot slip in.",
       "matchManagers": ["github-actions"],
-      "automerge": true
+      "automerge": true,
+      "addLabels": ["automerge"]
     },
     {
-      "description": "Runtime constraints are part of the public contract — never widen them automatically.",
+      "description": "The public contract — never widened automatically.",
       "matchManagers": ["composer"],
       "matchDepTypes": ["require"],
+      "enabled": false
+    },
+    {
+      "description": "Renovate reads its own constraints block as a dependency. Not an update.",
+      "matchDepTypes": ["tool-constraint"],
       "enabled": false
     }
   ]

@@ -30,6 +30,15 @@ jobs:
           coverage: none
           tools: composer:v2
 
+      - id: composer-cache
+        run: echo "dir=$(composer config cache-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-lint-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ runner.os }}-lint-
+
       - run: composer update --no-progress --prefer-dist
 
       - run: composer cs
@@ -57,6 +66,15 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: pcov
           tools: composer:v2
+
+      - id: composer-cache
+        run: echo "dir=$(composer config cache-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-test-${{ matrix.php }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ runner.os }}-test-${{ matrix.php }}-
 
       - run: composer update --no-progress --prefer-dist
 
@@ -107,6 +125,15 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
           tools: composer:v2
+
+      - id: composer-cache
+        run: echo "dir=$(composer config cache-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-lowest-${{ matrix.php }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ runner.os }}-lowest-${{ matrix.php }}-
 
       - run: composer update --no-progress --prefer-dist
 

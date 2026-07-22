@@ -1,0 +1,28 @@
+codecov:
+  # The four test jobs each upload a report. Holding the status back until all of
+  # them land keeps a half-merged number from posting — and, with these statuses
+  # required for merge, from flapping red and then green on every PR.
+  notify:
+    after_n_builds: 4
+  require_ci_to_pass: true
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 0%
+        # A PR that touches no PHP has no base to compare against on a fresh repo;
+        # without this the status never turns green and auto-merge stalls forever.
+        if_not_found: success
+    patch:
+      default:
+        target: auto
+        if_not_found: success
+
+comment:
+  layout: diff, files
+  require_changes: true
+
+ignore:
+  - tests

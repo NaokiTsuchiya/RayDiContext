@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Bot PRs are merged automatically, so nothing is granted by default: every job
+# has to name the scopes it needs, and a new job starts with none.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # mago analyses against a fixed target (php-version in mago.toml), so running it
+  # once is enough — repeating it per PHP version would produce identical results.
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - run: composer update --no-progress --prefer-dist
+
+      - run: composer cs
+
+      - run: composer sa
+
+  # ubuntu-latest runs as a non-root user on purpose: CompileRunnerTest chmods the
+  # compile dir to 0555 to prove nothing is written at runtime, and root ignores that.
+  # Do not move this job into a `container:` — it would silently weaken the test.
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Codecov authenticates over OIDC, so no upload token is stored.
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4', '8.5']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: pcov
+          tools: composer:v2
+
+      - run: composer update --no-progress --prefer-dist
+
+      - run: composer test -- --coverage-clover=coverage.xml
+
+      # after_n_builds in codecov.yml holds the status back until all four arrive,
+      # so a partial upload can never post a misleading number.
+      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          use_oidc: true
+          files: coverage.xml
+          disable_search: true
+          flags: php-${{ matrix.php }}
+          fail_ci_if_error: true
+
+  # Verifies the declared lower bounds of the runtime dependencies. Only ray/di and
+  # ray/compiler are lowered: a bare --prefer-lowest would also drag PHPUnit's own
+  # transitive tree down and fail for reasons unrelated to this package.
+  # Both corners are covered — oldest PHP with oldest deps, newest PHP with oldest deps.
+  lowest:
+    name: lowest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.5']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+
+      - run: composer update --no-progress --prefer-dist
+
+      - run: composer update --no-progress --prefer-dist --prefer-lowest --prefer-stable --with-dependencies ray/di ray/compiler
+
+      - run: composer show --direct
+
+      - run: composer test
+
+  # The single required status check. Adding or removing a matrix entry above never
+  # changes this job's name, so branch protection stays valid.
+  ci:
+    name: ci
+    if: always()
+    needs: [lint, test, lowest]
+    runs-on: ubuntu-latest
+    # Reads job results from the workflow context only — it never touches the repo.
+    permissions: {}
+    steps:
+      - name: Verify that every job succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: |
+          echo 'One or more jobs did not succeed:'
+          echo '${{ toJSON(needs) }}'
+          exit 1

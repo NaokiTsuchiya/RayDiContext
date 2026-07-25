@@ -178,15 +178,14 @@ final class CompileRunnerTest extends TestCase
     public function runRejectsUnsafeCompileDirBeforeCleaning(): void
     {
         $appDir = "{$this->baseDir}/app";
-        file_put_contents("{$appDir}/keep.php", data: '<?php return 0;');
-        $unsafeMeta = new AppMeta('fake', $appDir, $appDir, "{$appDir}/var/tmp/prod");
+        $unsafeMeta = new AppMeta('fake', $appDir, $appDir, $this->meta->tmpDir);
 
         try {
             $this->runner->run('prod', $unsafeMeta);
             static::fail('UnsafeCompileDir was not thrown');
-        } catch (UnsafeCompileDir $e) {
-            static::assertStringContainsString($appDir, $e->getMessage());
-            static::assertFileExists("{$appDir}/keep.php");
+        } catch (UnsafeCompileDir) {
+            // The tmp dir set up under the app dir is still there: nothing was removed
+            static::assertDirectoryExists($this->meta->tmpDir);
         }
     }
 

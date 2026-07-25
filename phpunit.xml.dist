@@ -14,8 +14,6 @@
          displayDetailsOnTestsThatTriggerNotices="true"
          displayDetailsOnTestsThatTriggerWarnings="true">
     <php>
-        <!-- Tests must not depend on the ambient shell environment or on execution
-             order; a leftover value here silently redirects AppMeta::fromAppDir. -->
         <env name="APP_COMPILE_DIR" value="" force="true"/>
         <env name="APP_TMP_DIR" value="" force="true"/>
     </php>

@@ -25,16 +25,16 @@ use function unlink;
  * volume) or a symlinked directory works.
  *
  * Everything below the compile dir is removed without asking, so the dir is verified
- * by CompileDirGuard first: the whole meta is taken rather than a bare path so the
- * guard can compare the compile dir against the app dir.
+ * by a CompileDirGuardInterface first: the whole meta is taken rather than a bare path
+ * so the guard can compare the compile dir against the app dir.
  *
  * @api
  */
 final class Cleaner
 {
-    /** @param CompileDirGuard $guard Rejects a compile dir that must never be emptied */
+    /** @param CompileDirGuardInterface $guard Rejects a compile dir that must never be emptied */
     public function __construct(
-        private readonly CompileDirGuard $guard = new CompileDirGuard(),
+        private readonly CompileDirGuardInterface $guard = new CompileDirGuard(),
     ) {}
 
     /**

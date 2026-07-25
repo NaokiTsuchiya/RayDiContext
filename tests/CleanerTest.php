@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
-use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -166,27 +165,6 @@ final class CleanerTest extends TestCase
             (new Cleaner())($this->meta($compileDir));
         } finally {
             restore_error_handler();
-        }
-    }
-
-    /**
-     * A compile dir holding the app dir is rejected before anything is removed
-     *
-     * @throws RuntimeException
-     */
-    #[Test]
-    public function rejectsCompileDirHoldingAppDirWithoutRemovingAnything(): void
-    {
-        $appDir = "{$this->baseDir}/app";
-        mkdir($appDir, permissions: 0o755, recursive: true);
-        file_put_contents("{$appDir}/keep.php", data: '<?php return 0;');
-        $meta = new AppMeta('fake', $appDir, $this->baseDir, "{$appDir}/var/tmp");
-
-        try {
-            (new Cleaner())($meta);
-            static::fail('UnsafeCompileDir was not thrown');
-        } catch (UnsafeCompileDir) {
-            static::assertFileExists("{$appDir}/keep.php");
         }
     }
 

@@ -22,17 +22,16 @@ use function str_starts_with;
  * rejected directory past a literal comparison. A path that does not exist yet is
  * compared verbatim: nothing can be removed from it anyway.
  *
- * This is a pure check. It never writes to or removes anything, which is what makes
- * the rejected cases safe to cover in a test.
- *
  * @api
  */
-final class CompileDirGuard
+final class CompileDirGuard implements CompileDirGuardInterface
 {
     /** Appended to every rejection: the compile dir is disposable, nothing else is */
     private const HINT = 'Point APP_COMPILE_DIR at a directory that holds nothing but compiled scripts.';
 
     /**
+     * {@inheritDoc}
+     *
      * @param AppMeta $meta Application metadata carrying the compile dir to verify
      *
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.

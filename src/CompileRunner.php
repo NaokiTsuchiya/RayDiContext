@@ -38,8 +38,6 @@ final class CompileRunner
      */
     public function run(string $env, AppMeta $meta): int
     {
-        // The env is resolved before the cleaner runs: an unknown env must fail without
-        // having emptied the compile dir.
         $context = $this->contextProvider->get($env, $meta);
         ($this->cleaner)($meta);
         (new Compiler())->compile($context(), $meta->compileDir);

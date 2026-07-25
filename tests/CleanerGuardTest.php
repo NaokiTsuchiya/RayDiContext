@@ -12,7 +12,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
-use function file_put_contents;
+use function copy;
 use function mkdir;
 use function uniqid;
 
@@ -22,6 +22,9 @@ use function uniqid;
 #[CoversClass(Cleaner::class)]
 final class CleanerGuardTest extends TestCase
 {
+    /** Content the tests put on disk and assert survives */
+    private const SCRIPT = __DIR__ . '/Fixture/script.php';
+
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
@@ -40,8 +43,8 @@ final class CleanerGuardTest extends TestCase
         $this->appDir = "{$this->baseDir}/app";
         $this->compileDir = "{$this->appDir}/var/di/prod";
         mkdir($this->compileDir, permissions: 0o755, recursive: true);
-        file_put_contents("{$this->appDir}/keep.php", data: '<?php return 0;');
-        file_put_contents("{$this->compileDir}/stale.php", data: '<?php return 0;');
+        copy(self::SCRIPT, "{$this->appDir}/keep.php");
+        copy(self::SCRIPT, "{$this->compileDir}/stale.php");
     }
 
     /**

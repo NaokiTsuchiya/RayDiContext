@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
+use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,7 +24,7 @@ use function uniqid;
 #[CoversClass(Cleaner::class)]
 final class CleanerTest extends TestCase
 {
-    /** Per-test working directory */
+    /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
     /**
@@ -52,7 +53,7 @@ final class CleanerTest extends TestCase
     {
         $compileDir = "{$this->baseDir}/var/di/prod";
 
-        (new Cleaner())($compileDir);
+        (new Cleaner())($this->meta($compileDir));
 
         static::assertDirectoryExists($compileDir);
         static::assertSame(0, iterator_count(new FilesystemIterator($compileDir)));
@@ -71,7 +72,7 @@ final class CleanerTest extends TestCase
         file_put_contents("{$compileDir}/stale.php", data: '<?php return 0;');
         file_put_contents("{$compileDir}/nested/stale.php", data: '<?php return 0;');
 
-        (new Cleaner())($compileDir);
+        (new Cleaner())($this->meta($compileDir));
 
         static::assertDirectoryExists($compileDir);
         static::assertSame(0, iterator_count(new FilesystemIterator($compileDir)));
@@ -88,9 +89,10 @@ final class CleanerTest extends TestCase
         $compileDir = "{$this->baseDir}/di";
         $cleaner = new Cleaner();
 
-        $cleaner($compileDir);
+        $meta = $this->meta($compileDir);
+        $cleaner($meta);
         file_put_contents("{$compileDir}/a.php", data: '<?php return 0;');
-        $cleaner($compileDir);
+        $cleaner($meta);
 
         static::assertDirectoryExists($compileDir);
         static::assertSame(0, iterator_count(new FilesystemIterator($compileDir)));
@@ -111,7 +113,7 @@ final class CleanerTest extends TestCase
         file_put_contents("{$target}/keep.php", data: '<?php return 0;');
         symlink($target, "{$compileDir}/link");
 
-        (new Cleaner())($compileDir);
+        (new Cleaner())($this->meta($compileDir));
 
         static::assertSame(0, iterator_count(new FilesystemIterator($compileDir)));
         static::assertFileExists("{$target}/keep.php");
@@ -131,7 +133,7 @@ final class CleanerTest extends TestCase
         $link = "{$this->baseDir}/di-link";
         symlink($target, $link);
 
-        (new Cleaner())($link);
+        (new Cleaner())($this->meta($link));
 
         static::assertTrue(is_link($link));
         static::assertDirectoryExists($target);
@@ -161,9 +163,40 @@ final class CleanerTest extends TestCase
         // a no-op handler swallows it since the exception is what's under test.
         set_error_handler(static fn(): bool => true);
         try {
-            (new Cleaner())($compileDir);
+            (new Cleaner())($this->meta($compileDir));
         } finally {
             restore_error_handler();
         }
+    }
+
+    /**
+     * A compile dir holding the app dir is rejected before anything is removed
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function rejectsCompileDirHoldingAppDirWithoutRemovingAnything(): void
+    {
+        $appDir = "{$this->baseDir}/app";
+        mkdir($appDir, permissions: 0o755, recursive: true);
+        file_put_contents("{$appDir}/keep.php", data: '<?php return 0;');
+        $meta = new AppMeta('fake', $appDir, $this->baseDir, "{$appDir}/var/tmp");
+
+        try {
+            (new Cleaner())($meta);
+            static::fail('UnsafeCompileDir was not thrown');
+        } catch (UnsafeCompileDir) {
+            static::assertFileExists("{$appDir}/keep.php");
+        }
+    }
+
+    /**
+     * Returns a meta whose app dir is unrelated to the given compile dir
+     *
+     * @param non-empty-string $compileDir
+     */
+    private function meta(string $compileDir): AppMeta
+    {
+        return new AppMeta('fake', "{$this->baseDir}/app", $compileDir, "{$this->baseDir}/tmp");
     }
 }

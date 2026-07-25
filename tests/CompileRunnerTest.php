@@ -7,6 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownEnv;
+use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
@@ -161,6 +162,30 @@ final class CompileRunnerTest extends TestCase
             static::assertStringContainsString($this->meta->appDir, $e->getMessage());
             // The compiled scripts exist: compilation preceded the guard
             static::assertNotSame([], glob("{$this->meta->compileDir}/*.php"));
+        }
+    }
+
+    /**
+     * A compile dir that holds the app dir is rejected before the clean step runs
+     *
+     * This is the APP_COMPILE_DIR typo the guard exists for: the run must abort with
+     * the app still on disk.
+     *
+     * @throws BakedPathFound
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function runRejectsUnsafeCompileDirBeforeCleaning(): void
+    {
+        $appDir = "{$this->baseDir}/app";
+        $unsafeMeta = new AppMeta('fake', $appDir, $appDir, $this->meta->tmpDir);
+
+        try {
+            $this->runner->run('prod', $unsafeMeta);
+            static::fail('UnsafeCompileDir was not thrown');
+        } catch (UnsafeCompileDir) {
+            // The tmp dir set up under the app dir is still there: nothing was removed
+            static::assertDirectoryExists($this->meta->tmpDir);
         }
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
+use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
@@ -23,13 +24,30 @@ use function unlink;
  * is kept rather than recreated, so a compile dir that is a mount point (a container
  * volume) or a symlinked directory works.
  *
+ * Everything below the compile dir is removed without asking, so the dir is verified
+ * by a CompileDirGuardInterface first: the whole meta is taken rather than a bare path
+ * so the guard can compare the compile dir against the app dir.
+ *
  * @api
  */
 final class Cleaner
 {
-    /** @throws RuntimeException When the compile dir cannot be created or emptied. */
-    public function __invoke(string $compileDir): void
+    /** @param CompileDirGuardInterface $guard Rejects a compile dir that must never be emptied */
+    public function __construct(
+        private readonly CompileDirGuardInterface $guard = new CompileDirGuard(),
+    ) {}
+
+    /**
+     * @param AppMeta $meta Application metadata carrying the compile dir to empty
+     *
+     * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
+     * @throws RuntimeException When the compile dir cannot be created or emptied.
+     */
+    public function __invoke(AppMeta $meta): void
     {
+        ($this->guard)($meta);
+
+        $compileDir = $meta->compileDir;
         $exists = is_dir($compileDir);
         if ($exists) {
             $this->removeContents($compileDir);

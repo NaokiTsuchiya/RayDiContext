@@ -78,7 +78,7 @@ jobs:
 
       - run: composer update --no-progress --prefer-dist
 
-      - run: composer test -- --coverage-clover=coverage.xml --log-junit=junit.xml
+      - run: composer test -- --order-by=random --random-order-seed=${{ github.run_number }} --coverage-clover=coverage.xml --log-junit=junit.xml
 
       # after_n_builds in codecov.yml holds the status back until all four arrive,
       # so a partial upload can never post a misleading number.

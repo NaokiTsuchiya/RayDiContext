@@ -105,13 +105,16 @@ final class BakedPathGuardBoundaryTest extends TestCase
     }
 
     /**
-     * An empty appDir never matches; clean scripts still pass
+     * Known gap, not a guaranteed contract: an empty appDir never matches, so the guard
+     * cannot detect a baked appDir literal in this case. AppMeta does not yet validate
+     * that appDir is non-empty (tracked separately); once it does, this case becomes
+     * unreachable and this test can be deleted.
      *
      * @throws BakedPathFound
      * @throws RuntimeException
      */
     #[Test]
-    public function emptyAppDirDoesNotReject(): void
+    public function emptyAppDirIsNotYetRejectedByGuard(): void
     {
         $meta = new AppMeta('fake', '', $this->meta->compileDir, $this->meta->tmpDir);
         file_put_contents("{$this->meta->compileDir}/clean.php", data: '<?php return new stdClass();');

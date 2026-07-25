@@ -10,14 +10,18 @@ coverage:
   status:
     project:
       default:
-        target: auto
+        # Every reachable line is covered; unreachable edge cases (races, filesystem
+        # denials root ignores) are marked @codeCoverageIgnore instead of budgeted for
+        # with slack here, so the floor can stay at the real 100% with zero tolerance.
+        target: 100%
         threshold: 0%
         # A PR that touches no PHP has no base to compare against on a fresh repo;
         # without this the status never turns green and auto-merge stalls forever.
         if_not_found: success
     patch:
       default:
-        target: auto
+        target: 100%
+        threshold: 0%
         if_not_found: success
 
 comment:

@@ -13,7 +13,10 @@ use RuntimeException;
 
 use function file_put_contents;
 use function mkdir;
+use function restore_error_handler;
 use function serialize;
+use function set_error_handler;
+use function symlink;
 use function uniqid;
 
 #[CoversClass(BakedPathGuard::class)]
@@ -147,5 +150,33 @@ final class BakedPathGuardTest extends TestCase
         ($this->guard)($this->meta->compileDir, $this->meta);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * A script that cannot be read raises a RuntimeException naming the path
+     *
+     * A dangling symlink is a portable way to make file_get_contents() fail without
+     * relying on permissions, which root ignores.
+     *
+     * @throws BakedPathFound
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function throwsWhenScriptCannotBeRead(): void
+    {
+        $broken = "{$this->meta->compileDir}/broken.php";
+        symlink("{$this->meta->compileDir}/missing-target.php", $broken);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage($broken);
+
+        // file_get_contents() emits its own E_WARNING on top of the exception the guard
+        // throws; a no-op handler swallows it since the exception is what's under test.
+        set_error_handler(static fn(): bool => true);
+        try {
+            ($this->guard)($this->meta->compileDir, $this->meta);
+        } finally {
+            restore_error_handler();
+        }
     }
 }

@@ -15,6 +15,8 @@ use function file_put_contents;
 use function is_link;
 use function iterator_count;
 use function mkdir;
+use function restore_error_handler;
+use function set_error_handler;
 use function symlink;
 use function uniqid;
 
@@ -134,5 +136,34 @@ final class CleanerTest extends TestCase
         static::assertTrue(is_link($link));
         static::assertDirectoryExists($target);
         static::assertSame(0, iterator_count(new FilesystemIterator($link)));
+    }
+
+    /**
+     * A compile dir that cannot be created raises a RuntimeException naming the path
+     *
+     * A regular file blocking a path component is a portable way to make mkdir() fail
+     * without relying on permissions, which root ignores.
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function throwsWhenCompileDirCannotBeCreated(): void
+    {
+        $blocker = "{$this->baseDir}/blocker";
+        mkdir($this->baseDir, permissions: 0o755, recursive: true);
+        file_put_contents($blocker, data: '');
+        $compileDir = "{$blocker}/di";
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage($compileDir);
+
+        // mkdir() emits its own E_WARNING on top of the exception the cleaner throws;
+        // a no-op handler swallows it since the exception is what's under test.
+        set_error_handler(static fn(): bool => true);
+        try {
+            (new Cleaner())($compileDir);
+        } finally {
+            restore_error_handler();
+        }
     }
 }

@@ -16,6 +16,9 @@
         "carthage-software/mago": "1.44.0",
         "phpunit/phpunit": "11.5.56"
     },
+    "bin": [
+        "bin/compile.php"
+    ],
     "autoload": {
         "psr-4": {
             "NaokiTsuchiya\\RayDiContext\\": "src/"

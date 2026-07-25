@@ -62,9 +62,15 @@ final class Cleaner
             $isLink = $entry->isLink();
             $isDir = $entry->isDir();
             $removed = !$isLink && $isDir ? rmdir($pathname) : unlink($pathname);
+            // @codeCoverageIgnoreStart
+            // Only reachable via a race (another process removes the entry between the
+            // iterator listing it and this call) or a filesystem-level denial that root
+            // ignores, so it cannot be triggered deterministically from a test.
             if (!$removed) {
                 throw new RuntimeException("Failed to remove: {$pathname}");
             }
+
+            // @codeCoverageIgnoreEnd
         }
     }
 }

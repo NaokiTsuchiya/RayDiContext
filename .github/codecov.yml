@@ -10,20 +10,18 @@ coverage:
   status:
     project:
       default:
-        # Line coverage is ~97% as of 2026-07-25. A fixed floor below that catches a
-        # real regression while, unlike `target: auto`, not resetting to whatever the
-        # base commit happened to be — coverage can't quietly erode PR by PR.
-        target: 95%
-        threshold: 1%
+        # Every reachable line is covered; unreachable edge cases (races, filesystem
+        # denials root ignores) are marked @codeCoverageIgnore instead of budgeted for
+        # with slack here, so the floor can stay at the real 100% with zero tolerance.
+        target: 100%
+        threshold: 0%
         # A PR that touches no PHP has no base to compare against on a fresh repo;
         # without this the status never turns green and auto-merge stalls forever.
         if_not_found: success
     patch:
       default:
-        # Newly-changed lines are expected to come close to full coverage; the
-        # threshold keeps one uncovered guard clause from failing the whole patch.
-        target: 90%
-        threshold: 1%
+        target: 100%
+        threshold: 0%
         if_not_found: success
 
 comment:

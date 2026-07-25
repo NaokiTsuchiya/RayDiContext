@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -33,13 +34,15 @@ final class BakedPathGuardTest extends TestCase
 
     /**
      * {@inheritDoc}
+     *
+     * @throws InvalidAppMeta
      */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_', more_entropy: true);
         $appDir = "{$this->baseDir}/app";
         // The tmp dir is deliberately outside the app dir to exercise both needles
-        $this->meta = new AppMeta('fake', $appDir, "{$appDir}/var/di/prod", "{$this->baseDir}/rw-tmp");
+        $this->meta = new AppMeta($appDir, 'prod', "{$appDir}/var/di/prod", "{$this->baseDir}/rw-tmp");
         mkdir($this->meta->compileDir, permissions: 0o755, recursive: true);
         $this->guard = new BakedPathGuard();
     }

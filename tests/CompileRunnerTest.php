@@ -6,6 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownEnv;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
@@ -44,13 +45,15 @@ final class CompileRunnerTest extends TestCase
 
     /**
      * {@inheritDoc}
+     *
+     * @throws InvalidAppMeta
      */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('runner_', more_entropy: true);
         $appDir = "{$this->baseDir}/app";
         mkdir("{$appDir}/var/tmp/prod", permissions: 0o755, recursive: true);
-        $this->meta = AppMeta::fromAppDir('fake', $appDir, 'prod');
+        $this->meta = AppMeta::fromAppDir($appDir, 'prod');
         $this->runner = new CompileRunner(new MapContextProvider([
             'prod' => FakeProdContext::class,
             'baked' => FakeBakedContext::class,
@@ -82,7 +85,7 @@ final class CompileRunnerTest extends TestCase
         mkdir($this->meta->compileDir, permissions: 0o755, recursive: true);
         file_put_contents("{$this->meta->compileDir}/stale.php", data: '<?php return 0;');
 
-        $status = $this->runner->run('prod', $this->meta);
+        $status = $this->runner->run($this->meta);
 
         static::assertSame(0, $status);
         static::assertFileDoesNotExist("{$this->meta->compileDir}/stale.php");
@@ -102,14 +105,13 @@ final class CompileRunnerTest extends TestCase
     #[Test]
     public function resolvesFromReadOnlyCompileDir(): void
     {
-        $this->runner->run('prod', $this->meta);
+        $this->runner->run($this->meta);
         chmod($this->meta->compileDir, permissions: 0o555);
         $before = $this->snapshot($this->meta->compileDir);
 
-        $injector = (new MapContextProvider(['prod' => FakeProdContext::class]))->get(
-            'prod',
-            $this->meta,
-        )->getInjectorInstance();
+        $injector = (new MapContextProvider([
+            'prod' => FakeProdContext::class,
+        ]))->get($this->meta)->getInjectorInstance();
 
         static::assertInstanceOf(CompiledInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
@@ -130,17 +132,16 @@ final class CompileRunnerTest extends TestCase
     #[Test]
     public function resolvesWithoutCompileTimeTmpDir(): void
     {
-        $this->runner->run('prod', $this->meta);
+        $this->runner->run($this->meta);
         Fs::removeDir("{$this->baseDir}/app/var/tmp");
         $runtimeMeta = new AppMeta(
-            'fake',
             "{$this->baseDir}/app",
+            'prod',
             $this->meta->compileDir,
             "{$this->baseDir}/absent-tmp",
         );
 
         $injector = (new MapContextProvider(['prod' => FakeProdContext::class]))->get(
-            'prod',
             $runtimeMeta,
         )->getInjectorInstance();
 
@@ -155,8 +156,10 @@ final class CompileRunnerTest extends TestCase
     #[Test]
     public function runGuardsBakedPathAfterCompile(): void
     {
+        $bakedMeta = new AppMeta($this->meta->appDir, 'baked', $this->meta->compileDir, $this->meta->tmpDir);
+
         try {
-            $this->runner->run('baked', $this->meta);
+            $this->runner->run($bakedMeta);
             static::fail('BakedPathFound was not thrown');
         } catch (BakedPathFound $e) {
             static::assertStringContainsString($this->meta->appDir, $e->getMessage());
@@ -178,10 +181,10 @@ final class CompileRunnerTest extends TestCase
     public function runRejectsUnsafeCompileDirBeforeCleaning(): void
     {
         $appDir = "{$this->baseDir}/app";
-        $unsafeMeta = new AppMeta('fake', $appDir, $appDir, $this->meta->tmpDir);
+        $unsafeMeta = new AppMeta($appDir, 'prod', $appDir, $this->meta->tmpDir);
 
         try {
-            $this->runner->run('prod', $unsafeMeta);
+            $this->runner->run($unsafeMeta);
             static::fail('UnsafeCompileDir was not thrown');
         } catch (UnsafeCompileDir) {
             // The tmp dir set up under the app dir is still there: nothing was removed

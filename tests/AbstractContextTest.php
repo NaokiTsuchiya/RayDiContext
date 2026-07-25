@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeDevContext;
@@ -41,35 +42,41 @@ final class AbstractContextTest extends TestCase
 
     /**
      * Saved singletons default to none
+     *
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function getSavedSingletonDefaultsToEmpty(): void
     {
-        $context = new FakeDevContext(new AppMeta('fake', '/app', '/app/var/di/dev', '/app/var/tmp/dev'));
+        $context = new FakeDevContext(new AppMeta('/app', 'dev', '/app/var/di/dev', '/app/var/tmp/dev'));
 
         static::assertSame([], $context->getSavedSingleton());
     }
 
     /**
      * A context can declare its own saved singletons
+     *
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function getSavedSingletonOverride(): void
     {
-        $context = new FakeProdContext(new AppMeta('fake', '/app', '/app/var/di/prod', '/app/var/tmp/prod'));
+        $context = new FakeProdContext(new AppMeta('/app', 'prod', '/app/var/di/prod', '/app/var/tmp/prod'));
 
         static::assertSame([FakeCarInterface::class], $context->getSavedSingleton());
     }
 
     /**
      * A development context resolves instances with the runtime injector
+     *
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function devContextResolvesWithRuntimeInjector(): void
     {
         $tmpDir = "{$this->baseDir}/tmp";
         mkdir($tmpDir, permissions: 0o755, recursive: true);
-        $context = new FakeDevContext(new AppMeta('fake', $this->baseDir, "{$this->baseDir}/di", $tmpDir));
+        $context = new FakeDevContext(new AppMeta($this->baseDir, 'dev', "{$this->baseDir}/di", $tmpDir));
 
         $injector = $context->getInjectorInstance();
 

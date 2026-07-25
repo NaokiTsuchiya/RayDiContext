@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownEnv;
 use NaokiTsuchiya\RayDiContext\Fake\FakeDevContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
@@ -18,17 +19,18 @@ final class MapContextProviderTest extends TestCase
      * Returns the context mapped to the env, constructed with the given meta
      *
      * @throws UnknownEnv
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function getReturnsMappedContext(): void
     {
-        $meta = new AppMeta('fake', '/app', '/app/var/di/dev', '/app/var/tmp/dev');
+        $meta = new AppMeta('/app', 'dev', '/app/var/di/dev', '/app/var/tmp/dev');
         $provider = new MapContextProvider([
             'dev' => FakeDevContext::class,
             'prod' => FakeProdContext::class,
         ]);
 
-        $context = $provider->get('dev', $meta);
+        $context = $provider->get($meta);
 
         static::assertInstanceOf(FakeDevContext::class, $context);
         static::assertSame($meta, $context->getMeta());
@@ -38,6 +40,7 @@ final class MapContextProviderTest extends TestCase
      * An unmapped env is rejected with the known envs listed
      *
      * @throws UnknownEnv
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function getThrowsOnUnknownEnv(): void
@@ -47,6 +50,6 @@ final class MapContextProviderTest extends TestCase
         $this->expectException(UnknownEnv::class);
         $this->expectExceptionMessage('Unknown env "prod": known envs are [dev]');
 
-        $provider->get('prod', new AppMeta('fake', '/app', '/app/var/di/prod', '/app/var/tmp/prod'));
+        $provider->get(new AppMeta('/app', 'prod', '/app/var/di/prod', '/app/var/tmp/prod'));
     }
 }

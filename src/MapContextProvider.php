@@ -25,15 +25,15 @@ final class MapContextProvider implements ContextProviderInterface
     /**
      * {@inheritDoc}
      *
-     * @throws UnknownEnv When no context is mapped to the env.
+     * @throws UnknownEnv When no context is mapped to $meta->context.
      */
-    public function get(string $env, AppMeta $meta): ContextInterface
+    public function get(AppMeta $meta): ContextInterface
     {
-        $class = $this->map[$env] ?? null;
+        $class = $this->map[$meta->context] ?? null;
         if ($class === null) {
             throw new UnknownEnv(sprintf(
                 'Unknown env "%s": known envs are [%s]',
-                $env,
+                $meta->context,
                 implode(', ', array_keys($this->map)),
             ));
         }

@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+
 use function getenv;
 use function rtrim;
+use function sprintf;
+use function str_contains;
 
 /**
  * Application metadata with separated compile-time and runtime directories
@@ -19,18 +23,67 @@ use function rtrim;
  */
 final readonly class AppMeta
 {
+    /** @var non-empty-string Application root directory */
+    public string $appDir;
+
+    /** @var non-empty-string Env/context name (e.g. "prod", "dev") */
+    public string $context;
+
+    /** @var non-empty-string Read-only DI script directory baked into the image */
+    public string $compileDir;
+
+    /** @var non-empty-string Runtime-writable directory, never baked */
+    public string $tmpDir;
+
     /**
-     * @param string           $name       Application name
-     * @param string           $appDir     Application root directory
-     * @param non-empty-string $compileDir Read-only DI script directory baked into the image
-     * @param non-empty-string $tmpDir     Runtime-writable directory, never baked
+     * @param string $appDir     Application root directory
+     * @param string $context    Env/context name (e.g. "prod", "dev")
+     * @param string $compileDir Read-only DI script directory baked into the image
+     * @param string $tmpDir     Runtime-writable directory, never baked
+     *
+     * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, or context contains "/" or "..".
      */
-    public function __construct(
-        public string $name,
-        public string $appDir,
-        public string $compileDir,
-        public string $tmpDir,
-    ) {}
+    public function __construct(string $appDir, string $context, string $compileDir, string $tmpDir)
+    {
+        if ($appDir === '') {
+            throw new InvalidAppMeta('AppMeta::$appDir must not be empty');
+        }
+
+        if ($context === '') {
+            throw new InvalidAppMeta('AppMeta::$context must not be empty');
+        }
+
+        if (str_contains($context, '/') || str_contains($context, '..')) {
+            throw new InvalidAppMeta(sprintf('AppMeta::$context must not contain "/" or "..": "%s"', $context));
+        }
+
+        if ($compileDir === '') {
+            throw new InvalidAppMeta('AppMeta::$compileDir must not be empty');
+        }
+
+        if ($tmpDir === '') {
+            throw new InvalidAppMeta('AppMeta::$tmpDir must not be empty');
+        }
+
+        $this->appDir = self::trimSlash($appDir);
+        $this->context = $context;
+        $this->compileDir = self::trimSlash($compileDir);
+        $this->tmpDir = self::trimSlash($tmpDir);
+    }
+
+    /**
+     * Trims trailing slashes, keeping a path of only slashes as "/" rather than ""
+     *
+     * @param non-empty-string $path
+     *
+     * @return non-empty-string
+     */
+    private static function trimSlash(string $path): string
+    {
+        $trimmed = rtrim($path, characters: '/');
+
+        return $trimmed === '' ? '/' : $trimmed;
+    }
 
     /**
      * Creates a meta whose directories default to conventional paths under the app dir
@@ -39,14 +92,16 @@ final readonly class AppMeta
      * which allows a container deployment to bake the compile dir into the image while
      * pointing the tmp dir at a writable volume. Trailing slashes are trimmed so the
      * paths compare verbatim against baked literals.
+     *
+     * @throws InvalidAppMeta When appDir/context is empty, or context contains "/" or "..".
      */
-    public static function fromAppDir(string $name, string $appDir, string $context): self
+    public static function fromAppDir(string $appDir, string $context): self
     {
         $appDir = rtrim($appDir, characters: '/');
 
         return new self(
-            $name,
             $appDir,
+            $context,
             self::env('APP_COMPILE_DIR', "{$appDir}/var/di/{$context}"),
             self::env('APP_TMP_DIR', "{$appDir}/var/tmp/{$context}"),
         );

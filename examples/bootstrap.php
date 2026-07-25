@@ -8,7 +8,7 @@ declare(strict_types=1);
  * A bootstrap file returns the application's ContextProviderInterface. Copy this
  * file into your app, replace the context classes with your own, then compile with:
  *
- *   php vendor/bin/compile.php path/to/bootstrap.php my-app "$(pwd)" prod
+ *   php vendor/bin/compile.php path/to/bootstrap.php "$(pwd)" prod
  */
 
 use NaokiTsuchiya\RayDiContext\MapContextProvider;

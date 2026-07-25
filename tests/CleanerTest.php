@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -172,9 +173,11 @@ final class CleanerTest extends TestCase
      * Returns a meta whose app dir is unrelated to the given compile dir
      *
      * @param non-empty-string $compileDir
+     *
+     * @throws InvalidAppMeta
      */
     private function meta(string $compileDir): AppMeta
     {
-        return new AppMeta('fake', "{$this->baseDir}/app", $compileDir, "{$this->baseDir}/tmp");
+        return new AppMeta("{$this->baseDir}/app", 'prod', $compileDir, "{$this->baseDir}/tmp");
     }
 }

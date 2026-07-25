@@ -57,7 +57,6 @@ final class BinCompileTest extends TestCase
 
         [$status, $stderr] = Cli::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
-            'fake',
             $appDir,
             'prod',
         ]);
@@ -90,7 +89,6 @@ final class BinCompileTest extends TestCase
     {
         [$status, $stderr] = Cli::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_invalid.php',
-            'fake',
             "{$this->baseDir}/app",
             'prod',
         ]);

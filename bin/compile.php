@@ -7,7 +7,7 @@ declare(strict_types=1);
  * Ahead-of-time compile CLI.
  *
  * Usage:
- *   php bin/compile.php <bootstrap> <name> <appDir> <env>
+ *   php bin/compile.php <bootstrap> <appDir> <context>
  *
  * The bootstrap file is a PHP script that returns a ContextProviderInterface,
  * for example:
@@ -45,9 +45,9 @@ exit((static function (array $argv): int {
         return 1;
     }
 
-    [, $bootstrap, $name, $appDir, $env] = $argv + [null, null, null, null, null];
-    if ($bootstrap === null || $name === null || $appDir === null || $env === null) {
-        fwrite(STDERR, "Usage: php bin/compile.php <bootstrap> <name> <appDir> <env>\n");
+    [, $bootstrap, $appDir, $context] = $argv + [null, null, null, null];
+    if ($bootstrap === null || $appDir === null || $context === null) {
+        fwrite(STDERR, "Usage: php bin/compile.php <bootstrap> <appDir> <context>\n");
 
         return 2;
     }
@@ -69,7 +69,7 @@ exit((static function (array $argv): int {
         return 2;
     }
 
-    $meta = AppMeta::fromAppDir($name, $appDir, $env);
+    $meta = AppMeta::fromAppDir($appDir, $context);
 
-    return (new CompileRunner($provider))->run($env, $meta);
+    return (new CompileRunner($provider))->run($meta);
 })($argv));

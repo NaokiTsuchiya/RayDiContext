@@ -54,7 +54,7 @@ final class DevContext extends AbstractContext
 
 Compile ahead of time with the bundled `bin/compile.php` CLI. It takes a
 *bootstrap* file that returns your `ContextProviderInterface`, plus the app
-name, app dir, and env:
+dir and context:
 
 ```php
 // bootstrap.php — see examples/bootstrap.php
@@ -64,24 +64,24 @@ return new MapContextProvider(['prod' => ProdContext::class, 'dev' => DevContext
 ```
 
 ```
-php vendor/bin/compile.php bootstrap.php my-app "$(pwd)" prod
+php vendor/bin/compile.php bootstrap.php "$(pwd)" prod
 ```
 
-The CLI cleans the compile dir, compiles the env's context, and guards the
+The CLI cleans the compile dir, compiles the context, and guards the
 result against baked paths, exiting `0` on success. Under the hood it is:
 
 ```php
 $provider = require 'bootstrap.php';
-$meta = AppMeta::fromAppDir('my-app', getcwd(), 'prod');
+$meta = AppMeta::fromAppDir(getcwd(), 'prod');
 
-exit((new CompileRunner($provider))->run('prod', $meta));
+exit((new CompileRunner($provider))->run($meta));
 ```
 
 Bootstrap at runtime:
 
 ```php
-$meta = AppMeta::fromAppDir('my-app', dirname(__DIR__), 'prod');
-$context = $provider->get(getenv('APP_ENV') ?: 'prod', $meta);
+$meta = AppMeta::fromAppDir(dirname(__DIR__), getenv('APP_ENV') ?: 'prod');
+$context = $provider->get($meta);
 $injector = $context->getInjectorInstance();
 
 foreach ($context->getSavedSingleton() as $class) {

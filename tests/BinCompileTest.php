@@ -4,22 +4,15 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
+use NaokiTsuchiya\RayDiContext\Fake\Cli;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
-use function fclose;
-use function file_put_contents;
 use function glob;
 use function mkdir;
-use function proc_close;
-use function proc_open;
-use function sprintf;
-use function stream_get_contents;
 use function uniqid;
-
-use const PHP_BINARY;
 
 /**
  * End-to-end test for the bin/compile.php CLI
@@ -28,6 +21,9 @@ final class BinCompileTest extends TestCase
 {
     /** Path to the compile CLI under test */
     private const SCRIPT = __DIR__ . '/../bin/compile.php';
+
+    /** Directory holding the prepared bootstrap stub files */
+    private const FIXTURE_DIR = __DIR__ . '/Fixture';
 
     /** Per-test working directory */
     private string $baseDir;
@@ -51,19 +47,20 @@ final class BinCompileTest extends TestCase
 
     /**
      * The CLI compiles the mapped context and exits with status 0
+     *
+     * @throws RuntimeException
      */
     #[Test]
     public function compilesMappedContext(): void
     {
         $appDir = "{$this->baseDir}/app";
-        $bootstrap = "{$this->baseDir}/bootstrap.php";
-        file_put_contents($bootstrap, sprintf(
-            "<?php\n\nreturn new %s(['prod' => %s::class]);\n",
-            MapContextProvider::class,
-            FakeProdContext::class,
-        ));
 
-        [$status, $stderr] = $this->runCli([$bootstrap, 'fake', $appDir, 'prod']);
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            'fake',
+            $appDir,
+            'prod',
+        ]);
 
         static::assertSame(0, $status, $stderr);
         static::assertNotSame([], glob("{$appDir}/var/di/prod/*FakeCarInterface*.php"));
@@ -71,11 +68,13 @@ final class BinCompileTest extends TestCase
 
     /**
      * The CLI reports a usage error when arguments are missing
+     *
+     * @throws RuntimeException
      */
     #[Test]
     public function failsWithUsageWhenArgumentsMissing(): void
     {
-        [$status, $stderr] = $this->runCli([]);
+        [$status, $stderr] = Cli::run(self::SCRIPT, []);
 
         static::assertSame(2, $status);
         static::assertStringContainsString('Usage:', $stderr);
@@ -83,45 +82,20 @@ final class BinCompileTest extends TestCase
 
     /**
      * The CLI rejects a bootstrap that does not return a provider
+     *
+     * @throws RuntimeException
      */
     #[Test]
     public function failsWhenBootstrapReturnsWrongType(): void
     {
-        $bootstrap = "{$this->baseDir}/bad-bootstrap.php";
-        file_put_contents($bootstrap, data: "<?php\n\nreturn 'not a provider';\n");
-
-        [$status, $stderr] = $this->runCli([$bootstrap, 'fake', "{$this->baseDir}/app", 'prod']);
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_invalid.php',
+            'fake',
+            "{$this->baseDir}/app",
+            'prod',
+        ]);
 
         static::assertSame(2, $status);
         static::assertStringContainsString('must return', $stderr);
-    }
-
-    /**
-     * Runs the compile CLI, returning its exit status and stderr
-     *
-     * @param list<string> $args
-     *
-     * @return array{int, string}
-     */
-    private function runCli(array $args): array
-    {
-        $command = [PHP_BINARY, self::SCRIPT, ...$args];
-        $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
-        $pipes = [];
-        $process = proc_open($command, $descriptors, $pipes);
-        static::assertIsResource($process);
-
-        $stdout = $pipes[1] ?? null;
-        $errPipe = $pipes[2] ?? null;
-        static::assertIsResource($stdout);
-        static::assertIsResource($errPipe);
-
-        stream_get_contents($stdout);
-        $stderr = stream_get_contents($errPipe);
-        fclose($stdout);
-        fclose($errPipe);
-        $status = proc_close($process);
-
-        return [$status, $stderr === false ? '' : $stderr];
     }
 }

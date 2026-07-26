@@ -121,4 +121,74 @@ final class BinCompileTest extends TestCase
         static::assertSame(2, $status);
         static::assertStringContainsString('must return', $stderr);
     }
+
+    /**
+     * A baked path fails the compile with status 1 and a readable one-line message
+     *
+     * This is the CI guard the package exists for: the status has to be usable, and the
+     * message has to be the first thing in the log rather than buried under a trace.
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function failsWithStatusOneOnBakedPath(): void
+    {
+        $appDir = "{$this->baseDir}/app";
+
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            $appDir,
+            'baked',
+        ]);
+
+        static::assertSame(1, $status, $stderr);
+        static::assertStringContainsString('Baked path', $stderr);
+        static::assertStringContainsString($appDir, $stderr);
+        static::assertStringNotContainsString('Stack trace', $stderr);
+    }
+
+    /**
+     * An unknown context fails with status 1, listing the contexts the bootstrap maps
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function failsWithStatusOneOnUnknownContext(): void
+    {
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            "{$this->baseDir}/app",
+            'nosuch',
+        ]);
+
+        static::assertSame(1, $status, $stderr);
+        static::assertStringContainsString('Unknown context "nosuch"', $stderr);
+        static::assertStringNotContainsString('Stack trace', $stderr);
+    }
+
+    /**
+     * Surplus arguments are a usage error, not a silently successful compile
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function failsWithUsageWhenTooManyArguments(): void
+    {
+        $appDir = "{$this->baseDir}/app";
+
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            $appDir,
+            'prod',
+            '',
+            '',
+            'surplus',
+        ]);
+
+        static::assertSame(2, $status);
+        static::assertStringContainsString('Too many arguments', $stderr);
+        static::assertStringContainsString('Usage:', $stderr);
+        // Nothing was compiled: the run stopped at argument validation
+        static::assertSame([], glob("{$appDir}/var/di/prod/*.php"));
+    }
 }

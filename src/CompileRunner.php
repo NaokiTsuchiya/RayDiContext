@@ -32,21 +32,17 @@ final class CompileRunner
     /**
      * Cleans the compile dir, compiles the context module, then guards against baked paths
      *
-     * @return int Exit status
-     *
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
      * @throws CompileDirNotWritable When the compile dir does not exist and cannot be created.
      * @throws RemoveFailed When an entry inside the compile dir cannot be removed.
      * @throws ScriptNotReadable When a compiled script cannot be read.
      */
-    public function run(AppMeta $meta): int
+    public function run(AppMeta $meta): void
     {
         $context = $this->contextProvider->get($meta);
         ($this->cleaner)($meta);
         (new Compiler())->compile($context(), $meta->compileDir);
         ($this->guard)($meta->compileDir, $meta);
-
-        return 0;
     }
 }

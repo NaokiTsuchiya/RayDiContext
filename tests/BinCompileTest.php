@@ -66,6 +66,31 @@ final class BinCompileTest extends TestCase
     }
 
     /**
+     * Explicit compileDir/tmpDir CLI arguments override the conventional defaults
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function compilesToExplicitOverride(): void
+    {
+        $appDir = "{$this->baseDir}/app";
+        $compileDir = "{$this->baseDir}/custom-di";
+        $tmpDir = "{$this->baseDir}/app/var/tmp/prod";
+
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            $appDir,
+            'prod',
+            $compileDir,
+            $tmpDir,
+        ]);
+
+        static::assertSame(0, $status, $stderr);
+        static::assertNotSame([], glob("{$compileDir}/*FakeCarInterface*.php"));
+        static::assertSame([], glob("{$appDir}/var/di/prod/*.php"));
+    }
+
+    /**
      * The CLI reports a usage error when arguments are missing
      *
      * @throws RuntimeException

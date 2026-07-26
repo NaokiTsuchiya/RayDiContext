@@ -12,11 +12,11 @@ use function str_starts_with;
 /**
  * Rejects a compile dir whose contents must never be emptied
  *
- * The compile dir is emptied on every compile. In the bundled CLI it is ultimately
- * sourced from the APP_COMPILE_DIR environment variable, so a one-character mistake
- * there, such as APP_COMPILE_DIR=/app instead of /app/var/di/prod, would otherwise
- * wipe the whole application. This guard rejects the two shapes that can only ever be
- * a mistake: the filesystem root, and a directory that holds the app dir.
+ * The compile dir is emptied on every compile. It is typically supplied to the bundled
+ * CLI as an APP_COMPILE_DIR-sourced argument, so a one-character mistake there, such as
+ * APP_COMPILE_DIR=/app instead of /app/var/di/prod, would otherwise wipe the whole
+ * application. This guard rejects the two shapes that can only ever be a mistake: the
+ * filesystem root, and a directory that holds the app dir.
  *
  * Paths are compared after realpath() so a symlink or a `.` segment cannot slip a
  * rejected directory past a literal comparison. A path that does not exist yet is

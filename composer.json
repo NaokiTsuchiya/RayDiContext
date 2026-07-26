@@ -33,9 +33,10 @@
         "test": "phpunit",
         "lint": "mago lint --minimum-fail-level note",
         "analyze": "mago analyze",
+        "guard": "mago guard",
         "fmt": "mago fmt --check",
         "cs": ["@lint", "@fmt"],
-        "sa": "@analyze",
+        "sa": ["@analyze", "@guard"],
         "tests": ["@cs", "@sa", "@test"]
     },
     "config": {

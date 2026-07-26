@@ -85,3 +85,22 @@ check-name-casing = true
 enforce-class-finality = true
 require-api-or-internal = true
 allow-side-effects-in-conditions = false
+
+# The package's exception contract, enforced at the declaration site rather than by a test.
+# ExceptionInterface claims to mark every exception this package throws; these rules are what
+# make that true, so `catch (ExceptionInterface)` cannot silently start missing a case.
+[[guard.structural.rules]]
+on = 'NaokiTsuchiya\RayDiContext\Exception\*'
+not-on = 'NaokiTsuchiya\RayDiContext\Exception\AbstractRuntimeException'
+target = "class"
+must-be-final = true
+must-extend = 'NaokiTsuchiya\RayDiContext\Exception\AbstractRuntimeException'
+reason = "Concrete exceptions are final and inherit the marker from AbstractRuntimeException"
+
+[[guard.structural.rules]]
+on = 'NaokiTsuchiya\RayDiContext\Exception\AbstractRuntimeException'
+target = "class"
+must-be-abstract = true
+must-implement = 'NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface'
+must-extend = 'RuntimeException'
+reason = "The base carries both the marker and the \\RuntimeException lineage every subclass relies on"

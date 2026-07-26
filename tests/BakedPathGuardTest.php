@@ -6,6 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -156,7 +157,7 @@ final class BakedPathGuardTest extends TestCase
     }
 
     /**
-     * A script that cannot be read raises a RuntimeException naming the path
+     * A script that cannot be read raises a ScriptNotReadable naming the path
      *
      * A dangling symlink is a portable way to make file_get_contents() fail without
      * relying on permissions, which root ignores.
@@ -170,7 +171,7 @@ final class BakedPathGuardTest extends TestCase
         $broken = "{$this->meta->compileDir}/broken.php";
         symlink("{$this->meta->compileDir}/missing-target.php", $broken);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(ScriptNotReadable::class);
         $this->expectExceptionMessage($broken);
 
         // file_get_contents() emits its own E_WARNING on top of the exception the guard

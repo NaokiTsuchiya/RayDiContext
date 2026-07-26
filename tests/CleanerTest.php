@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -141,7 +142,7 @@ final class CleanerTest extends TestCase
     }
 
     /**
-     * A compile dir that cannot be created raises a RuntimeException naming the path
+     * A compile dir that cannot be created raises a CompileDirNotWritable naming the path
      *
      * A regular file blocking a path component is a portable way to make mkdir() fail
      * without relying on permissions, which root ignores.
@@ -156,7 +157,7 @@ final class CleanerTest extends TestCase
         file_put_contents($blocker, data: '');
         $compileDir = "{$blocker}/di";
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(CompileDirNotWritable::class);
         $this->expectExceptionMessage($compileDir);
 
         // mkdir() emits its own E_WARNING on top of the exception the cleaner throws;

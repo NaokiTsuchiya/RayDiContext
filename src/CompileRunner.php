@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
+use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
+use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use Ray\Compiler\Compiler;
-use RuntimeException;
 
 /**
  * Compiles the context of an env into the compile dir
@@ -34,7 +36,9 @@ final class CompileRunner
      *
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
-     * @throws RuntimeException When the compile dir cannot be recreated or a script cannot be read.
+     * @throws CompileDirNotWritable When the compile dir does not exist and cannot be created.
+     * @throws RemoveFailed When an entry inside the compile dir cannot be removed.
+     * @throws ScriptNotReadable When a compiled script cannot be read.
      */
     public function run(AppMeta $meta): int
     {

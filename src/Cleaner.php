@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
+use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use RuntimeException;
 use SplFileInfo;
 
 use function is_dir;
@@ -41,7 +42,8 @@ final class Cleaner
      * @param AppMeta $meta Application metadata carrying the compile dir to empty
      *
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
-     * @throws RuntimeException When the compile dir cannot be created or emptied.
+     * @throws CompileDirNotWritable When the compile dir does not exist and cannot be created.
+     * @throws RemoveFailed When an entry inside the compile dir cannot be removed.
      */
     public function __invoke(AppMeta $meta): void
     {
@@ -58,14 +60,14 @@ final class Cleaner
         $created = mkdir($compileDir, permissions: 0o755, recursive: true);
         $createdConcurrently = is_dir($compileDir);
         if (!$created && !$createdConcurrently) {
-            throw new RuntimeException("Failed to create compile dir: {$compileDir}");
+            throw new CompileDirNotWritable("Failed to create compile dir: {$compileDir}");
         }
     }
 
     /**
      * Removes every entry inside a directory
      *
-     * @throws RuntimeException When an entry cannot be removed.
+     * @throws RemoveFailed When an entry cannot be removed.
      */
     private function removeContents(string $dir): void
     {
@@ -85,7 +87,7 @@ final class Cleaner
             // iterator listing it and this call) or a filesystem-level denial that root
             // ignores, so it cannot be triggered deterministically from a test.
             if (!$removed) {
-                throw new RuntimeException("Failed to remove: {$pathname}");
+                throw new RemoveFailed("Failed to remove: {$pathname}");
             }
 
             // @codeCoverageIgnoreEnd

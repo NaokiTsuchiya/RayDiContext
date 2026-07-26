@@ -6,9 +6,9 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use RuntimeException;
 use SplFileInfo;
 
 use function file_get_contents;
@@ -34,7 +34,7 @@ final class BakedPathGuard
 {
     /**
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
-     * @throws RuntimeException When a compiled script cannot be read.
+     * @throws ScriptNotReadable When a compiled script cannot be read.
      */
     public function __invoke(string $compileDir, AppMeta $meta): void
     {
@@ -57,13 +57,13 @@ final class BakedPathGuard
      * Throws when a single compiled script contains a runtime path literal
      *
      * @throws BakedPathFound When the script contains an appDir or tmpDir literal.
-     * @throws RuntimeException When the script cannot be read.
+     * @throws ScriptNotReadable When the script cannot be read.
      */
     private function guardScript(string $path, string $compileDir, AppMeta $meta): void
     {
         $script = file_get_contents($path);
         if ($script === false) {
-            throw new RuntimeException("Failed to read compiled script: {$path}");
+            throw new ScriptNotReadable("Failed to read compiled script: {$path}");
         }
 
         $scanner = new BakedPathScanner($script, $compileDir);

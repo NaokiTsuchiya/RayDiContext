@@ -7,13 +7,13 @@ declare(strict_types=1);
  * Ahead-of-time compile CLI.
  *
  * Usage:
- *   php bin/compile.php <bootstrap> <appDir> <context> [compileDir] [tmpDir]
+ *   php bin/ray-di-compile <bootstrap> <appDir> <context> [compileDir] [tmpDir]
  *
  * compileDir/tmpDir default to the conventional "{appDir}/var/di|tmp/{context}" paths
  * when omitted (or passed as ""). This CLI does not read the environment itself; pass
  * env values in explicitly if you want them, e.g.:
  *
- *   php bin/compile.php bootstrap.php "$(pwd)" prod "$APP_COMPILE_DIR" "$APP_TMP_DIR"
+ *   php bin/ray-di-compile bootstrap.php "$(pwd)" prod "$APP_COMPILE_DIR" "$APP_TMP_DIR"
  *
  * The bootstrap file is a PHP script that returns a ContextProviderInterface,
  * for example:
@@ -53,7 +53,7 @@ exit((static function (array $argv): int {
 
     [, $bootstrap, $appDir, $context, $compileDir, $tmpDir] = $argv + [null, null, null, null, null, null];
     if ($bootstrap === null || $appDir === null || $context === null) {
-        fwrite(STDERR, "Usage: php bin/compile.php <bootstrap> <appDir> <context> [compileDir] [tmpDir]\n");
+        fwrite(STDERR, "Usage: php bin/ray-di-compile <bootstrap> <appDir> <context> [compileDir] [tmpDir]\n");
 
         return 2;
     }

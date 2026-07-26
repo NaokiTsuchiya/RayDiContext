@@ -17,7 +17,7 @@
         "phpunit/phpunit": "11.5.56"
     },
     "bin": [
-        "bin/compile.php"
+        "bin/ray-di-compile"
     ],
     "autoload": {
         "psr-4": {

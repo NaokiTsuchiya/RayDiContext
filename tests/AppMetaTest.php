@@ -27,15 +27,19 @@ final class AppMetaTest extends TestCase
     /**
      * Keeps constructor arguments as-is
      *
+     * The constructor has no character restriction on context beyond non-empty: it is
+     * only a lookup key here (e.g. for MapContextProvider), not necessarily a path
+     * fragment, so "prod:staging" — not a safe path segment — is still accepted.
+     *
      * @throws InvalidAppMeta
      */
     #[Test]
     public function construct(): void
     {
-        $meta = new AppMeta('/path/to/app', 'prod', '/opt/di', '/tmp/rw');
+        $meta = new AppMeta('/path/to/app', 'prod:staging', '/opt/di', '/tmp/rw');
 
         static::assertSame('/path/to/app', $meta->appDir);
-        static::assertSame('prod', $meta->context);
+        static::assertSame('prod:staging', $meta->context);
         static::assertSame('/opt/di', $meta->compileDir);
         static::assertSame('/tmp/rw', $meta->tmpDir);
     }
@@ -73,24 +77,6 @@ final class AppMetaTest extends TestCase
     }
 
     /**
-     * A context that is not a safe path segment is rejected
-     *
-     * @throws InvalidAppMeta
-     */
-    #[TestWith(['prod/staging'])]
-    #[TestWith(['../prod'])]
-    #[TestWith(['pro..d'])]
-    #[TestWith(['prod staging'])]
-    #[TestWith(["prod\\staging"])]
-    #[Test]
-    public function rejectsUnsafeContext(string $context): void
-    {
-        $this->expectException(InvalidAppMeta::class);
-
-        new AppMeta('/path/to/app', $context, '/opt/di', '/tmp/rw');
-    }
-
-    /**
      * Falls back to conventional paths under the app dir
      *
      * @throws InvalidAppMeta
@@ -104,6 +90,25 @@ final class AppMetaTest extends TestCase
         static::assertSame('prod', $meta->context);
         static::assertSame('/path/to/app/var/di/prod', $meta->compileDir);
         static::assertSame('/path/to/app/var/tmp/prod', $meta->tmpDir);
+    }
+
+    /**
+     * A context that is not a safe path segment is rejected, since fromAppDir()
+     * interpolates it into the default compileDir/tmpDir
+     *
+     * @throws InvalidAppMeta
+     */
+    #[TestWith(['prod/staging'])]
+    #[TestWith(['../prod'])]
+    #[TestWith(['pro..d'])]
+    #[TestWith(['prod staging'])]
+    #[TestWith(["prod\\staging"])]
+    #[Test]
+    public function fromAppDirRejectsUnsafeContext(string $context): void
+    {
+        $this->expectException(InvalidAppMeta::class);
+
+        AppMeta::fromAppDir('/path/to/app', $context);
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeDevContext;
@@ -19,6 +20,7 @@ final class MapContextProviderTest extends TestCase
      * Returns the context mapped to $meta->context, constructed with the given meta
      *
      * @throws UnknownContext
+     * @throws ContextClassNotFound
      * @throws InvalidAppMeta
      */
     #[Test]
@@ -40,6 +42,7 @@ final class MapContextProviderTest extends TestCase
      * An unmapped context is rejected with the known contexts listed
      *
      * @throws UnknownContext
+     * @throws ContextClassNotFound
      * @throws InvalidAppMeta
      */
     #[Test]
@@ -49,6 +52,29 @@ final class MapContextProviderTest extends TestCase
 
         $this->expectException(UnknownContext::class);
         $this->expectExceptionMessage('Unknown context "prod": known contexts are [dev]');
+
+        $provider->get(new AppMeta('/app', 'prod', '/app/var/di/prod', '/app/var/tmp/prod'));
+    }
+
+    /**
+     * A mapped class that does not exist is reported naming both the class and the context
+     *
+     * A misspelled class name in a bootstrap file would otherwise reach `new $class()` and
+     * surface as a bare Error mentioning neither the context nor this package.
+     *
+     * @throws UnknownContext
+     * @throws ContextClassNotFound
+     * @throws InvalidAppMeta
+     */
+    #[Test]
+    public function getThrowsOnMissingContextClass(): void
+    {
+        /** @var array<string, class-string<AbstractContext>> $map A bootstrap typo, as the runtime sees it */
+        $map = ['prod' => 'NoSuchContextClass'];
+        $provider = new MapContextProvider($map);
+
+        $this->expectException(ContextClassNotFound::class);
+        $this->expectExceptionMessage('Context class "NoSuchContextClass" mapped to context "prod" does not exist');
 
         $provider->get(new AppMeta('/app', 'prod', '/app/var/di/prod', '/app/var/tmp/prod'));
     }

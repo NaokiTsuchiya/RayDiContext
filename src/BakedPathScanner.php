@@ -38,19 +38,11 @@ final class BakedPathScanner
 
     /**
      * Returns whether the needle occurs outside every compile dir literal
+     *
+     * @param non-empty-string $needle
      */
     public function hasBakedPath(string $needle): bool
     {
-        // @codeCoverageIgnoreStart
-        // Unreachable via the current call graph: BakedPathGuard only ever passes
-        // $meta->appDir/$meta->tmpDir, and AppMeta guarantees both are non-empty. Kept
-        // as defense-in-depth because strpos() treats an empty needle as always
-        // matching, which would otherwise loop forever below.
-        if ($needle === '') {
-            return false;
-        }
-
-        // @codeCoverageIgnoreEnd
         $length = strlen($needle);
         $offset = 0;
         while (true) {

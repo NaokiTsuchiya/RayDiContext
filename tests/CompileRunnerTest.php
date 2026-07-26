@@ -7,7 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
-use NaokiTsuchiya\RayDiContext\Exception\UnknownEnv;
+use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
@@ -100,7 +100,7 @@ final class CompileRunnerTest extends TestCase
      *
      * @throws BakedPathFound
      * @throws RuntimeException
-     * @throws UnknownEnv
+     * @throws UnknownContext
      */
     #[Test]
     public function resolvesFromReadOnlyCompileDir(): void
@@ -127,7 +127,7 @@ final class CompileRunnerTest extends TestCase
      *
      * @throws BakedPathFound
      * @throws RuntimeException
-     * @throws UnknownEnv
+     * @throws UnknownContext
      */
     #[Test]
     public function resolvesWithoutCompileTimeTmpDir(): void

@@ -7,6 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 
 use function getenv;
+use function preg_match;
 use function rtrim;
 use function sprintf;
 use function str_contains;
@@ -41,7 +42,7 @@ final readonly class AppMeta
      * @param string $compileDir Read-only DI script directory baked into the image
      * @param string $tmpDir     Runtime-writable directory, never baked
      *
-     * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, or context contains "/" or "..".
+     * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, or context is not a safe path segment.
      */
     public function __construct(string $appDir, string $context, string $compileDir, string $tmpDir)
     {
@@ -53,8 +54,13 @@ final readonly class AppMeta
             throw new InvalidAppMeta('AppMeta::$context must not be empty');
         }
 
-        if (str_contains($context, '/') || str_contains($context, '..')) {
-            throw new InvalidAppMeta(sprintf('AppMeta::$context must not contain "/" or "..": "%s"', $context));
+        // $context is interpolated into compileDir/tmpDir path segments (see fromAppDir()),
+        // so it is restricted to the same character class BakedPathScanner treats as a path
+        // segment. ".." is rejected separately: each "." is individually allowed (e.g. "v1.2"),
+        // but the pair is a parent-dir traversal even without a "/".
+        $isSafeSegment = preg_match('/\A[A-Za-z0-9_.\-]+\z/', $context) === 1;
+        if (!$isSafeSegment || str_contains($context, '..')) {
+            throw new InvalidAppMeta(sprintf('AppMeta::$context must be a safe path segment: "%s"', $context));
         }
 
         if ($compileDir === '') {
@@ -93,7 +99,7 @@ final readonly class AppMeta
      * pointing the tmp dir at a writable volume. Trailing slashes are trimmed so the
      * paths compare verbatim against baked literals.
      *
-     * @throws InvalidAppMeta When appDir/context is empty, or context contains "/" or "..".
+     * @throws InvalidAppMeta When appDir/context is empty, or context is not a safe path segment.
      */
     public static function fromAppDir(string $appDir, string $context): self
     {

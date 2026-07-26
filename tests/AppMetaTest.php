@@ -73,13 +73,15 @@ final class AppMetaTest extends TestCase
     }
 
     /**
-     * A context containing a path separator or a parent-dir reference is rejected
+     * A context that is not a safe path segment is rejected
      *
      * @throws InvalidAppMeta
      */
     #[TestWith(['prod/staging'])]
     #[TestWith(['../prod'])]
     #[TestWith(['pro..d'])]
+    #[TestWith(['prod staging'])]
+    #[TestWith(["prod\\staging"])]
     #[Test]
     public function rejectsUnsafeContext(string $context): void
     {

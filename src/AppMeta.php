@@ -7,7 +7,6 @@ namespace NaokiTsuchiya\RayDiContext;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 
 use function getenv;
-use function preg_match;
 use function rtrim;
 use function sprintf;
 use function str_contains;
@@ -94,21 +93,18 @@ final readonly class AppMeta
      * pointing the tmp dir at a writable volume. Trailing slashes are trimmed so the
      * paths compare verbatim against baked literals.
      *
-     * $context is interpolated into the default compileDir/tmpDir here, so it is
-     * restricted to the same character class BakedPathScanner treats as a path segment.
-     * ".." is rejected separately: each "." is individually allowed (e.g. "v1.2"), but
-     * the pair is a parent-dir traversal even without a "/".
+     * $context is interpolated into the default compileDir/tmpDir here via string
+     * concatenation, not path resolution, so most characters (including "/", which just
+     * nests an extra directory level) pass through harmlessly. ".." is the one
+     * exception: the OS resolves it as a parent-dir traversal wherever the resulting
+     * path is later used (mkdir, DirectoryIterator, ...), so it is rejected outright.
      *
-     * @throws InvalidAppMeta When appDir/context is empty, or context is not a safe path segment.
+     * @throws InvalidAppMeta When appDir/context is empty, or context contains "..".
      */
     public static function fromAppDir(string $appDir, string $context): self
     {
-        $isSafeSegment = preg_match('/\A[A-Za-z0-9_.\-]+\z/', $context) === 1;
-        if (!$isSafeSegment || str_contains($context, '..')) {
-            throw new InvalidAppMeta(sprintf(
-                'AppMeta::fromAppDir(): $context must be a safe path segment: "%s"',
-                $context,
-            ));
+        if (str_contains($context, '..')) {
+            throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $context must not contain "..": "%s"', $context));
         }
 
         $appDir = rtrim($appDir, characters: '/');

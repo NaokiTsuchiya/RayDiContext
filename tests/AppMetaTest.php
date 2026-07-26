@@ -79,32 +79,36 @@ final class AppMetaTest extends TestCase
     /**
      * Falls back to conventional paths under the app dir
      *
+     * A context that is not a single conventional path segment — containing "/", as a
+     * namespaced class-string would with "\" — is still accepted: it is concatenated,
+     * not resolved, so it only nests an extra directory level rather than escaping
+     * anywhere.
+     *
      * @throws InvalidAppMeta
      */
     #[Test]
     public function fromAppDirDefaults(): void
     {
-        $meta = AppMeta::fromAppDir('/path/to/app', 'prod');
+        $context = 'App/ProdContext';
+        $meta = AppMeta::fromAppDir('/path/to/app', $context);
 
         static::assertSame('/path/to/app', $meta->appDir);
-        static::assertSame('prod', $meta->context);
-        static::assertSame('/path/to/app/var/di/prod', $meta->compileDir);
-        static::assertSame('/path/to/app/var/tmp/prod', $meta->tmpDir);
+        static::assertSame($context, $meta->context);
+        static::assertSame("/path/to/app/var/di/{$context}", $meta->compileDir);
+        static::assertSame("/path/to/app/var/tmp/{$context}", $meta->tmpDir);
     }
 
     /**
-     * A context that is not a safe path segment is rejected, since fromAppDir()
-     * interpolates it into the default compileDir/tmpDir
+     * A context containing ".." is rejected: the OS resolves it as a parent-dir
+     * traversal wherever the interpolated compileDir/tmpDir is later used
      *
      * @throws InvalidAppMeta
      */
-    #[TestWith(['prod/staging'])]
     #[TestWith(['../prod'])]
     #[TestWith(['pro..d'])]
-    #[TestWith(['prod staging'])]
-    #[TestWith(["prod\\staging"])]
+    #[TestWith(['prod/../../etc'])]
     #[Test]
-    public function fromAppDirRejectsUnsafeContext(string $context): void
+    public function fromAppDirRejectsParentDirTraversal(string $context): void
     {
         $this->expectException(InvalidAppMeta::class);
 

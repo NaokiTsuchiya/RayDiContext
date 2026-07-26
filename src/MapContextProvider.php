@@ -41,9 +41,6 @@ final class MapContextProvider implements ContextProviderInterface
             ));
         }
 
-        // The map is typed as class-string, but a bootstrap file is arbitrary PHP loaded at
-        // runtime: a misspelled class name would otherwise surface as a bare Error naming
-        // neither the context it is mapped to nor this package.
         $exists = class_exists($class);
         if (!$exists) {
             throw new ContextClassNotFound(sprintf(

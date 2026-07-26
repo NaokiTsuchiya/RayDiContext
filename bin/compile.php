@@ -7,7 +7,13 @@ declare(strict_types=1);
  * Ahead-of-time compile CLI.
  *
  * Usage:
- *   php bin/compile.php <bootstrap> <name> <appDir> <env>
+ *   php bin/compile.php <bootstrap> <appDir> <context> [compileDir] [tmpDir]
+ *
+ * compileDir/tmpDir default to the conventional "{appDir}/var/di|tmp/{context}" paths
+ * when omitted (or passed as ""). This CLI does not read the environment itself; pass
+ * env values in explicitly if you want them, e.g.:
+ *
+ *   php bin/compile.php bootstrap.php "$(pwd)" prod "$APP_COMPILE_DIR" "$APP_TMP_DIR"
  *
  * The bootstrap file is a PHP script that returns a ContextProviderInterface,
  * for example:
@@ -45,9 +51,9 @@ exit((static function (array $argv): int {
         return 1;
     }
 
-    [, $bootstrap, $name, $appDir, $env] = $argv + [null, null, null, null, null];
-    if ($bootstrap === null || $name === null || $appDir === null || $env === null) {
-        fwrite(STDERR, "Usage: php bin/compile.php <bootstrap> <name> <appDir> <env>\n");
+    [, $bootstrap, $appDir, $context, $compileDir, $tmpDir] = $argv + [null, null, null, null, null, null];
+    if ($bootstrap === null || $appDir === null || $context === null) {
+        fwrite(STDERR, "Usage: php bin/compile.php <bootstrap> <appDir> <context> [compileDir] [tmpDir]\n");
 
         return 2;
     }
@@ -69,7 +75,7 @@ exit((static function (array $argv): int {
         return 2;
     }
 
-    $meta = AppMeta::fromAppDir($name, $appDir, $env);
+    $meta = AppMeta::fromAppDir($appDir, $context, $compileDir ?: null, $tmpDir ?: null);
 
-    return (new CompileRunner($provider))->run($env, $meta);
+    return (new CompileRunner($provider))->run($meta);
 })($argv));

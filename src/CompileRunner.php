@@ -36,9 +36,9 @@ final class CompileRunner
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
      * @throws RuntimeException When the compile dir cannot be recreated or a script cannot be read.
      */
-    public function run(string $env, AppMeta $meta): int
+    public function run(AppMeta $meta): int
     {
-        $context = $this->contextProvider->get($env, $meta);
+        $context = $this->contextProvider->get($meta);
         ($this->cleaner)($meta);
         (new Compiler())->compile($context(), $meta->compileDir);
         ($this->guard)($meta->compileDir, $meta);

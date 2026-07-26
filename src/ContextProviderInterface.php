@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 /**
- * Provides the context bound to an env name
+ * Provides the context bound to an AppMeta's context name
  *
- * The env-to-context mapping belongs to the application.
+ * The context-to-context-class mapping belongs to the application.
  *
  * @api
  */
 interface ContextProviderInterface
 {
     /**
-     * Returns the context bound to the given env
+     * Returns the context bound to $meta->context
      */
-    public function get(string $env, AppMeta $meta): ContextInterface;
+    public function get(AppMeta $meta): ContextInterface;
 }

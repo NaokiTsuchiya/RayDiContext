@@ -10,8 +10,11 @@ Context, meta, and compile management for [Ray.Di](https://github.com/ray-di/Ray
 `AppMeta` keeps the two independent, so `compileDir` can be baked into a
 `readOnlyRootFilesystem` container while `tmpDir` stays a writable volume.
 
-- `compileDir` defaults to `{appDir}/var/di/{context}`, overridable with `APP_COMPILE_DIR`
-- `tmpDir` defaults to `{appDir}/var/tmp/{context}`, overridable with `APP_TMP_DIR`
+- `compileDir`/`tmpDir` default to `{appDir}/var/di/{context}` / `{appDir}/var/tmp/{context}`
+- Neither `AppMeta::fromAppDir()` nor the bundled CLI reads the environment — pass
+  overrides in explicitly (e.g. as CLI arguments, sourced from env vars by your shell
+  or Dockerfile). Compile-time and runtime code must agree on the same values, or the
+  compiled scripts and the running app will look in different places
 
 **Never bind `AppMeta` with `toInstance()`** — Ray.Compiler freezes bound objects into
 the compiled scripts. `BakedPathGuard` fails the compile if `appDir`/`tmpDir` leaks in.
@@ -53,8 +56,8 @@ final class DevContext extends AbstractContext
 ```
 
 Compile ahead of time with the bundled `bin/compile.php` CLI. It takes a
-*bootstrap* file that returns your `ContextProviderInterface`, plus the app
-name, app dir, and env:
+*bootstrap* file that returns your `ContextProviderInterface`, the app dir, the
+context, and optionally `compileDir`/`tmpDir` overrides:
 
 ```php
 // bootstrap.php — see examples/bootstrap.php
@@ -64,24 +67,39 @@ return new MapContextProvider(['prod' => ProdContext::class, 'dev' => DevContext
 ```
 
 ```
-php vendor/bin/compile.php bootstrap.php my-app "$(pwd)" prod
+php vendor/bin/compile.php bootstrap.php "$(pwd)" prod
 ```
 
-The CLI cleans the compile dir, compiles the env's context, and guards the
+The CLI itself never reads the environment; if your deployment sets
+`APP_COMPILE_DIR`/`APP_TMP_DIR`, pass them through explicitly (e.g. in a Dockerfile
+`RUN` step):
+
+```
+php vendor/bin/compile.php bootstrap.php "$(pwd)" prod "$APP_COMPILE_DIR" "$APP_TMP_DIR"
+```
+
+The CLI cleans the compile dir, compiles the context, and guards the
 result against baked paths, exiting `0` on success. Under the hood it is:
 
 ```php
 $provider = require 'bootstrap.php';
-$meta = AppMeta::fromAppDir('my-app', getcwd(), 'prod');
+$meta = AppMeta::fromAppDir(getcwd(), 'prod', $compileDir, $tmpDir); // args 4/5, or null
 
-exit((new CompileRunner($provider))->run('prod', $meta));
+exit((new CompileRunner($provider))->run($meta));
 ```
 
-Bootstrap at runtime:
+Bootstrap at runtime. Resolve `compileDir`/`tmpDir` to the **same** values you passed
+to the CLI above — a mismatch means the running app looks for compiled scripts in a
+different place than they were baked into:
 
 ```php
-$meta = AppMeta::fromAppDir('my-app', dirname(__DIR__), 'prod');
-$context = $provider->get(getenv('APP_ENV') ?: 'prod', $meta);
+$meta = AppMeta::fromAppDir(
+    dirname(__DIR__),
+    getenv('APP_ENV') ?: 'prod',
+    getenv('APP_COMPILE_DIR') ?: null,
+    getenv('APP_TMP_DIR') ?: null,
+);
+$context = $provider->get($meta);
 $injector = $context->getInjectorInstance();
 
 foreach ($context->getSavedSingleton() as $class) {

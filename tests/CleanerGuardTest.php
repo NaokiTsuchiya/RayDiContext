@@ -63,7 +63,7 @@ final class CleanerGuardTest extends TestCase
     #[Test]
     public function rejectsCompileDirHoldingAppDirWithoutRemovingAnything(): void
     {
-        $meta = new AppMeta('fake', $this->appDir, $this->baseDir, "{$this->appDir}/var/tmp");
+        $meta = new AppMeta($this->appDir, 'prod', $this->baseDir, "{$this->appDir}/var/tmp");
 
         try {
             (new Cleaner())($meta);
@@ -84,7 +84,7 @@ final class CleanerGuardTest extends TestCase
     #[Test]
     public function honoursApplicationSuppliedGuard(): void
     {
-        $meta = new AppMeta('fake', $this->appDir, $this->compileDir, "{$this->appDir}/var/tmp");
+        $meta = new AppMeta($this->appDir, 'prod', $this->compileDir, "{$this->appDir}/var/tmp");
 
         try {
             (new Cleaner(new FakeRejectingGuard()))($meta);

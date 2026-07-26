@@ -57,13 +57,37 @@ final class BinCompileTest extends TestCase
 
         [$status, $stderr] = Cli::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
-            'fake',
             $appDir,
             'prod',
         ]);
 
         static::assertSame(0, $status, $stderr);
         static::assertNotSame([], glob("{$appDir}/var/di/prod/*FakeCarInterface*.php"));
+    }
+
+    /**
+     * Explicit compileDir/tmpDir CLI arguments override the conventional defaults
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function compilesToExplicitOverride(): void
+    {
+        $appDir = "{$this->baseDir}/app";
+        $compileDir = "{$this->baseDir}/custom-di";
+        $tmpDir = "{$this->baseDir}/app/var/tmp/prod";
+
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            $appDir,
+            'prod',
+            $compileDir,
+            $tmpDir,
+        ]);
+
+        static::assertSame(0, $status, $stderr);
+        static::assertNotSame([], glob("{$compileDir}/*FakeCarInterface*.php"));
+        static::assertSame([], glob("{$appDir}/var/di/prod/*.php"));
     }
 
     /**
@@ -90,7 +114,6 @@ final class BinCompileTest extends TestCase
     {
         [$status, $stderr] = Cli::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_invalid.php',
-            'fake',
             "{$this->baseDir}/app",
             'prod',
         ]);

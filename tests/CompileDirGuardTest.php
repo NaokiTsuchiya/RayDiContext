@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -53,6 +54,7 @@ final class CompileDirGuardTest extends TestCase
      * The filesystem root is rejected
      *
      * @throws UnsafeCompileDir
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function rejectsFilesystemRoot(): void
@@ -60,7 +62,7 @@ final class CompileDirGuardTest extends TestCase
         $this->expectException(UnsafeCompileDir::class);
         $this->expectExceptionMessage('Refusing to empty the filesystem root');
 
-        ($this->guard)(new AppMeta('fake', '/app', '/', '/tmp'));
+        ($this->guard)(new AppMeta('/app', 'prod', '/', '/tmp'));
     }
 
     /**
@@ -70,26 +72,28 @@ final class CompileDirGuardTest extends TestCase
      * slashes, but APP_COMPILE_DIR=/. reaches the compile dir verbatim.
      *
      * @throws UnsafeCompileDir
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function rejectsRootReachedThroughDotSegment(): void
     {
         $this->expectException(UnsafeCompileDir::class);
 
-        ($this->guard)(new AppMeta('fake', '/app', '/.', '/tmp'));
+        ($this->guard)(new AppMeta('/app', 'prod', '/.', '/tmp'));
     }
 
     /**
      * A compile dir equal to the app dir is rejected
      *
      * @throws UnsafeCompileDir
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function rejectsCompileDirEqualToAppDir(): void
     {
         $this->expectException(UnsafeCompileDir::class);
 
-        ($this->guard)(new AppMeta('fake', $this->appDir, $this->appDir, "{$this->appDir}/var/tmp"));
+        ($this->guard)(new AppMeta($this->appDir, 'prod', $this->appDir, "{$this->appDir}/var/tmp"));
     }
 
     /**
@@ -98,13 +102,14 @@ final class CompileDirGuardTest extends TestCase
      * This is the APP_COMPILE_DIR=/app typo when the app lives in /app/src.
      *
      * @throws UnsafeCompileDir
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function rejectsCompileDirHoldingAppDir(): void
     {
         $this->expectException(UnsafeCompileDir::class);
 
-        ($this->guard)(new AppMeta('fake', $this->appDir, $this->baseDir, "{$this->appDir}/var/tmp"));
+        ($this->guard)(new AppMeta($this->appDir, 'prod', $this->baseDir, "{$this->appDir}/var/tmp"));
     }
 
     /**
@@ -114,6 +119,7 @@ final class CompileDirGuardTest extends TestCase
      * no prefix until both are resolved.
      *
      * @throws UnsafeCompileDir
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function rejectsSymlinkedCompileDirHoldingAppDir(): void
@@ -125,19 +131,20 @@ final class CompileDirGuardTest extends TestCase
 
         $this->expectException(UnsafeCompileDir::class);
 
-        ($this->guard)(new AppMeta('fake', $appDir, $link, "{$appDir}/var/tmp"));
+        ($this->guard)(new AppMeta($appDir, 'prod', $link, "{$appDir}/var/tmp"));
     }
 
     /**
      * The rejection is catchable as a package exception
      *
      * @throws UnsafeCompileDir
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function rejectionImplementsPackageExceptionInterface(): void
     {
         try {
-            ($this->guard)(new AppMeta('fake', '/app', '/', '/tmp'));
+            ($this->guard)(new AppMeta('/app', 'prod', '/', '/tmp'));
             static::fail('UnsafeCompileDir was not thrown');
         } catch (UnsafeCompileDir $e) {
             static::assertInstanceOf(ExceptionInterface::class, $e);
@@ -148,13 +155,14 @@ final class CompileDirGuardTest extends TestCase
      * The conventional compile dir under the app dir is allowed
      *
      * @throws UnsafeCompileDir
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function allowsCompileDirUnderAppDir(): void
     {
         $this->expectNotToPerformAssertions();
 
-        ($this->guard)(AppMeta::fromAppDir('fake', $this->appDir, 'prod'));
+        ($this->guard)(AppMeta::fromAppDir($this->appDir, 'prod'));
     }
 
     /**
@@ -164,12 +172,13 @@ final class CompileDirGuardTest extends TestCase
      * reject a legitimate compile dir.
      *
      * @throws UnsafeCompileDir
+     * @throws InvalidAppMeta
      */
     #[Test]
     public function allowsCompileDirSharingNamePrefixWithAppDir(): void
     {
         $this->expectNotToPerformAssertions();
 
-        ($this->guard)(new AppMeta('fake', '/appdata', '/app', '/tmp'));
+        ($this->guard)(new AppMeta('/appdata', 'prod', '/app', '/tmp'));
     }
 }

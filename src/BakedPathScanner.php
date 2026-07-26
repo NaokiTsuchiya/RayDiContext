@@ -38,13 +38,11 @@ final class BakedPathScanner
 
     /**
      * Returns whether the needle occurs outside every compile dir literal
+     *
+     * @param non-empty-string $needle
      */
     public function hasBakedPath(string $needle): bool
     {
-        if ($needle === '') {
-            return false;
-        }
-
         $length = strlen($needle);
         $offset = 0;
         while (true) {

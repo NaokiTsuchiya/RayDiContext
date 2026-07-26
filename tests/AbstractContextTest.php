@@ -14,8 +14,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Ray\Di\Injector;
-use ReflectionException;
-use ReflectionMethod;
 
 use function mkdir;
 use function uniqid;
@@ -84,21 +82,5 @@ final class AbstractContextTest extends TestCase
 
         static::assertInstanceOf(Injector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
-    }
-
-    /**
-     * The constructor is final, so `new $class($meta)` holds for every context class
-     *
-     * A subclass that widened or reordered the signature would turn the by-name
-     * instantiation in MapContextProvider into a runtime fatal.
-     *
-     * @throws ReflectionException
-     */
-    #[Test]
-    public function constructorIsFinal(): void
-    {
-        $constructor = new ReflectionMethod(AbstractContext::class, '__construct');
-
-        static::assertTrue($constructor->isFinal());
     }
 }

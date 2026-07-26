@@ -6,83 +6,62 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\AbstractRuntimeException;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
+use NaokiTsuchiya\RayDiContext\Fake\ExceptionClasses;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
 
-use function basename;
-use function glob;
 use function is_a;
-use function sprintf;
 
 /**
  * ExceptionInterface says it marks every exception of this package; this holds it to that
  *
- * The list is discovered from the source directory rather than hard-coded, so an exception
- * added later is covered without anyone remembering to register it here.
+ * One case per exception class, so a violation names the class that broke instead of
+ * failing a single aggregate assertion.
  */
 #[CoversClass(AbstractRuntimeException::class)]
 final class ExceptionHierarchyTest extends TestCase
 {
     /**
-     * Every concrete exception is catchable as ExceptionInterface, and as RuntimeException
-     *
-     * Every violation is collected before asserting, so one missing marker does not hide
-     * the rest.
+     * The discovery is worth asserting on its own: an empty list would pass every case below
      *
      * @throws ReflectionException
      */
     #[Test]
-    public function everyConcreteExceptionImplementsTheMarker(): void
+    public function discoversTheExceptionClasses(): void
     {
-        $classes = $this->concreteExceptions();
-        $violations = [];
-        foreach ($classes as $class) {
-            $implementsMarker = is_a($class, ExceptionInterface::class, allow_string: true);
-            $extendsRuntime = is_a($class, RuntimeException::class, allow_string: true);
-            $isFinal = (new ReflectionClass($class))->isFinal();
-            if (!$implementsMarker) {
-                $violations[] = sprintf('%s does not implement %s', $class, ExceptionInterface::class);
-            }
+        static::assertNotSame([], ExceptionClasses::provide());
+    }
 
-            if (!$extendsRuntime) {
-                $violations[] = sprintf('%s does not extend %s', $class, RuntimeException::class);
-            }
+    /** @param class-string $class */
+    #[Test]
+    #[DataProviderExternal(ExceptionClasses::class, 'provide')]
+    public function isCatchableAsTheMarker(string $class): void
+    {
+        static::assertTrue(is_a($class, ExceptionInterface::class, allow_string: true));
+    }
 
-            if (!$isFinal) {
-                $violations[] = sprintf('%s is not final', $class);
-            }
-        }
-
-        static::assertNotSame([], $classes, 'No exception classes were discovered');
-        static::assertSame([], $violations);
+    /** @param class-string $class */
+    #[Test]
+    #[DataProviderExternal(ExceptionClasses::class, 'provide')]
+    public function isCatchableAsRuntimeException(string $class): void
+    {
+        static::assertTrue(is_a($class, RuntimeException::class, allow_string: true));
     }
 
     /**
-     * Returns every class under src/Exception except the marker and the base class
-     *
-     * @return list<class-string>
+     * @param class-string $class
      *
      * @throws ReflectionException
      */
-    private function concreteExceptions(): array
+    #[Test]
+    #[DataProviderExternal(ExceptionClasses::class, 'provide')]
+    public function isFinal(string $class): void
     {
-        $namespace = (new ReflectionClass(ExceptionInterface::class))->getNamespaceName();
-        $found = glob(__DIR__ . '/../src/Exception/*.php');
-        $files = $found === false ? [] : $found;
-        $classes = [];
-        foreach ($files as $file) {
-            $class = $namespace . '\\' . basename($file, suffix: '.php');
-            if ($class === ExceptionInterface::class || $class === AbstractRuntimeException::class) {
-                continue;
-            }
-
-            $classes[] = $class;
-        }
-
-        return $classes;
+        static::assertTrue((new ReflectionClass($class))->isFinal());
     }
 }

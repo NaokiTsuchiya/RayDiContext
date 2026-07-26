@@ -18,12 +18,15 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Ray\Compiler\CompiledInjector;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use RuntimeException;
 use SplFileInfo;
 
 use function chmod;
 use function file_put_contents;
 use function filemtime;
+use function fileperms;
 use function filesize;
 use function glob;
 use function is_dir;
@@ -148,6 +151,47 @@ final class CompileRunnerTest extends TestCase
     }
 
     /**
+     * Every compiled entry is readable by a user other than the one that compiled
+     *
+     * This is the build-as-root, run-as-non-root container: Ray.Compiler writes the
+     * scripts 0600 through tempnam(), which leaves them unreadable to the runtime user
+     * once the compile dir is baked into the image.
+     *
+     * @throws BakedPathFound
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function runMakesCompiledScriptsWorldReadable(): void
+    {
+        $this->runner->run($this->meta);
+
+        static::assertSame(0o755, $this->mode($this->meta->compileDir));
+        $entries = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($this->meta->compileDir, FilesystemIterator::SKIP_DOTS),
+        );
+        $count = 0;
+        /** @var SplFileInfo $entry */
+        foreach ($entries as $entry) {
+            $pathname = $entry->getPathname();
+            $mode = $this->mode($pathname);
+            // A directory additionally has to be traversable to reach what is inside
+            $isDir = $entry->isDir();
+            $required = $isDir ? 0o005 : 0o004;
+            static::assertSame($required, $mode & $required, $pathname);
+            // Compiled scripts always arrive at 0600 from tempnam(), so they are always
+            // rewritten: their mode is exact, not merely readable.
+            $isScript = $entry->getExtension() === 'php';
+            if ($isScript) {
+                static::assertSame(0o644, $mode, $pathname);
+            }
+
+            $count++;
+        }
+
+        static::assertGreaterThan(0, $count);
+    }
+
+    /**
      * The guard runs after compilation and rejects baked runtime paths
      *
      * @throws RuntimeException
@@ -210,5 +254,13 @@ final class CompileRunnerTest extends TestCase
         ksort($files);
 
         return $files;
+    }
+
+    /**
+     * Returns the permission bits of a path
+     */
+    private function mode(string $path): int
+    {
+        return (int) fileperms($path) & 0o777;
     }
 }

@@ -15,12 +15,12 @@ use function mkdir;
 use function uniqid;
 
 /**
- * End-to-end test for the bin/compile.php CLI
+ * End-to-end test for the bin/ray-di-compile CLI
  */
 final class BinCompileTest extends TestCase
 {
     /** Path to the compile CLI under test */
-    private const SCRIPT = __DIR__ . '/../bin/compile.php';
+    private const SCRIPT = __DIR__ . '/../bin/ray-di-compile';
 
     /** Directory holding the prepared bootstrap stub files */
     private const FIXTURE_DIR = __DIR__ . '/Fixture';

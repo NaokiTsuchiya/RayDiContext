@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 /**
- * Example bootstrap for bin/compile.php.
+ * Example bootstrap for bin/ray-di-compile.
  *
  * A bootstrap file returns the application's ContextProviderInterface. Copy this
  * file into your app, replace the context classes with your own, then compile with:
  *
- *   php vendor/bin/compile.php path/to/bootstrap.php "$(pwd)" prod
+ *   php vendor/bin/ray-di-compile path/to/bootstrap.php "$(pwd)" prod
  */
 
 use NaokiTsuchiya\RayDiContext\MapContextProvider;

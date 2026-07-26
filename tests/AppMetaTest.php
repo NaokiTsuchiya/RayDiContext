@@ -108,7 +108,7 @@ final class AppMetaTest extends TestCase
      * Explicit compileDir/tmpDir override the conventional defaults independently
      *
      * fromAppDir() no longer reads the environment itself; a caller such as
-     * bin/compile.php reads APP_COMPILE_DIR/APP_TMP_DIR and passes the result in.
+     * bin/ray-di-compile passes the result in.
      *
      * @throws InvalidAppMeta
      */

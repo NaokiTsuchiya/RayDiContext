@@ -55,7 +55,7 @@ final class DevContext extends AbstractContext
 }
 ```
 
-Compile ahead of time with the bundled `bin/compile.php` CLI. It takes a
+Compile ahead of time with the bundled `bin/ray-di-compile` CLI. It takes a
 *bootstrap* file that returns your `ContextProviderInterface`, the app dir, the
 context, and optionally `compileDir`/`tmpDir` overrides:
 
@@ -67,7 +67,7 @@ return new MapContextProvider(['prod' => ProdContext::class, 'dev' => DevContext
 ```
 
 ```
-php vendor/bin/compile.php bootstrap.php "$(pwd)" prod
+php vendor/bin/ray-di-compile bootstrap.php "$(pwd)" prod
 ```
 
 The CLI itself never reads the environment; if your deployment sets
@@ -75,7 +75,7 @@ The CLI itself never reads the environment; if your deployment sets
 `RUN` step):
 
 ```
-php vendor/bin/compile.php bootstrap.php "$(pwd)" prod "$APP_COMPILE_DIR" "$APP_TMP_DIR"
+php vendor/bin/ray-di-compile bootstrap.php "$(pwd)" prod "$APP_COMPILE_DIR" "$APP_TMP_DIR"
 ```
 
 The CLI cleans the compile dir, compiles the context, and guards the

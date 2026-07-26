@@ -6,7 +6,6 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 
-use function getenv;
 use function rtrim;
 use function sprintf;
 use function str_contains;
@@ -88,10 +87,12 @@ final readonly class AppMeta
     /**
      * Creates a meta whose directories default to conventional paths under the app dir
      *
-     * The APP_COMPILE_DIR and APP_TMP_DIR environment variables override the defaults,
-     * which allows a container deployment to bake the compile dir into the image while
-     * pointing the tmp dir at a writable volume. Trailing slashes are trimmed so the
-     * paths compare verbatim against baked literals.
+     * $compileDir/$tmpDir default to "{appDir}/var/di/{context}" and
+     * "{appDir}/var/tmp/{context}" when omitted; pass explicit values (e.g. read from
+     * APP_COMPILE_DIR/APP_TMP_DIR by the caller) to override, which lets a container
+     * deployment bake the compile dir into the image while pointing the tmp dir at a
+     * writable volume. This method does not read the environment itself. Trailing
+     * slashes are trimmed so the paths compare verbatim against baked literals.
      *
      * $context is interpolated into the default compileDir/tmpDir here via string
      * concatenation, not path resolution, so most characters (including "/", which just
@@ -101,8 +102,12 @@ final readonly class AppMeta
      *
      * @throws InvalidAppMeta When appDir/context is empty, or context contains "..".
      */
-    public static function fromAppDir(string $appDir, string $context): self
-    {
+    public static function fromAppDir(
+        string $appDir,
+        string $context,
+        ?string $compileDir = null,
+        ?string $tmpDir = null,
+    ): self {
         if (str_contains($context, '..')) {
             throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $context must not contain "..": "%s"', $context));
         }
@@ -112,27 +117,8 @@ final readonly class AppMeta
         return new self(
             $appDir,
             $context,
-            self::env('APP_COMPILE_DIR', "{$appDir}/var/di/{$context}"),
-            self::env('APP_TMP_DIR', "{$appDir}/var/tmp/{$context}"),
+            $compileDir ?? "{$appDir}/var/di/{$context}",
+            $tmpDir ?? "{$appDir}/var/tmp/{$context}",
         );
-    }
-
-    /**
-     * Returns the env value, falling back to the default when unset or empty
-     *
-     * @param non-empty-string $default
-     *
-     * @return non-empty-string
-     */
-    private static function env(string $name, string $default): string
-    {
-        $value = getenv($name);
-        if ($value === false) {
-            return $default;
-        }
-
-        $value = rtrim($value, characters: '/');
-
-        return $value === '' ? $default : $value;
     }
 }

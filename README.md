@@ -10,8 +10,13 @@ Context, meta, and compile management for [Ray.Di](https://github.com/ray-di/Ray
 `AppMeta` keeps the two independent, so `compileDir` can be baked into a
 `readOnlyRootFilesystem` container while `tmpDir` stays a writable volume.
 
-- `compileDir` defaults to `{appDir}/var/di/{context}`, overridable with `APP_COMPILE_DIR`
-- `tmpDir` defaults to `{appDir}/var/tmp/{context}`, overridable with `APP_TMP_DIR`
+- `compileDir` defaults to `{appDir}/var/di/{context}`; the bundled CLI lets you
+  override it with `APP_COMPILE_DIR`
+- `tmpDir` defaults to `{appDir}/var/tmp/{context}`; the bundled CLI lets you override
+  it with `APP_TMP_DIR`
+- `AppMeta::fromAppDir()` never reads the environment itself — pass overrides in
+  explicitly. Compile-time and runtime code must read the **same** env vars, or the
+  compiled scripts and the running app will look in different places
 
 **Never bind `AppMeta` with `toInstance()`** — Ray.Compiler freezes bound objects into
 the compiled scripts. `BakedPathGuard` fails the compile if `appDir`/`tmpDir` leaks in.
@@ -72,15 +77,27 @@ result against baked paths, exiting `0` on success. Under the hood it is:
 
 ```php
 $provider = require 'bootstrap.php';
-$meta = AppMeta::fromAppDir(getcwd(), 'prod');
+$meta = AppMeta::fromAppDir(
+    getcwd(),
+    'prod',
+    getenv('APP_COMPILE_DIR') ?: null,
+    getenv('APP_TMP_DIR') ?: null,
+);
 
 exit((new CompileRunner($provider))->run($meta));
 ```
 
-Bootstrap at runtime:
+Bootstrap at runtime. Read the **same** `APP_COMPILE_DIR`/`APP_TMP_DIR` as the compile
+step above — `fromAppDir()` won't do it for you, and a mismatch means the running app
+looks for compiled scripts in a different place than they were baked into:
 
 ```php
-$meta = AppMeta::fromAppDir(dirname(__DIR__), getenv('APP_ENV') ?: 'prod');
+$meta = AppMeta::fromAppDir(
+    dirname(__DIR__),
+    getenv('APP_ENV') ?: 'prod',
+    getenv('APP_COMPILE_DIR') ?: null,
+    getenv('APP_TMP_DIR') ?: null,
+);
 $context = $provider->get($meta);
 $injector = $context->getInjectorInstance();
 

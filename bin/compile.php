@@ -69,7 +69,12 @@ exit((static function (array $argv): int {
         return 2;
     }
 
-    $meta = AppMeta::fromAppDir($appDir, $context);
+    $meta = AppMeta::fromAppDir(
+        $appDir,
+        $context,
+        getenv('APP_COMPILE_DIR') ?: null,
+        getenv('APP_TMP_DIR') ?: null,
+    );
 
     return (new CompileRunner($provider))->run($meta);
 })($argv));

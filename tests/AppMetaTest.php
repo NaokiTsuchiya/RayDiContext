@@ -10,20 +10,9 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
 
-use function putenv;
-
 #[CoversClass(AppMeta::class)]
 final class AppMetaTest extends TestCase
 {
-    /**
-     * {@inheritDoc}
-     */
-    protected function tearDown(): void
-    {
-        putenv('APP_COMPILE_DIR');
-        putenv('APP_TMP_DIR');
-    }
-
     /**
      * Keeps constructor arguments as-is
      *
@@ -116,37 +105,20 @@ final class AppMetaTest extends TestCase
     }
 
     /**
-     * APP_COMPILE_DIR and APP_TMP_DIR override the defaults independently
+     * Explicit compileDir/tmpDir override the conventional defaults independently
+     *
+     * fromAppDir() no longer reads the environment itself; a caller such as
+     * bin/compile.php reads APP_COMPILE_DIR/APP_TMP_DIR and passes the result in.
      *
      * @throws InvalidAppMeta
      */
     #[Test]
-    public function fromAppDirEnvOverride(): void
+    public function fromAppDirOverride(): void
     {
-        putenv('APP_COMPILE_DIR=/opt/di');
-        putenv('APP_TMP_DIR=/tmp/rw');
-
-        $meta = AppMeta::fromAppDir('/path/to/app', 'prod');
+        $meta = AppMeta::fromAppDir('/path/to/app', 'prod', '/opt/di', '/tmp/rw');
 
         static::assertSame('/opt/di', $meta->compileDir);
         static::assertSame('/tmp/rw', $meta->tmpDir);
-    }
-
-    /**
-     * An empty env value is treated as unset
-     *
-     * @throws InvalidAppMeta
-     */
-    #[Test]
-    public function fromAppDirEmptyEnvFallsBack(): void
-    {
-        putenv('APP_COMPILE_DIR=');
-        putenv('APP_TMP_DIR=');
-
-        $meta = AppMeta::fromAppDir('/path/to/app', 'prod');
-
-        static::assertSame('/path/to/app/var/di/prod', $meta->compileDir);
-        static::assertSame('/path/to/app/var/tmp/prod', $meta->tmpDir);
     }
 
     /**
@@ -155,27 +127,23 @@ final class AppMetaTest extends TestCase
      * @throws InvalidAppMeta
      */
     #[Test]
-    public function fromAppDirPartialEnvOverride(): void
+    public function fromAppDirPartialOverride(): void
     {
-        putenv('APP_COMPILE_DIR=/opt/di');
-
-        $meta = AppMeta::fromAppDir('/path/to/app', 'prod');
+        $meta = AppMeta::fromAppDir('/path/to/app', 'prod', compileDir: '/opt/di');
 
         static::assertSame('/opt/di', $meta->compileDir);
         static::assertSame('/path/to/app/var/tmp/prod', $meta->tmpDir);
     }
 
     /**
-     * Trailing slashes are trimmed so paths compare verbatim against baked literals
+     * Trailing slashes are trimmed on both the conventional default and an override
      *
      * @throws InvalidAppMeta
      */
     #[Test]
     public function fromAppDirTrimsTrailingSlashes(): void
     {
-        putenv('APP_TMP_DIR=/tmp/rw/');
-
-        $meta = AppMeta::fromAppDir('/path/to/app/', 'prod');
+        $meta = AppMeta::fromAppDir('/path/to/app/', 'prod', tmpDir: '/tmp/rw/');
 
         static::assertSame('/path/to/app', $meta->appDir);
         static::assertSame('/path/to/app/var/di/prod', $meta->compileDir);

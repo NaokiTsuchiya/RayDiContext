@@ -15,6 +15,8 @@ use function chmod;
 use function fileperms;
 use function is_dir;
 use function is_executable;
+use function restore_error_handler;
+use function set_error_handler;
 use function sprintf;
 
 /**
@@ -32,13 +34,15 @@ use function sprintf;
  * dir the compiling user does not own (a root-owned 0777 volume, say) is already
  * readable, and chmod on it would fail for no gain. That rule reads the other class
  * only, so a directory can satisfy it and still deny this process, which POSIX resolves
- * against the owner class first; such a directory is refused by name rather than walked
- * into. Symlinks are skipped rather than followed, since chmod would apply to the
- * target — outside the compile dir.
+ * against the owner class first; any directory that cannot then be listed — the compile
+ * dir or one below it — is reported by name instead of being walked into. Symlinks are
+ * skipped rather than followed, since chmod would apply to the target — outside the
+ * compile dir.
  *
- * The compile dir and the entries directly in it are normalized, and no deeper: by the
- * time this runs, Cleaner has emptied the dir and ray/compiler has filled it with one
- * flat file per dependency index, so a subdirectory to descend into cannot be there.
+ * Subdirectories are descended into. ray/compiler names a script after its dependency
+ * index with only the namespace separators replaced, so a qualifier holding a "/" —
+ * annotatedWith('a/b') — makes FilePutContents mkdir a real directory under the compile
+ * dir, and the script inside it is written 0600 like any other.
  *
  * This is a workaround for how ray/compiler writes, not a facility to build on: it
  * exists because FilePutContents goes through tempnam(), and CompileRunner builds it
@@ -61,7 +65,7 @@ final class PermissionNormalizer
     private const DIR_MODE = 0o755;
 
     /**
-     * Normalizes the compile dir and the entries directly in it
+     * Normalizes the compile dir and everything below it
      *
      * The path is verified to be a directory before anything is changed. Without that
      * check a path that is a file gets chmod'ed to 0755 and only then fails, leaving a
@@ -86,7 +90,10 @@ final class PermissionNormalizer
     }
 
     /**
-     * Normalizes every entry directly inside a directory
+     * Normalizes every entry inside a directory, descending into real subdirectories
+     *
+     * The recursion is written out rather than delegated to RecursiveDirectoryIterator,
+     * which follows symlinked directories and would chmod outside the compile dir.
      *
      * @throws CompileDirNotReadable When the directory cannot be listed or traversed.
      * @throws ChmodFailed When an entry cannot be made readable.
@@ -101,8 +108,16 @@ final class PermissionNormalizer
                 continue;
             }
 
+            $pathname = $entry->getPathname();
             $isDir = $entry->isDir();
-            $this->apply($entry->getPathname(), $isDir ? self::DIR_MODE : self::FILE_MODE);
+            if (!$isDir) {
+                $this->apply($pathname, self::FILE_MODE);
+
+                continue;
+            }
+
+            $this->apply($pathname, self::DIR_MODE);
+            $this->normalizeContents($pathname);
         }
     }
 
@@ -157,13 +172,24 @@ final class PermissionNormalizer
             return;
         }
 
-        $changed = chmod($path, $mode);
+        // chmod() raises an E_WARNING of its own when the OS refuses. ChmodFailed carries
+        // the same information with the path attached, and a warning on top of it would
+        // escape a class whose contract is that a failure arrives as one package exception
+        // — so the diagnostic is swallowed for this call and the exception is what is left.
+        set_error_handler(static fn(): bool => true);
+        try {
+            $changed = chmod($path, $mode);
+        } finally {
+            restore_error_handler();
+        }
+
         // @codeCoverageIgnoreStart
-        // chmod() asks for ownership, not for permission on the entry, and openDir() has
-        // already established that the directory holding this one can be traversed — a
-        // parent that denies traversal is refused there rather than failing here. What is
-        // left is an entry the process does not own while not running as root, which a
-        // test cannot set up for itself, or a race with another process.
+        // chmod() asks for ownership or root, so an entry the process does not own reaches
+        // this: handing the normalizer /root (Linux) or /var/root (macOS) throws here as an
+        // ordinary user. The suite does not do that, because no such path exists with the
+        // same owner and mode across every environment this package supports, and a test
+        // that skipped itself would take the 100% coverage floor down with it. Ignored
+        // because it cannot be reproduced portably, not because it cannot happen.
         if (!$changed) {
             throw new ChmodFailed(sprintf('Failed to set mode %o on: %s', $mode, $path));
         }

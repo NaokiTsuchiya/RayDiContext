@@ -50,10 +50,11 @@ final class PermissionNormalizerTest extends TestCase
     }
 
     /**
-     * Owner-only scripts and directories become world-readable
+     * Owner-only scripts and directories become world-readable, nested ones included
      *
      * This is what Ray.Compiler leaves behind: 0600 files from tempnam(), in a compile
-     * dir whose own mode depends on the umask of the build.
+     * dir whose own mode depends on the umask of the build. A qualifier holding a "/"
+     * puts one of those scripts in a subdirectory, so the nested case is not academic.
      *
      * @throws ChmodFailed
      * @throws RuntimeException
@@ -65,12 +66,14 @@ final class PermissionNormalizerTest extends TestCase
         mkdir($nested, permissions: 0o700);
         chmod($nested, permissions: 0o700);
         $this->copyScript("{$this->compileDir}/script.php", mode: 0o600);
+        $this->copyScript("{$nested}/script.php", mode: 0o600);
 
         (new PermissionNormalizer())($this->compileDir);
 
         static::assertSame(0o755, $this->mode($this->compileDir));
         static::assertSame(0o755, $this->mode($nested));
         static::assertSame(0o644, $this->mode("{$this->compileDir}/script.php"));
+        static::assertSame(0o644, $this->mode("{$nested}/script.php"));
     }
 
     /**

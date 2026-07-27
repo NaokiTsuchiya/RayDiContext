@@ -79,14 +79,24 @@ php vendor/bin/ray-di-compile bootstrap.php "$(pwd)" prod "$APP_COMPILE_DIR" "$A
 ```
 
 The CLI cleans the compile dir, compiles the context, and guards the
-result against baked paths, exiting `0` on success. Under the hood it is:
+result against baked paths. Under the hood it is:
 
 ```php
 $provider = require 'bootstrap.php';
 $meta = AppMeta::fromAppDir(getcwd(), 'prod', $compileDir, $tmpDir); // args 4/5, or null
 
-exit((new CompileRunner($provider))->run($meta));
+(new CompileRunner($provider))->run($meta); // returns void, throws on failure
 ```
+
+### Exit status
+
+The exit status is a public contract — gate your CI on it.
+
+| Code | Meaning |
+|------|---------|
+| `0`  | The context compiled successfully |
+| `1`  | The compile failed. Every exception of this package (`UnknownContext`, `BakedPathFound`, `CompileDirNotWritable`, …) is caught and its message written to STDERR as a single line — no stack trace, so the CI log stays readable |
+| `2`  | Usage error: wrong number of arguments, bootstrap file not found, or a bootstrap that does not return a `ContextProviderInterface` |
 
 Bootstrap at runtime. Resolve `compileDir`/`tmpDir` to the **same** values you passed
 to the CLI above — a mismatch means the running app looks for compiled scripts in a

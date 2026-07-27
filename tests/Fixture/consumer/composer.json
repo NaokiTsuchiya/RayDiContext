@@ -1,0 +1,17 @@
+{
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../package",
+            "options": {
+                "symlink": false,
+                "versions": {
+                    "naoki-tsuchiya/ray-di-context": "1.0.0"
+                }
+            }
+        }
+    ],
+    "require": {
+        "naoki-tsuchiya/ray-di-context": "1.0.0"
+    }
+}

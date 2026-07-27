@@ -26,12 +26,17 @@ declare(strict_types=1);
  *       'dev'  => App\DevContext::class,
  *   ]);
  *
- * The exit status is the status returned by CompileRunner (0 on success).
+ * Exit status:
+ *   0  the context compiled successfully
+ *   1  the compile failed; the exception message is written to STDERR without a stack trace
+ *   2  usage error: wrong number of arguments, bootstrap file not found, or a bootstrap
+ *      that does not return a ContextProviderInterface
  */
 
 use NaokiTsuchiya\RayDiContext\AppMeta;
 use NaokiTsuchiya\RayDiContext\CompileRunner;
 use NaokiTsuchiya\RayDiContext\ContextProviderInterface;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 
 exit((static function (array $argv): int {
     foreach ([
@@ -51,9 +56,18 @@ exit((static function (array $argv): int {
         return 1;
     }
 
+    $usage = "Usage: php bin/ray-di-compile <bootstrap> <appDir> <context> [compileDir] [tmpDir]\n";
+
     [, $bootstrap, $appDir, $context, $compileDir, $tmpDir] = $argv + [null, null, null, null, null, null];
     if ($bootstrap === null || $appDir === null || $context === null) {
-        fwrite(STDERR, "Usage: php bin/ray-di-compile <bootstrap> <appDir> <context> [compileDir] [tmpDir]\n");
+        fwrite(STDERR, $usage);
+
+        return 2;
+    }
+
+    $argumentCount = count($argv) - 1;
+    if ($argumentCount > 5) {
+        fwrite(STDERR, sprintf("Too many arguments: at most 5 are accepted, got %d.\n%s", $argumentCount, $usage));
 
         return 2;
     }
@@ -75,7 +89,14 @@ exit((static function (array $argv): int {
         return 2;
     }
 
-    $meta = AppMeta::fromAppDir($appDir, $context, $compileDir ?: null, $tmpDir ?: null);
+    try {
+        $meta = AppMeta::fromAppDir($appDir, $context, $compileDir ?: null, $tmpDir ?: null);
+        (new CompileRunner($provider))->run($meta);
+    } catch (ExceptionInterface $e) {
+        fwrite(STDERR, $e->getMessage() . "\n");
 
-    return (new CompileRunner($provider))->run($meta);
+        return 1;
+    }
+
+    return 0;
 })($argv));

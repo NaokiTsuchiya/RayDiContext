@@ -74,20 +74,19 @@ final class CompileRunnerTest extends TestCase
     }
 
     /**
-     * run() cleans stale scripts, compiles the context module, and returns 0
+     * run() cleans stale scripts and compiles the context module
      *
      * @throws BakedPathFound
      * @throws RuntimeException
      */
     #[Test]
-    public function runCleansCompilesAndReturnsZero(): void
+    public function runCleansAndCompiles(): void
     {
         mkdir($this->meta->compileDir, permissions: 0o755, recursive: true);
         file_put_contents("{$this->meta->compileDir}/stale.php", data: '<?php return 0;');
 
-        $status = $this->runner->run($this->meta);
+        $this->runner->run($this->meta);
 
-        static::assertSame(0, $status);
         static::assertFileDoesNotExist("{$this->meta->compileDir}/stale.php");
         static::assertNotSame([], glob("{$this->meta->compileDir}/*FakeCarInterface*.php"));
     }

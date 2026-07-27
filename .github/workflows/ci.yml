@@ -143,12 +143,28 @@ jobs:
 
       - run: composer test
 
+  dist:
+    name: dist
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - run: composer dist
+
   # The single required status check. Adding or removing a matrix entry above never
   # changes this job's name, so branch protection stays valid.
   ci:
     name: ci
     if: always()
-    needs: [lint, test, lowest]
+    needs: [lint, test, lowest, dist]
     runs-on: ubuntu-latest
     # Reads job results from the workflow context only — it never touches the repo.
     permissions: {}

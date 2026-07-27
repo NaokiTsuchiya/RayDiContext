@@ -2,13 +2,6 @@
 
 declare(strict_types=1);
 
-/**
- * Bootstrap of the consumer project tests/dist-check.sh installs.
- *
- * The consumer only gets this package's production autoloading, so it cannot reach
- * tests/Fake; everything the compile needs is declared here.
- */
-
 use NaokiTsuchiya\RayDiContext\AbstractContext;
 use NaokiTsuchiya\RayDiContext\MapContextProvider;
 use Ray\Compiler\CompiledInjector;

@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-#
-# Installs this package into a throwaway consumer project and compiles through the
-# installed vendor/bin/ray-di-compile, the way `composer require` users run it.
-#
-# Usage: tests/dist-check.sh   (or: composer dist)
 
 set -euo pipefail
 

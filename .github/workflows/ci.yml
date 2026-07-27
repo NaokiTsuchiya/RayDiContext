@@ -143,11 +143,6 @@ jobs:
 
       - run: composer test
 
-  # Installs the package into a consumer project and compiles through the installed
-  # vendor/bin entry. The PHPUnit suite runs the CLI out of this repository, where the
-  # first autoloader candidate always exists; only this job walks the path a
-  # `composer require` user takes. It installs nothing of this repo, so it needs no
-  # composer cache of its own and runs on one PHP version.
   dist:
     name: dist
     runs-on: ubuntu-latest

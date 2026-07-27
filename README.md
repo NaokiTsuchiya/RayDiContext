@@ -11,6 +11,8 @@ Context, meta, and compile management for [Ray.Di](https://github.com/ray-di/Ray
 `readOnlyRootFilesystem` container while `tmpDir` stays a writable volume.
 
 - `compileDir`/`tmpDir` default to `{appDir}/var/di/{context}` / `{appDir}/var/tmp/{context}`
+- `appDir` must exist — `AppMeta::fromAppDir()` resolves it with `realpath()`, so a relative
+  path is never baked into the compiled scripts, and rejects it otherwise
 - Neither `AppMeta::fromAppDir()` nor the bundled CLI reads the environment — pass
   overrides in explicitly (e.g. as CLI arguments, sourced from env vars by your shell
   or Dockerfile). Compile-time and runtime code must agree on the same values, or the
@@ -99,7 +101,7 @@ The exit status is a public contract — gate your CI on it.
 | Code | Meaning |
 |------|---------|
 | `0`  | The context compiled successfully |
-| `1`  | The compile failed. Every exception of this package (`UnknownContext`, `BakedPathFound`, `CompileDirNotWritable`, …) is caught and its message written to STDERR as a single line — no stack trace, so the CI log stays readable |
+| `1`  | The compile failed, or `appDir` does not exist. Every exception of this package (`UnknownContext`, `BakedPathFound`, `CompileDirNotWritable`, `InvalidAppMeta`, …) is caught and its message written to STDERR as a single line — no stack trace, so the CI log stays readable |
 | `2`  | Usage error: wrong number of arguments, bootstrap file not found, or a bootstrap that does not return a `ContextProviderInterface` |
 
 Bootstrap at runtime. Resolve `compileDir`/`tmpDir` to the **same** values you passed

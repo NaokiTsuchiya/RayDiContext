@@ -167,6 +167,31 @@ final class BinCompileTest extends TestCase
     }
 
     /**
+     * An appDir that does not exist fails with status 1 and names the argument
+     *
+     * The path is resolved before anything is compiled, so the message points at the
+     * argument rather than at a baked path or a mkdir failure downstream.
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function failsWithStatusOneOnMissingAppDir(): void
+    {
+        $appDir = "{$this->baseDir}/nosuch";
+
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            $appDir,
+            'prod',
+        ]);
+
+        static::assertSame(1, $status, $stderr);
+        static::assertStringContainsString('$appDir does not exist', $stderr);
+        static::assertStringContainsString($appDir, $stderr);
+        static::assertStringNotContainsString('Stack trace', $stderr);
+    }
+
+    /**
      * Surplus arguments are a usage error, not a silently successful compile
      *
      * @throws RuntimeException

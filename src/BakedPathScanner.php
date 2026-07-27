@@ -13,15 +13,24 @@ use function strpos;
  *
  * A needle occurrence is a violation unless it lies fully inside a compile dir literal:
  * the compile dir is baked into the image together with the scripts, so the compile dir
- * itself — and any path inside it — is allowed. An occurrence where the compile dir
- * string merely prefixes a different path ("…/prod" in "…/production_logs") is not a
- * compile dir literal, and a tmp dir nested under the compile dir extends beyond the
- * literal, so both are still detected.
+ * itself — and any path inside it — is allowed. A tmp dir nested under the compile dir
+ * extends beyond the literal, so it is still detected.
+ *
+ * Both the needle and the compile dir only match on path-segment boundaries: an occurrence
+ * flanked by a path-segment character continues into a longer segment and therefore names a
+ * different path — "/app" in "/appdata/config.php" or in "/var/backup/app", "…/prod" in
+ * "…/production_logs". Boundaries are decided byte-wise against the ASCII segment class, so
+ * a multi-byte character beside a match counts as a boundary and the occurrence is reported:
+ * fail-close, matching the guard. Matching is case-sensitive, like the verbatim comparison
+ * it is part of, so "/App/src" does not match a needle of "/app".
  *
  * @internal Used by BakedPathGuard
  */
 final class BakedPathScanner
 {
+    /** A character that continues a path segment; "/" is absent because it ends one */
+    private const SEGMENT_CHAR = '/\A[A-Za-z0-9_.\-]\z/';
+
     /** @var list<array{int, int}> [start, end) ranges of compile dir literals */
     private readonly array $allowedRanges;
 
@@ -33,11 +42,11 @@ final class BakedPathScanner
         private readonly string $script,
         string $compileDir,
     ) {
-        $this->allowedRanges = $this->compileDirRanges($script, $compileDir);
+        $this->allowedRanges = $this->compileDirRanges($compileDir);
     }
 
     /**
-     * Returns whether the needle occurs outside every compile dir literal
+     * Returns whether the needle occurs, on a segment boundary, outside every compile dir literal
      *
      * @param non-empty-string $needle
      */
@@ -52,6 +61,11 @@ final class BakedPathScanner
             }
 
             $offset = $position + 1;
+            $isPath = $this->isWholePath($position, $length);
+            if (!$isPath) {
+                continue;
+            }
+
             $contained = $this->isContained($position, $position + $length);
             if (!$contained) {
                 return true;
@@ -59,29 +73,64 @@ final class BakedPathScanner
         }
     }
 
-    /** @return list<array{int, int}> */
-    private function compileDirRanges(string $script, string $compileDir): array
+    /**
+     * Collects the [start, end) range of every compile dir literal in the script
+     *
+     * @return list<array{int, int}>
+     */
+    private function compileDirRanges(string $compileDir): array
     {
         $ranges = [];
         $length = strlen($compileDir);
         $offset = 0;
         while (true) {
-            $position = strpos($script, $compileDir, $offset);
+            $position = strpos($this->script, $compileDir, $offset);
             if ($position === false) {
                 return $ranges;
             }
 
             $offset = $position + 1;
-            // A path-segment character right after means a different path ("…/prod" in
-            // "…/production_logs"); "/" does not match and continues inside the compile dir.
-            $next = $script[$position + $length] ?? '';
-            $isSegmentChar = preg_match('/\A[A-Za-z0-9_.\-]\z/', $next) === 1;
-            if ($isSegmentChar) {
+            $isPath = $this->isWholePath($position, $length);
+            if (!$isPath) {
                 continue;
             }
 
             $ranges[] = [$position, $position + $length];
         }
+    }
+
+    /**
+     * Returns whether the $length bytes at $position span whole path segments
+     *
+     * A path-segment character on either side means the match runs on into a longer segment
+     * and so names a different path: "/app" both in "/appdata" and in "/var/backup/app",
+     * "…/prod" in "…/production_logs". "/" is not a segment character, so a match continues
+     * to hold when a path nests deeper or sits below a parent; neither is the start or the
+     * end of the script, both of which bound a match.
+     */
+    private function isWholePath(int $position, int $length): bool
+    {
+        $isPrefixed = $this->isSegmentChar($position - 1);
+        $isSuffixed = $this->isSegmentChar($position + $length);
+
+        return !$isPrefixed && !$isSuffixed;
+    }
+
+    /**
+     * Returns whether the byte at $index continues a path segment
+     *
+     * An index outside the script does not: it bounds the match. The negative index is
+     * spelled out because PHP reads one as an offset from the end of the string.
+     */
+    private function isSegmentChar(int $index): bool
+    {
+        if ($index < 0) {
+            return false;
+        }
+
+        $char = $this->script[$index] ?? '';
+
+        return preg_match(self::SEGMENT_CHAR, $char) === 1;
     }
 
     /**

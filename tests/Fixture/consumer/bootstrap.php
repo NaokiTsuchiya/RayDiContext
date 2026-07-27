@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 /**
- * Bootstrap for the consumer project ConsumerInstallTest builds.
+ * Bootstrap of the consumer project tests/dist-check.sh installs.
  *
- * The consumer installs this package the way `composer require` does, so it has none of
- * this repository's dev autoloading and cannot reach tests/Fake. Everything the compile
- * needs is therefore declared here, in the global namespace.
+ * The consumer only gets this package's production autoloading, so it cannot reach
+ * tests/Fake; everything the compile needs is declared here.
  */
 
 use NaokiTsuchiya\RayDiContext\AbstractContext;

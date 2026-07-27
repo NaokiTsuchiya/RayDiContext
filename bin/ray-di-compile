@@ -65,7 +65,6 @@ exit((static function (array $argv): int {
         return 2;
     }
 
-    // Silently ignoring surplus arguments would turn a typo into a green compile
     $argumentCount = count($argv) - 1;
     if ($argumentCount > 5) {
         fwrite(STDERR, sprintf("Too many arguments: at most 5 are accepted, got %d.\n%s", $argumentCount, $usage));
@@ -90,8 +89,6 @@ exit((static function (array $argv): int {
         return 2;
     }
 
-    // A stack trace would bury the message, and every one of these exceptions already says
-    // what to fix. Anything else is a bug in this package and keeps PHP's fatal handler.
     try {
         $meta = AppMeta::fromAppDir($appDir, $context, $compileDir ?: null, $tmpDir ?: null);
         (new CompileRunner($provider))->run($meta);

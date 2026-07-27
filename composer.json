@@ -31,13 +31,14 @@
     },
     "scripts": {
         "test": "phpunit",
+        "dist": "tests/dist-check.sh",
         "lint": "mago lint --minimum-fail-level note",
         "analyze": "mago analyze",
         "guard": "mago guard",
         "fmt": "mago fmt --check",
         "cs": ["@lint", "@fmt"],
         "sa": ["@analyze", "@guard"],
-        "tests": ["@cs", "@sa", "@test"]
+        "tests": ["@cs", "@sa", "@test", "@dist"]
     },
     "config": {
         "sort-packages": true

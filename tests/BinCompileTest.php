@@ -188,7 +188,6 @@ final class BinCompileTest extends TestCase
         static::assertSame(2, $status);
         static::assertStringContainsString('Too many arguments', $stderr);
         static::assertStringContainsString('Usage:', $stderr);
-        // Nothing was compiled: the run stopped at argument validation
         static::assertSame([], glob("{$appDir}/var/di/prod/*.php"));
     }
 }

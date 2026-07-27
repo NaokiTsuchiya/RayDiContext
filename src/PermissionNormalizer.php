@@ -36,7 +36,21 @@ use function sprintf;
  * into. Symlinks are skipped rather than followed, since chmod would apply to the
  * target — outside the compile dir.
  *
- * @api
+ * The compile dir and the entries directly in it are normalized, and no deeper: by the
+ * time this runs, Cleaner has emptied the dir and ray/compiler has filled it with one
+ * flat file per dependency index, so a subdirectory to descend into cannot be there.
+ *
+ * This is a workaround for how ray/compiler writes, not a facility to build on: it
+ * exists because FilePutContents goes through tempnam(), and CompileRunner builds it
+ * where it uses it. If the upstream write ever stops producing 0600, this class goes away.
+ *
+ * The checks below are defensive rather than input validation: CompileRunner always
+ * hands over a directory Cleaner has just created or verified, so what they defend
+ * against is the compile dir changing underneath the run — removed, replaced by a file,
+ * or made unreadable between the steps — which would otherwise surface as a bare SPL
+ * exception, or as a chmod applied to something that is not a compile dir at all.
+ *
+ * @internal
  */
 final class PermissionNormalizer
 {
@@ -47,18 +61,17 @@ final class PermissionNormalizer
     private const DIR_MODE = 0o755;
 
     /**
-     * Normalizes the compile dir and everything below it
+     * Normalizes the compile dir and the entries directly in it
      *
-     * The path is verified to be a directory before anything is changed, so a rejected
-     * call leaves the filesystem exactly as it found it. The type keeps an empty path
-     * out at the call site — AppMeta rejects one at construction — but the type says
-     * nothing about what the path points at, and this is an @api entry point that an
-     * application may call on a path of its own.
+     * The path is verified to be a directory before anything is changed. Without that
+     * check a path that is a file gets chmod'ed to 0755 and only then fails, leaving a
+     * side effect behind from a call that did not succeed — and it fails as an SPL
+     * exception from FilesystemIterator rather than as an exception of this package.
      *
      * @param non-empty-string $compileDir Directory holding the compiled scripts
      *
      * @throws CompileDirNotFound When the path is not an existing directory.
-     * @throws CompileDirNotReadable When a directory cannot be listed or traversed.
+     * @throws CompileDirNotReadable When the compile dir cannot be listed or traversed.
      * @throws ChmodFailed When an entry cannot be made readable.
      */
     public function __invoke(string $compileDir): void
@@ -73,7 +86,7 @@ final class PermissionNormalizer
     }
 
     /**
-     * Normalizes every entry inside a directory, descending into real subdirectories
+     * Normalizes every entry directly inside a directory
      *
      * @throws CompileDirNotReadable When the directory cannot be listed or traversed.
      * @throws ChmodFailed When an entry cannot be made readable.
@@ -88,16 +101,8 @@ final class PermissionNormalizer
                 continue;
             }
 
-            $pathname = $entry->getPathname();
             $isDir = $entry->isDir();
-            if (!$isDir) {
-                $this->apply($pathname, self::FILE_MODE);
-
-                continue;
-            }
-
-            $this->apply($pathname, self::DIR_MODE);
-            $this->normalizeContents($pathname);
+            $this->apply($entry->getPathname(), $isDir ? self::DIR_MODE : self::FILE_MODE);
         }
     }
 

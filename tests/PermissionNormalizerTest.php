@@ -50,10 +50,10 @@ final class PermissionNormalizerTest extends TestCase
     }
 
     /**
-     * Owner-only scripts and directories become world-readable, nested ones included
+     * Owner-only scripts and directories become world-readable
      *
-     * This is what Ray.Compiler leaves behind: 0600 files from tempnam(), under a
-     * compile dir whose own mode depends on the umask of the build.
+     * This is what Ray.Compiler leaves behind: 0600 files from tempnam(), in a compile
+     * dir whose own mode depends on the umask of the build.
      *
      * @throws ChmodFailed
      * @throws RuntimeException
@@ -65,14 +65,12 @@ final class PermissionNormalizerTest extends TestCase
         mkdir($nested, permissions: 0o700);
         chmod($nested, permissions: 0o700);
         $this->copyScript("{$this->compileDir}/script.php", mode: 0o600);
-        $this->copyScript("{$nested}/script.php", mode: 0o600);
 
         (new PermissionNormalizer())($this->compileDir);
 
         static::assertSame(0o755, $this->mode($this->compileDir));
         static::assertSame(0o755, $this->mode($nested));
         static::assertSame(0o644, $this->mode("{$this->compileDir}/script.php"));
-        static::assertSame(0o644, $this->mode("{$nested}/script.php"));
     }
 
     /**
@@ -91,12 +89,12 @@ final class PermissionNormalizerTest extends TestCase
         $nested = "{$this->compileDir}/nested";
         mkdir($nested, permissions: 0o775);
         chmod($nested, permissions: 0o775);
-        $this->copyScript("{$nested}/script.php", mode: 0o664);
+        $this->copyScript("{$this->compileDir}/script.php", mode: 0o664);
 
         (new PermissionNormalizer())($this->compileDir);
 
         static::assertSame(0o775, $this->mode($nested));
-        static::assertSame(0o664, $this->mode("{$nested}/script.php"));
+        static::assertSame(0o664, $this->mode("{$this->compileDir}/script.php"));
     }
 
     /**

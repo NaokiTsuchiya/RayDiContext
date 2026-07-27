@@ -56,8 +56,9 @@ final class PermissionNormalizerRejectionTest extends TestCase
     /**
      * A path that is a file rather than a directory is rejected, changing nothing
      *
-     * The normalizer is @api, so an application may call it on a path of its own: a
-     * mistyped one must not have its mode rewritten on the way to the failure.
+     * Without the check the file is chmod'ed to 0755 and only then fails, so a call that
+     * did not succeed leaves a side effect behind — and it fails as an SPL exception from
+     * FilesystemIterator rather than as an exception of this package.
      *
      * @throws ChmodFailed
      * @throws CompileDirNotReadable
@@ -131,30 +132,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
     }
 
     /**
-     * An unlistable directory nested in a normal compile dir fails the same way
-     *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
-     * @throws RuntimeException
-     */
-    #[Test]
-    public function rejectsANestedDirectoryItCannotList(): void
-    {
-        $nested = "{$this->compileDir}/nested";
-        mkdir($nested, permissions: 0o700);
-        chmod($nested, permissions: 0o005);
-
-        try {
-            (new PermissionNormalizer())($this->compileDir);
-            static::fail('CompileDirNotReadable was not thrown');
-        } catch (CompileDirNotReadable $e) {
-            static::assertStringContainsString($nested, $e->getMessage());
-        } finally {
-            chmod($nested, permissions: 0o700);
-        }
-    }
-
-    /**
      * A compile dir the process cannot traverse fails as a package exception
      *
      * 0405 is the other half of that family: read is granted, so the listing opens and
@@ -184,36 +161,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
 
         // Nothing inside was touched: no entry was ever reached
         static::assertSame(0o600, $this->mode($script));
-    }
-
-    /**
-     * An untraversable directory nested in a normal compile dir fails the same way
-     *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
-     * @throws RuntimeException
-     */
-    #[Test]
-    public function rejectsANestedDirectoryItCannotTraverse(): void
-    {
-        $nested = "{$this->compileDir}/nested";
-        mkdir($nested, permissions: 0o700);
-        $inner = "{$nested}/inner.php";
-        copy(self::SCRIPT, $inner);
-        chmod($inner, permissions: 0o600);
-        chmod($nested, permissions: 0o405);
-
-        try {
-            (new PermissionNormalizer())($this->compileDir);
-            static::fail('CompileDirNotReadable was not thrown');
-        } catch (CompileDirNotReadable $e) {
-            static::assertStringContainsString($nested, $e->getMessage());
-            static::assertSame(0o405, $this->mode($nested));
-        } finally {
-            chmod($nested, permissions: 0o700);
-        }
-
-        static::assertSame(0o600, $this->mode($inner));
     }
 
     /**

@@ -25,13 +25,11 @@ final class CompileRunner
      * @param ContextProviderInterface $contextProvider Application env-to-context mapping
      * @param Cleaner                  $cleaner         Recreates the compile dir before compiling
      * @param BakedPathGuard           $guard           Verifies the compiled scripts afterwards
-     * @param PermissionNormalizer     $permissions     Makes the verified scripts readable at runtime
      */
     public function __construct(
         private readonly ContextProviderInterface $contextProvider,
         private readonly Cleaner $cleaner = new Cleaner(),
         private readonly BakedPathGuard $guard = new BakedPathGuard(),
-        private readonly PermissionNormalizer $permissions = new PermissionNormalizer(),
     ) {}
 
     /**
@@ -39,7 +37,9 @@ final class CompileRunner
      * then normalizes the permissions of what was written
      *
      * Only a compile that passed the guard is normalized: a rejected one leaves nothing
-     * to run, so its scripts stay as Ray.Compiler wrote them.
+     * to run, so its scripts stay as Ray.Compiler wrote them. The normalizer is built
+     * here rather than injected: it is a fix for how Ray.Compiler writes, not a policy
+     * an application chooses.
      *
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
@@ -56,6 +56,6 @@ final class CompileRunner
         ($this->cleaner)($meta);
         (new Compiler())->compile($context(), $meta->compileDir);
         ($this->guard)($meta->compileDir, $meta);
-        ($this->permissions)($meta->compileDir);
+        (new PermissionNormalizer())($meta->compileDir);
     }
 }

@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 use function chmod;
-use function file_put_contents;
+use function copy;
 use function fileperms;
 use function mkdir;
 use function symlink;
@@ -21,10 +21,13 @@ use function uniqid;
 #[CoversClass(PermissionNormalizer::class)]
 final class PermissionNormalizerTest extends TestCase
 {
-    /** Per-test working directory */
+    /** Stands in for a compiled script the tests assert the mode of */
+    private const SCRIPT = __DIR__ . '/Fixture/script.php';
+
+    /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
-    /** Directory standing in for the compile dir */
+    /** @var non-empty-string Directory standing in for the compile dir */
     private string $compileDir;
 
     /**
@@ -61,8 +64,8 @@ final class PermissionNormalizerTest extends TestCase
         $nested = "{$this->compileDir}/nested";
         mkdir($nested, permissions: 0o700);
         chmod($nested, permissions: 0o700);
-        $this->writeFile("{$this->compileDir}/script.php", mode: 0o600);
-        $this->writeFile("{$nested}/script.php", mode: 0o600);
+        $this->copyScript("{$this->compileDir}/script.php", mode: 0o600);
+        $this->copyScript("{$nested}/script.php", mode: 0o600);
 
         (new PermissionNormalizer())($this->compileDir);
 
@@ -88,7 +91,7 @@ final class PermissionNormalizerTest extends TestCase
         $nested = "{$this->compileDir}/nested";
         mkdir($nested, permissions: 0o775);
         chmod($nested, permissions: 0o775);
-        $this->writeFile("{$nested}/script.php", mode: 0o664);
+        $this->copyScript("{$nested}/script.php", mode: 0o664);
 
         (new PermissionNormalizer())($this->compileDir);
 
@@ -111,7 +114,7 @@ final class PermissionNormalizerTest extends TestCase
         $target = "{$this->baseDir}/outside";
         mkdir($target, permissions: 0o700);
         chmod($target, permissions: 0o700);
-        $this->writeFile("{$target}/script.php", mode: 0o600);
+        $this->copyScript("{$target}/script.php", mode: 0o600);
         symlink($target, "{$this->compileDir}/link");
 
         (new PermissionNormalizer())($this->compileDir);
@@ -121,11 +124,11 @@ final class PermissionNormalizerTest extends TestCase
     }
 
     /**
-     * Writes a file with a mode the umask cannot narrow
+     * Copies the fixture script in and gives it a mode the umask cannot narrow
      */
-    private function writeFile(string $path, int $mode): void
+    private function copyScript(string $path, int $mode): void
     {
-        file_put_contents($path, data: '<?php return 0;');
+        copy(self::SCRIPT, $path);
         chmod($path, $mode);
     }
 

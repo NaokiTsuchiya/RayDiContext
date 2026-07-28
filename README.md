@@ -78,8 +78,12 @@ The CLI itself never reads the environment; if your deployment sets
 php vendor/bin/ray-di-compile bootstrap.php "$(pwd)" prod "$APP_COMPILE_DIR" "$APP_TMP_DIR"
 ```
 
-The CLI cleans the compile dir, compiles the context, and guards the
-result against baked paths. Under the hood it is:
+Ray.Compiler writes every script `0600`, so a compile dir built as `root` would be
+unreadable to a non-root runtime user; the compiled scripts are normalized to `0644`
+(their directories to `0755`) so the image stays readable after a `USER` switch.
+
+The CLI cleans the compile dir, compiles the context, guards the result against baked
+paths, and normalizes the permissions of what it wrote. Under the hood it is:
 
 ```php
 $provider = require 'bootstrap.php';

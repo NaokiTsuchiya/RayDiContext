@@ -167,17 +167,18 @@ final class BinCompileTest extends TestCase
     }
 
     /**
-     * An appDir that does not exist is a usage error naming the argument
+     * A missing appDir is a usage error (status 2); a relative one fails the compile
+     * itself (status 1)
      *
-     * Checked before anything is compiled, so the message points at the argument rather
-     * than at a baked path or a mkdir failure downstream. This is a CLI-level check, not
-     * AppMeta's: AppMeta::fromAppDir() only validates the string's shape (absolute or
-     * not), never touches the filesystem.
+     * Existence is checked here, before anything is compiled, so the message points at
+     * the argument rather than at a baked path or a mkdir failure downstream. Shape is
+     * checked inside AppMeta::fromAppDir() instead: it never touches the filesystem, so
+     * a relative appDir surfaces the same way a baked path or an unknown context does.
      *
      * @throws RuntimeException
      */
     #[Test]
-    public function failsWithUsageOnMissingAppDir(): void
+    public function distinguishesMissingFromRelativeAppDir(): void
     {
         $appDir = "{$this->baseDir}/nosuch";
 
@@ -191,20 +192,7 @@ final class BinCompileTest extends TestCase
         static::assertStringContainsString('appDir does not exist', $stderr);
         static::assertStringContainsString($appDir, $stderr);
         static::assertStringNotContainsString('Stack trace', $stderr);
-    }
 
-    /**
-     * A relative appDir fails the compile with status 1, not a usage error
-     *
-     * AppMeta::fromAppDir() rejects it as an InvalidAppMeta rather than resolving it
-     * against the working directory, so it surfaces the same way a baked path or an
-     * unknown context does.
-     *
-     * @throws RuntimeException
-     */
-    #[Test]
-    public function failsWithStatusOneOnRelativeAppDir(): void
-    {
         [$status, $stderr] = Cli::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
             '.',

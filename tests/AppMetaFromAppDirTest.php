@@ -13,9 +13,7 @@ use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
-use function chdir;
 use function file_put_contents;
-use function getcwd;
 use function mkdir;
 use function symlink;
 use function uniqid;
@@ -142,46 +140,27 @@ final class AppMetaFromAppDirTest extends TestCase
     }
 
     /**
-     * A relative appDir is rejected rather than resolved against the working directory
+     * A relative or empty appDir is rejected outright rather than resolved
      *
-     * Left relative, it would reach BakedPathGuard as a needle that matches nearly every
-     * literal — "." matches all of them — and fail the compile with a message that reads
-     * as a baked path rather than as a bad argument.
-     *
-     * @throws InvalidAppMeta
-     */
-    #[TestWith(['.'])]
-    #[TestWith(['app'])]
-    #[TestWith(['./app'])]
-    #[Test]
-    public function rejectsRelativeAppDir(string $appDir): void
-    {
-        $cwd = getcwd();
-        static::assertNotFalse($cwd);
-        chdir($this->baseDir);
-
-        try {
-            $this->expectException(InvalidAppMeta::class);
-            $this->expectExceptionMessage('must be an absolute path');
-
-            AppMeta::fromAppDir($appDir, 'prod');
-        } finally {
-            chdir($cwd);
-        }
-    }
-
-    /**
-     * An empty appDir is rejected
+     * A relative appDir is never resolved against the working directory: left as-is it
+     * would reach BakedPathGuard as a needle that matches nearly every literal — "."
+     * matches all of them — and fail the compile with a message that reads as a baked
+     * path rather than as a bad argument. Unlike the earlier realpath()-based check,
+     * this one never touches the filesystem, so no cwd juggling is needed to exercise it.
      *
      * @throws InvalidAppMeta
      */
+    #[TestWith(['.', 'must be an absolute path'])]
+    #[TestWith(['app', 'must be an absolute path'])]
+    #[TestWith(['./app', 'must be an absolute path'])]
+    #[TestWith(['', 'must not be empty'])]
     #[Test]
-    public function rejectsEmptyAppDir(): void
+    public function rejectsInvalidAppDirShape(string $appDir, string $message): void
     {
         $this->expectException(InvalidAppMeta::class);
-        $this->expectExceptionMessage('must not be empty');
+        $this->expectExceptionMessage($message);
 
-        AppMeta::fromAppDir('', 'prod');
+        AppMeta::fromAppDir($appDir, 'prod');
     }
 
     /**

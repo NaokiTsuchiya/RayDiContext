@@ -129,7 +129,7 @@ final readonly class AppMeta
             throw new InvalidAppMeta('AppMeta::fromAppDir(): $appDir must not be empty');
         }
 
-        if (! str_starts_with($appDir, '/')) {
+        if (!str_starts_with($appDir, '/')) {
             throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $appDir must be an absolute path: "%s"', $appDir));
         }
 

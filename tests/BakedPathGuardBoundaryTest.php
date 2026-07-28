@@ -14,6 +14,7 @@ use RuntimeException;
 
 use function file_put_contents;
 use function mkdir;
+use function symlink;
 use function uniqid;
 
 #[CoversClass(BakedPathGuard::class)]
@@ -110,5 +111,36 @@ final class BakedPathGuardBoundaryTest extends TestCase
         $this->expectException(BakedPathFound::class);
 
         ($this->guard)($this->meta->compileDir, $this->meta);
+    }
+
+    /**
+     * A baked literal spelled through a symlinked appDir is still detected
+     *
+     * appDir is no longer realpath()-resolved by fromAppDir(), so a caller whose appDir is
+     * reached through a symlink (e.g. Capistrano's /app -> /releases/current) binds paths
+     * spelled with the link, not the target. The guard must catch a literal spelled the
+     * same way fromAppDir() actually bound it. Constructing AppMeta directly (bypassing
+     * fromAppDir()) would not reproduce the bug this test guards against, since the
+     * constructor itself never resolved symlinks — only fromAppDir()'s now-removed
+     * realpath() call did.
+     *
+     * @throws RuntimeException
+     * @throws InvalidAppMeta
+     */
+    #[Test]
+    public function detectsBakedPathThroughSymlinkedAppDir(): void
+    {
+        $real = "{$this->baseDir}/real/app";
+        mkdir($real, permissions: 0o755, recursive: true);
+        $link = "{$this->baseDir}/app-link";
+        symlink($real, $link);
+
+        $meta = AppMeta::fromAppDir($link, 'prod', "{$link}/var/di/prod", "{$link}/var/tmp/prod");
+        mkdir($meta->compileDir, permissions: 0o755, recursive: true);
+        file_put_contents("{$meta->compileDir}/baked.php", data: "<?php return '{$link}/storage';");
+
+        $this->expectException(BakedPathFound::class);
+
+        ($this->guard)($meta->compileDir, $meta);
     }
 }

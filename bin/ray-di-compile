@@ -9,8 +9,9 @@ declare(strict_types=1);
  * Usage:
  *   php bin/ray-di-compile <bootstrap> <appDir> <context> [compileDir] [tmpDir]
  *
- * appDir must exist: it is resolved with realpath() so a relative path such as "." does
- * not end up baked into the compiled scripts.
+ * appDir must be an absolute path (a relative one such as "." is rejected, so it can't
+ * reach BakedPathGuard as a needle that matches nearly every literal) and must exist as a
+ * directory.
  *
  * compileDir/tmpDir default to the conventional "{appDir}/var/di|tmp/{context}" paths
  * when omitted (or passed as ""). This CLI does not read the environment itself; pass
@@ -31,10 +32,11 @@ declare(strict_types=1);
  *
  * Exit status:
  *   0  the context compiled successfully
- *   1  the compile failed, or appDir does not exist; the exception message is written to
- *      STDERR without a stack trace
- *   2  usage error: wrong number of arguments, bootstrap file not found, or a bootstrap
- *      that does not return a ContextProviderInterface
+ *   1  the compile failed; the exception message is written to STDERR without a stack
+ *      trace
+ *   2  usage error: wrong number of arguments, bootstrap file not found, the app
+ *      directory does not exist, or a bootstrap that does not return a
+ *      ContextProviderInterface
  */
 
 use NaokiTsuchiya\RayDiContext\AppMeta;
@@ -78,6 +80,12 @@ exit((static function (array $argv): int {
 
     if (! is_file($bootstrap)) {
         fwrite(STDERR, sprintf("Bootstrap file not found: %s\n", $bootstrap));
+
+        return 2;
+    }
+
+    if (! is_dir($appDir)) {
+        fwrite(STDERR, sprintf("App directory not found: %s\n", $appDir));
 
         return 2;
     }

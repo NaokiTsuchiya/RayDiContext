@@ -11,8 +11,10 @@ Context, meta, and compile management for [Ray.Di](https://github.com/ray-di/Ray
 `readOnlyRootFilesystem` container while `tmpDir` stays a writable volume.
 
 - `compileDir`/`tmpDir` default to `{appDir}/var/di/{context}` / `{appDir}/var/tmp/{context}`
-- `appDir` must exist — `AppMeta::fromAppDir()` resolves it with `realpath()`, so a relative
-  path is never baked into the compiled scripts, and rejects it otherwise
+- `appDir` must be an absolute path — `AppMeta::fromAppDir()` rejects a relative one (e.g.
+  `.`), so a symlink or `..` in the caller's spelling is preserved rather than resolved
+  (matching `BakedPathGuard`'s verbatim comparison). The bundled CLI additionally requires
+  the directory to exist (a usage error, exit 2)
 - Neither `AppMeta::fromAppDir()` nor the bundled CLI reads the environment — pass
   overrides in explicitly (e.g. as CLI arguments, sourced from env vars by your shell
   or Dockerfile). Compile-time and runtime code must agree on the same values, or the

@@ -19,8 +19,9 @@ use function uniqid;
 /**
  * Covers the fromAppDir() factory; AppMetaTest covers the public constructor
  *
- * The factory resolves appDir with realpath(), so unlike the constructor it needs an app
- * dir that exists on disk.
+ * The factory requires an absolute appDir, rejecting a relative one. Unlike before, it no
+ * longer checks existence — that check now lives in the CLI (bin/ray-di-compile), since it
+ * is argument validation rather than a type invariant.
  */
 #[CoversClass(AppMeta::class)]
 final class AppMetaFromAppDirTest extends TestCase
@@ -92,9 +93,9 @@ final class AppMetaFromAppDirTest extends TestCase
      * Explicit compileDir/tmpDir override the conventional defaults independently
      *
      * fromAppDir() no longer reads the environment itself; a caller such as
-     * bin/ray-di-compile passes the result in. Only appDir is resolved, so an override
-     * still reaches AppMeta verbatim — compile-time and runtime have to agree on the
-     * literal, and resolving it here would silently change it under a symlink.
+     * bin/ray-di-compile passes the result in. An override reaches AppMeta verbatim, just
+     * like appDir — compile-time and runtime have to agree on the literal, and resolving
+     * it here would silently change it under a symlink.
      *
      * @throws InvalidAppMeta
      */
@@ -137,51 +138,50 @@ final class AppMetaFromAppDirTest extends TestCase
     }
 
     /**
-     * A relative appDir is resolved to an absolute path
+     * A relative appDir is rejected, not resolved
      *
-     * Left relative, it reaches BakedPathGuard as a needle that matches nearly every
-     * literal — "." matches all of them — and fails the compile with a message that reads
-     * as a baked path rather than as a bad argument.
+     * Left relative, it would reach BakedPathGuard as a needle that matches nearly every
+     * literal — "." matches all of them. Resolving it (as a prior implementation did with
+     * realpath()) would also absorb symlinks, which breaks BakedPathGuard's verbatim
+     * comparison for a symlinked appDir (e.g. Capistrano's /app -> /releases/current): the
+     * needle would no longer share a spelling with the literal actually baked into the
+     * compiled scripts. Rejecting outright avoids both problems.
      *
      * @throws InvalidAppMeta
      */
     #[Test]
-    public function resolvesRelativeAppDir(): void
+    public function rejectsRelativeAppDir(): void
     {
         $cwd = getcwd();
         static::assertNotFalse($cwd);
         chdir($this->appDir);
 
         try {
-            $meta = AppMeta::fromAppDir('.', 'prod');
+            $this->expectException(InvalidAppMeta::class);
+            $this->expectExceptionMessage('must be an absolute path: "."');
+
+            AppMeta::fromAppDir('.', 'prod');
         } finally {
             chdir($cwd);
         }
-
-        static::assertSame($this->appDir, $meta->appDir);
-        static::assertSame("{$this->appDir}/var/di/prod", $meta->compileDir);
     }
 
     /**
-     * An appDir that cannot be resolved is rejected
+     * An empty appDir is rejected
      *
-     * A missing one would fail the compile later anyway, further away from the cause. An
-     * empty one is checked separately because realpath('') answers with the working
-     * directory rather than failing, which would turn an unset argument into a
-     * plausible-looking app dir.
+     * A missing-but-absolute appDir is no longer rejected here: existence is argument
+     * validation, not a type invariant, so that check now lives in the CLI
+     * (bin/ray-di-compile's is_dir() check, covered by
+     * BinCompileTest::failsWithStatusTwoOnMissingAppDir).
      *
      * @throws InvalidAppMeta
      */
-    #[TestWith(['nosuch', 'does not exist'])]
-    #[TestWith(['', 'must not be empty'])]
     #[Test]
-    public function rejectsUnresolvableAppDir(string $name, string $message): void
+    public function rejectsEmptyAppDir(): void
     {
-        $appDir = $name === '' ? '' : "{$this->baseDir}/{$name}";
-
         $this->expectException(InvalidAppMeta::class);
-        $this->expectExceptionMessage($message);
+        $this->expectExceptionMessage('must not be empty');
 
-        AppMeta::fromAppDir($appDir, 'prod');
+        AppMeta::fromAppDir('', 'prod');
     }
 }

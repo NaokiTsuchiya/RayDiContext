@@ -6,6 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 
+use function realpath;
 use function rtrim;
 use function sprintf;
 use function str_contains;
@@ -100,7 +101,15 @@ final readonly class AppMeta
      * exception: the OS resolves it as a parent-dir traversal wherever the resulting
      * path is later used (mkdir, DirectoryIterator, ...), so it is rejected outright.
      *
-     * @throws InvalidAppMeta When appDir/context is empty, or context contains "..".
+     * $appDir is normalized with realpath(), which absorbs trailing slashes, "." and
+     * ".." segments, and symlinks. A relative appDir would otherwise reach BakedPathGuard
+     * as a needle that matches nearly every literal — "." matches all of them — and fail
+     * the compile with a message that reads as a baked path rather than as a bad argument.
+     * A path realpath() cannot resolve is rejected here for the same reason: the compile
+     * would fail later anyway, and further away from the cause.
+     *
+     * @throws InvalidAppMeta When appDir does not exist, appDir/context is empty, or
+     *                        context contains "..".
      */
     public static function fromAppDir(
         string $appDir,
@@ -112,13 +121,22 @@ final readonly class AppMeta
             throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $context must not contain "..": "%s"', $context));
         }
 
-        $appDir = rtrim($appDir, characters: '/');
+        // Checked ahead of realpath(), which resolves "" to the working directory rather
+        // than failing, and would silently turn an empty appDir into a plausible one.
+        if ($appDir === '') {
+            throw new InvalidAppMeta('AppMeta::fromAppDir(): $appDir must not be empty');
+        }
+
+        $resolved = realpath($appDir);
+        if ($resolved === false) {
+            throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $appDir does not exist: "%s"', $appDir));
+        }
 
         return new self(
-            $appDir,
+            $resolved,
             $context,
-            $compileDir ?? "{$appDir}/var/di/{$context}",
-            $tmpDir ?? "{$appDir}/var/tmp/{$context}",
+            $compileDir ?? "{$resolved}/var/di/{$context}",
+            $tmpDir ?? "{$resolved}/var/tmp/{$context}",
         );
     }
 }

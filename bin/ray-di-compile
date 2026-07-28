@@ -9,6 +9,9 @@ declare(strict_types=1);
  * Usage:
  *   php bin/ray-di-compile <bootstrap> <appDir> <context> [compileDir] [tmpDir]
  *
+ * appDir must exist: it is resolved with realpath() so a relative path such as "." does
+ * not end up baked into the compiled scripts.
+ *
  * compileDir/tmpDir default to the conventional "{appDir}/var/di|tmp/{context}" paths
  * when omitted (or passed as ""). This CLI does not read the environment itself; pass
  * env values in explicitly if you want them, e.g.:
@@ -28,7 +31,8 @@ declare(strict_types=1);
  *
  * Exit status:
  *   0  the context compiled successfully
- *   1  the compile failed; the exception message is written to STDERR without a stack trace
+ *   1  the compile failed, or appDir does not exist; the exception message is written to
+ *      STDERR without a stack trace
  *   2  usage error: wrong number of arguments, bootstrap file not found, or a bootstrap
  *      that does not return a ContextProviderInterface
  */

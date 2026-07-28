@@ -167,15 +167,17 @@ final class BinCompileTest extends TestCase
     }
 
     /**
-     * An appDir that does not exist fails with status 1 and names the argument
+     * An appDir that does not exist is a usage error naming the argument
      *
-     * The path is resolved before anything is compiled, so the message points at the
-     * argument rather than at a baked path or a mkdir failure downstream.
+     * Checked before anything is compiled, so the message points at the argument rather
+     * than at a baked path or a mkdir failure downstream. This is a CLI-level check, not
+     * AppMeta's: AppMeta::fromAppDir() only validates the string's shape (absolute or
+     * not), never touches the filesystem.
      *
      * @throws RuntimeException
      */
     #[Test]
-    public function failsWithStatusOneOnMissingAppDir(): void
+    public function failsWithUsageOnMissingAppDir(): void
     {
         $appDir = "{$this->baseDir}/nosuch";
 
@@ -185,9 +187,32 @@ final class BinCompileTest extends TestCase
             'prod',
         ]);
 
-        static::assertSame(1, $status, $stderr);
-        static::assertStringContainsString('$appDir does not exist', $stderr);
+        static::assertSame(2, $status, $stderr);
+        static::assertStringContainsString('appDir does not exist', $stderr);
         static::assertStringContainsString($appDir, $stderr);
+        static::assertStringNotContainsString('Stack trace', $stderr);
+    }
+
+    /**
+     * A relative appDir fails the compile with status 1, not a usage error
+     *
+     * AppMeta::fromAppDir() rejects it as an InvalidAppMeta rather than resolving it
+     * against the working directory, so it surfaces the same way a baked path or an
+     * unknown context does.
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function failsWithStatusOneOnRelativeAppDir(): void
+    {
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            '.',
+            'prod',
+        ]);
+
+        static::assertSame(1, $status, $stderr);
+        static::assertStringContainsString('must be an absolute path', $stderr);
         static::assertStringNotContainsString('Stack trace', $stderr);
     }
 

@@ -6,10 +6,10 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 
-use function realpath;
 use function rtrim;
 use function sprintf;
 use function str_contains;
+use function str_starts_with;
 
 /**
  * Application metadata with separated compile-time and runtime directories
@@ -101,14 +101,18 @@ final readonly class AppMeta
      * exception: the OS resolves it as a parent-dir traversal wherever the resulting
      * path is later used (mkdir, DirectoryIterator, ...), so it is rejected outright.
      *
-     * $appDir is normalized with realpath(), which absorbs trailing slashes, "." and
-     * ".." segments, and symlinks. A relative appDir would otherwise reach BakedPathGuard
-     * as a needle that matches nearly every literal — "." matches all of them — and fail
-     * the compile with a message that reads as a baked path rather than as a bad argument.
-     * A path realpath() cannot resolve is rejected here for the same reason: the compile
-     * would fail later anyway, and further away from the cause.
+     * $appDir must already be absolute; it is rejected otherwise rather than resolved.
+     * BakedPathGuard compares meta strings verbatim against literals frozen into compiled
+     * scripts, so whatever spelling is bound at compile time has to be the same spelling
+     * the running app binds — resolving symlinks or "." segments here would silently
+     * change that spelling and make the guard fail open. A relative appDir is rejected
+     * outright rather than resolved against the working directory: left as-is it would
+     * reach BakedPathGuard as a needle that matches nearly every literal — "." matches
+     * all of them — and fail the compile with a message that reads as a baked path rather
+     * than as a bad argument. Whether appDir exists on disk is a caller concern (e.g.
+     * bin/ray-di-compile checks it as a usage error); this factory only checks its shape.
      *
-     * @throws InvalidAppMeta When appDir does not exist, appDir/context is empty, or
+     * @throws InvalidAppMeta When appDir is not absolute, appDir/context is empty, or
      *                        context contains "..".
      */
     public static function fromAppDir(
@@ -121,22 +125,23 @@ final readonly class AppMeta
             throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $context must not contain "..": "%s"', $context));
         }
 
-        // Checked ahead of realpath(), which resolves "" to the working directory rather
-        // than failing, and would silently turn an empty appDir into a plausible one.
         if ($appDir === '') {
             throw new InvalidAppMeta('AppMeta::fromAppDir(): $appDir must not be empty');
         }
 
-        $resolved = realpath($appDir);
-        if ($resolved === false) {
-            throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $appDir does not exist: "%s"', $appDir));
+        if (! str_starts_with($appDir, '/')) {
+            throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $appDir must be an absolute path: "%s"', $appDir));
         }
 
+        // Trimmed ahead of interpolation below so a trailing slash on $appDir does not
+        // leave a doubled slash in the default compileDir/tmpDir.
+        $appDir = self::trimSlash($appDir);
+
         return new self(
-            $resolved,
+            $appDir,
             $context,
-            $compileDir ?? "{$resolved}/var/di/{$context}",
-            $tmpDir ?? "{$resolved}/var/tmp/{$context}",
+            $compileDir ?? "{$appDir}/var/di/{$context}",
+            $tmpDir ?? "{$appDir}/var/tmp/{$context}",
         );
     }
 }

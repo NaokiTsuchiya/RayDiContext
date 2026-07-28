@@ -35,8 +35,8 @@ final class BakedPathScanner
     private readonly array $allowedRanges;
 
     /**
-     * @param string $script     Contents of one compiled script
-     * @param string $compileDir The baked, read-only compile dir
+     * @param string           $script     Contents of one compiled script
+     * @param non-empty-string $compileDir The baked, read-only compile dir
      */
     public function __construct(
         private readonly string $script,

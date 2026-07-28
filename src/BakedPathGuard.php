@@ -33,6 +33,8 @@ use function sprintf;
 final class BakedPathGuard
 {
     /**
+     * @param non-empty-string $compileDir
+     *
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
      * @throws ScriptNotReadable When a compiled script cannot be read.
      */
@@ -55,6 +57,8 @@ final class BakedPathGuard
 
     /**
      * Throws when a single compiled script contains a runtime path literal
+     *
+     * @param non-empty-string $compileDir
      *
      * @throws BakedPathFound When the script contains an appDir or tmpDir literal.
      * @throws ScriptNotReadable When the script cannot be read.

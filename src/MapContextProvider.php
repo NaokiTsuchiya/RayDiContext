@@ -77,8 +77,9 @@ final class MapContextProvider implements ContextProviderInterface
 
         try {
             $reflection = new ReflectionClass($class);
-        } catch (ReflectionException $e) {
+
             // @codeCoverageIgnoreStart
+        } catch (ReflectionException $e) {
             // Unreachable from a test: class_exists()/interface_exists() above already
             // confirmed $class resolves, so ReflectionClass's constructor cannot fail here.
             // Caught anyway so this method's contract stays limited to this package's own
@@ -87,9 +88,8 @@ final class MapContextProvider implements ContextProviderInterface
                 sprintf('Context class "%s" mapped to context "%s" does not exist', $class, $context),
                 previous: $e,
             );
-
-            // @codeCoverageIgnoreEnd
         }
+        // @codeCoverageIgnoreEnd
 
         if ($reflection->isInterface()) {
             throw new InvalidContextClass(sprintf(

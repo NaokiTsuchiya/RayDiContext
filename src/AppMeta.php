@@ -107,26 +107,18 @@ final readonly class AppMeta
     /**
      * Creates a meta whose directories default to conventional paths under the app dir
      *
-     * $compileDir/$tmpDir default to "{appDir}/var/di/{context}" and
-     * "{appDir}/var/tmp/{context}" when omitted; pass explicit values (e.g. read from
-     * APP_COMPILE_DIR/APP_TMP_DIR by the caller) to override, which lets a container
-     * deployment bake the compile dir into the image while pointing the tmp dir at a
-     * writable volume. This method does not read the environment itself. Trailing
-     * slashes are trimmed so the paths compare verbatim against baked literals.
+     * This method does not read the environment itself; pass explicit compileDir/tmpDir
+     * (e.g. read from APP_COMPILE_DIR/APP_TMP_DIR by the caller) to override the defaults.
      *
-     * $context is interpolated into the default compileDir/tmpDir here as a single path
-     * segment, so it is restricted to CONTEXT_PATTERN's alphabet (letters, digits, "_",
-     * "-", "\") rather than validated against a growing list of dangerous spellings. Both
-     * "." and "/" are excluded by that restriction: either one, alone or as part of a
-     * leading/trailing/doubled separator, would otherwise make compileDir resolve to
-     * "{appDir}/var/di" itself — the parent shared by every context — so Cleaner emptying
-     * it would delete every other context's compiled scripts, not just this one's.
-     *
-     * appDir's absoluteness is enforced by the constructor now (see above); the empty
-     * check below still has to run here first, though, since trimSlash() folds an empty
-     * string to "/" and would otherwise mask it as a valid absolute path before the
-     * constructor sees it. Whether appDir exists on disk is a caller concern (e.g.
-     * bin/ray-di-compile checks it as a usage error); this factory only checks its shape.
+     * @param string      $appDir     Application root directory; must be absolute, as
+     *                                enforced by the constructor (see __construct())
+     * @param string      $context    Env/context name; must match CONTEXT_PATTERN (see
+     *                                that constant's doc) since it becomes a path segment
+     *                                of the defaults below
+     * @param string|null $compileDir Read-only DI script directory baked into the image;
+     *                                defaults to "{appDir}/var/di/{context}"
+     * @param string|null $tmpDir     Runtime-writable directory, never baked; defaults to
+     *                                "{appDir}/var/tmp/{context}"
      *
      * @throws InvalidAppMeta When appDir is not absolute or empty, or context does not
      *                        match CONTEXT_PATTERN (letters, digits, "_", "-", "\" only).
@@ -145,13 +137,15 @@ final readonly class AppMeta
             ));
         }
 
+        // Checked here, ahead of trimSlash(), because trimSlash() folds an empty string
+        // to "/" — which would pass the constructor's absolute-path check before it ever
+        // saw $appDir was empty.
         if ($appDir === '') {
             throw new InvalidAppMeta('AppMeta::fromAppDir(): $appDir must not be empty');
         }
 
         // Trimmed ahead of interpolation below so a trailing slash on $appDir does not
-        // leave a doubled slash in the default compileDir/tmpDir. The constructor
-        // rejects a non-absolute $appDir once trimSlash() no longer needs to touch it.
+        // leave a doubled slash in the default compileDir/tmpDir.
         $appDir = self::trimSlash($appDir);
 
         return new self(

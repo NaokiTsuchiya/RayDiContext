@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 use function chmod;
+use function copy;
 use function file_put_contents;
 use function is_link;
 use function iterator_count;
@@ -27,6 +28,9 @@ use function uniqid;
 #[CoversClass(Cleaner::class)]
 final class CleanerTest extends TestCase
 {
+    /** Stands in for a compiled script the tests assert the survival of */
+    private const SCRIPT = __DIR__ . '/Fixture/script.php';
+
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
@@ -192,7 +196,7 @@ final class CleanerTest extends TestCase
         foreach ([0o005, 0o405] as $mode) {
             $compileDir = "{$this->baseDir}/di_root_{$mode}";
             mkdir($compileDir, permissions: 0o700, recursive: true);
-            file_put_contents("{$compileDir}/stale.php", data: '<?php return 0;');
+            copy(self::SCRIPT, "{$compileDir}/stale.php");
             chmod($compileDir, permissions: $mode);
 
             try {
@@ -210,7 +214,7 @@ final class CleanerTest extends TestCase
         $compileDir = "{$this->baseDir}/di_nested";
         $nested = "{$compileDir}/nested";
         mkdir($nested, permissions: 0o700, recursive: true);
-        file_put_contents("{$nested}/stale.php", data: '<?php return 0;');
+        copy(self::SCRIPT, "{$nested}/stale.php");
         chmod($nested, permissions: 0o005);
 
         try {

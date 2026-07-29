@@ -8,6 +8,7 @@ use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use ReflectionClass;
+use ReflectionException;
 
 use function array_keys;
 use function class_exists;
@@ -33,6 +34,7 @@ final class MapContextProvider implements ContextProviderInterface
      * @throws UnknownContext When no context class is mapped to $meta->context.
      * @throws ContextClassNotFound When the mapped context class does not exist.
      * @throws InvalidContextClass When the mapped class exists but cannot serve as a context.
+     * @throws ReflectionException Never in practice: $class was just confirmed to exist above.
      */
     public function get(AppMeta $meta): ContextInterface
     {

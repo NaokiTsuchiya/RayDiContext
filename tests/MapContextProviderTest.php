@@ -14,6 +14,7 @@ use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionException;
 use stdClass;
 
 #[CoversClass(MapContextProvider::class)]
@@ -26,6 +27,7 @@ final class MapContextProviderTest extends TestCase
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
      * @throws InvalidAppMeta
+     * @throws ReflectionException
      */
     #[Test]
     public function getReturnsMappedContext(): void
@@ -49,6 +51,7 @@ final class MapContextProviderTest extends TestCase
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
      * @throws InvalidAppMeta
+     * @throws ReflectionException
      */
     #[Test]
     public function getThrowsOnUnknownContext(): void
@@ -71,6 +74,7 @@ final class MapContextProviderTest extends TestCase
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
      * @throws InvalidAppMeta
+     * @throws ReflectionException
      */
     #[Test]
     public function getThrowsOnMissingContextClass(): void
@@ -95,6 +99,7 @@ final class MapContextProviderTest extends TestCase
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
      * @throws InvalidAppMeta
+     * @throws ReflectionException
      */
     #[Test]
     public function getThrowsOnClassNotExtendingAbstractContext(): void
@@ -104,9 +109,8 @@ final class MapContextProviderTest extends TestCase
         $provider = new MapContextProvider($map);
 
         $this->expectException(InvalidContextClass::class);
-        $this->expectExceptionMessage(
-            'Context class "stdClass" mapped to context "prod" must extend ' . AbstractContext::class,
-        );
+        $this->expectExceptionMessage('Context class "stdClass" mapped to context "prod" must extend '
+        . AbstractContext::class);
 
         $provider->get(new AppMeta('/app', 'prod', '/app/var/di/prod', '/app/var/tmp/prod'));
     }
@@ -121,6 +125,7 @@ final class MapContextProviderTest extends TestCase
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
      * @throws InvalidAppMeta
+     * @throws ReflectionException
      */
     #[Test]
     public function getThrowsOnAbstractContextClass(): void
@@ -131,7 +136,9 @@ final class MapContextProviderTest extends TestCase
 
         $this->expectException(InvalidContextClass::class);
         $this->expectExceptionMessage(
-            'Context class "' . AbstractContext::class . '" mapped to context "prod" is abstract and cannot be instantiated',
+            'Context class "'
+            . AbstractContext::class
+            . '" mapped to context "prod" is abstract and cannot be instantiated',
         );
 
         $provider->get(new AppMeta('/app', 'prod', '/app/var/di/prod', '/app/var/tmp/prod'));
@@ -147,6 +154,7 @@ final class MapContextProviderTest extends TestCase
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
      * @throws InvalidAppMeta
+     * @throws ReflectionException
      */
     #[Test]
     public function getThrowsOnInterfaceContextClass(): void

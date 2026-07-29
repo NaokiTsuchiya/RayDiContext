@@ -20,6 +20,7 @@ use PHPUnit\Framework\TestCase;
 use Ray\Compiler\CompiledInjector;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use ReflectionException;
 use RuntimeException;
 use SplFileInfo;
 
@@ -103,6 +104,7 @@ final class CompileRunnerTest extends TestCase
      * @throws BakedPathFound
      * @throws RuntimeException
      * @throws UnknownContext
+     * @throws ReflectionException
      */
     #[Test]
     public function resolvesFromReadOnlyCompileDir(): void
@@ -130,6 +132,7 @@ final class CompileRunnerTest extends TestCase
      * @throws BakedPathFound
      * @throws RuntimeException
      * @throws UnknownContext
+     * @throws ReflectionException
      */
     #[Test]
     public function resolvesWithoutCompileTimeTmpDir(): void

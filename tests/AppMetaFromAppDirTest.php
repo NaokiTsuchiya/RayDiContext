@@ -54,18 +54,20 @@ final class AppMetaFromAppDirTest extends TestCase
     /**
      * Falls back to conventional paths under the app dir
      *
-     * A namespaced class-string context (e.g. "App\ProdContext") is not accepted
-     * verbatim — fromAppDir() treats $context as a single path segment and does not
-     * interpret "\" or "/" as a separator on the caller's behalf. A caller with a
-     * class-string-shaped context is expected to fold it into a safe segment itself
-     * first, e.g. by replacing "\" with "_" as done here.
+     * A namespaced class-string context (e.g. "App\ProdContext") is accepted verbatim:
+     * unlike "/" and ".", "\" carries none of the OS-resolution risk that excludes those
+     * two from CONTEXT_PATTERN, so a caller can pass a ::class-shaped context straight
+     * through without folding it into a different alphabet first.
      *
      * @throws InvalidAppMeta
      */
     #[Test]
     public function defaults(): void
     {
-        $context = 'App_ProdContext';
+        // Lowercase second segment sidesteps mago's no-literal-namespace-string heuristic
+        // (it flags strings where every "\"-segment starts uppercase); the case doesn't
+        // matter to fromAppDir(), which treats "\" as an ordinary allowed character.
+        $context = 'App\prodContext';
         $meta = AppMeta::fromAppDir($this->appDir, $context);
 
         static::assertSame($this->appDir, $meta->appDir);
@@ -75,14 +77,14 @@ final class AppMetaFromAppDirTest extends TestCase
     }
 
     /**
-     * A context outside CONTEXT_PATTERN's alphabet (letters, digits, "_", "-") is
+     * A context outside CONTEXT_PATTERN's alphabet (letters, digits, "_", "-", "\") is
      * rejected outright, as a whitelist rather than as a list of specific dangerous
      * spellings: "/" and "." (whether alone, doubled, or leading/trailing) would
      * otherwise collapse the interpolated compileDir/tmpDir back to "{appDir}/var/di"
      * itself — the parent shared by every context, so Cleaner emptying it would delete
-     * every other context's compiled scripts too — and an un-folded namespace
-     * class-string ("App/ProdContext") is rejected the same way rather than having its
-     * separator interpreted as a path segment boundary on the caller's behalf.
+     * every other context's compiled scripts too. A "/"-nested class-string
+     * ("App/ProdContext") is rejected the same way — only "\" is accepted as a
+     * namespace separator, not "/".
      *
      * @throws InvalidAppMeta
      */

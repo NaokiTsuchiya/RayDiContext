@@ -40,11 +40,13 @@ final readonly class AppMeta
      * the default compileDir/tmpDir, so this is a whitelist rather than a blacklist of
      * specific dangerous spellings (".", "..", "/", leading/trailing separators, ...) —
      * every one of those is excluded by construction instead of being named individually.
-     * A caller with a richer context name (e.g. a "App\ProdContext" class-string) is
-     * expected to fold it into this alphabet itself (e.g. replacing "\" with "_") rather
-     * than have this factory interpret separators on its behalf.
+     * "\" is included so a namespaced class-string context (e.g. "App\ProdContext") can
+     * be passed through verbatim: unlike "/" and ".", the OS does not resolve "\"
+     * specially in a path segment, so it carries none of the collapse risk that excludes
+     * "/" and "." here — it is just an ordinary filename character on the POSIX
+     * filesystems this package targets.
      */
-    private const CONTEXT_PATTERN = '/\A[A-Za-z0-9_-]+\z/';
+    private const CONTEXT_PATTERN = '/\A[A-Za-z0-9_\\\\-]+\z/';
 
     /**
      * @param string $appDir     Application root directory
@@ -108,8 +110,8 @@ final readonly class AppMeta
      *
      * $context is interpolated into the default compileDir/tmpDir here as a single path
      * segment, so it is restricted to CONTEXT_PATTERN's alphabet (letters, digits, "_",
-     * "-") rather than validated against a growing list of dangerous spellings. Both "."
-     * and "/" are excluded by that restriction: either one, alone or as part of a
+     * "-", "\") rather than validated against a growing list of dangerous spellings. Both
+     * "." and "/" are excluded by that restriction: either one, alone or as part of a
      * leading/trailing/doubled separator, would otherwise make compileDir resolve to
      * "{appDir}/var/di" itself — the parent shared by every context — so Cleaner emptying
      * it would delete every other context's compiled scripts, not just this one's.
@@ -126,7 +128,7 @@ final readonly class AppMeta
      * bin/ray-di-compile checks it as a usage error); this factory only checks its shape.
      *
      * @throws InvalidAppMeta When appDir is not absolute or empty, or context does not
-     *                        match CONTEXT_PATTERN (letters, digits, "_", "-" only).
+     *                        match CONTEXT_PATTERN (letters, digits, "_", "-", "\" only).
      */
     public static function fromAppDir(
         string $appDir,
@@ -137,7 +139,7 @@ final readonly class AppMeta
         $isSafeContext = preg_match(self::CONTEXT_PATTERN, $context) === 1;
         if (!$isSafeContext) {
             throw new InvalidAppMeta(sprintf(
-                'AppMeta::fromAppDir(): $context must contain only letters, digits, "_", or "-": "%s"',
+                'AppMeta::fromAppDir(): $context must contain only letters, digits, "_", "-", or "\\": "%s"',
                 $context,
             ));
         }

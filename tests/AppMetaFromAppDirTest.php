@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
@@ -12,7 +13,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function file_put_contents;
 use function mkdir;
@@ -206,8 +206,8 @@ final class AppMetaFromAppDirTest extends TestCase
      * Capistrano-style "current -> release" deployment layout.
      *
      * @throws BakedPathFound
+     * @throws ExceptionInterface
      * @throws InvalidAppMeta
-     * @throws RuntimeException
      */
     #[Test]
     public function preservesSymlinkSpellingAgainstBakedPathGuard(): void

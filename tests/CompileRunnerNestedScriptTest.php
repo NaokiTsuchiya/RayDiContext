@@ -7,6 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Fake\FakeQualifiedContext;
@@ -16,7 +17,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use RuntimeException;
 use SplFileInfo;
 
 use function dirname;
@@ -66,7 +66,7 @@ final class CompileRunnerNestedScriptTest extends TestCase
      * ones a non-recursive normalizer would leave behind.
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
      */

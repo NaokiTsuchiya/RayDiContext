@@ -11,7 +11,6 @@ use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function chmod;
 use function copy;
@@ -62,7 +61,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
      *
      * @throws ChmodFailed
      * @throws CompileDirNotReadable
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsAPathThatIsNotADirectory(): void
@@ -87,7 +85,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
      *
      * @throws ChmodFailed
      * @throws CompileDirNotReadable
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsAMissingPath(): void
@@ -114,7 +111,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
      *
      * @throws ChmodFailed
      * @throws CompileDirNotFound
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsACompileDirItCannotList(): void
@@ -136,7 +132,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
      *
      * @throws ChmodFailed
      * @throws CompileDirNotFound
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsANestedDirectoryItCannotList(): void
@@ -164,7 +159,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
      *
      * @throws ChmodFailed
      * @throws CompileDirNotFound
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsACompileDirItCannotTraverse(): void
@@ -192,7 +186,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
      *
      * @throws ChmodFailed
      * @throws CompileDirNotFound
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsANestedDirectoryItCannotTraverse(): void

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function chmod;
 use function copy;
@@ -57,7 +57,7 @@ final class PermissionNormalizerTest extends TestCase
      * puts one of those scripts in a subdirectory, so the nested case is not academic.
      *
      * @throws ChmodFailed
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function normalizesFilesAndDirectories(): void
@@ -84,7 +84,7 @@ final class PermissionNormalizerTest extends TestCase
      * the world bits it needs must not be touched.
      *
      * @throws ChmodFailed
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function leavesAlreadyReadableEntriesAlone(): void
@@ -107,7 +107,7 @@ final class PermissionNormalizerTest extends TestCase
      * outside the compile dir.
      *
      * @throws ChmodFailed
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function doesNotFollowSymlinks(): void

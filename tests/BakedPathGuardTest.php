@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function file_put_contents;
 use function mkdir;
@@ -60,7 +60,7 @@ final class BakedPathGuardTest extends TestCase
      * Scripts free of runtime paths pass
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function passesOnCleanScripts(): void
@@ -75,7 +75,7 @@ final class BakedPathGuardTest extends TestCase
     /**
      * An appDir literal in a compiled script is detected, naming the path and the file
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function detectsAppDirLiteral(): void
@@ -95,7 +95,7 @@ final class BakedPathGuardTest extends TestCase
      * A tmpDir literal is detected even when the tmp dir is outside the app dir
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function detectsTmpDirLiteral(): void
@@ -111,7 +111,7 @@ final class BakedPathGuardTest extends TestCase
      * A path inside a serialized instance is detected
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function detectsPathInSerializedInstance(): void
@@ -128,7 +128,7 @@ final class BakedPathGuardTest extends TestCase
      * The compile dir itself is baked into the image, so its literal is allowed
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function allowsCompileDirLiteral(): void
@@ -144,7 +144,7 @@ final class BakedPathGuardTest extends TestCase
      * Only PHP scripts are scanned; compile artifacts like _bindings.log are ignored
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function ignoresNonPhpFiles(): void
@@ -163,7 +163,7 @@ final class BakedPathGuardTest extends TestCase
      * relying on permissions, which root ignores.
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function throwsWhenScriptCannotBeRead(): void

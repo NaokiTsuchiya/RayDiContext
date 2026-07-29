@@ -7,6 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
@@ -22,7 +23,6 @@ use PHPUnit\Framework\TestCase;
 use Ray\Compiler\CompiledInjector;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use RuntimeException;
 use SplFileInfo;
 
 use function chmod;
@@ -84,7 +84,7 @@ final class CompileRunnerTest extends TestCase
      * run() cleans stale scripts and compiles the context module
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function runCleansAndCompiles(): void
@@ -105,7 +105,7 @@ final class CompileRunnerTest extends TestCase
      * image and never written to at runtime.
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      * @throws UnknownContext
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
@@ -134,7 +134,7 @@ final class CompileRunnerTest extends TestCase
      * compiled context must still resolve.
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      * @throws UnknownContext
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
@@ -166,7 +166,7 @@ final class CompileRunnerTest extends TestCase
      * once the compile dir is baked into the image.
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function runMakesCompiledScriptsWorldReadable(): void
@@ -202,7 +202,7 @@ final class CompileRunnerTest extends TestCase
     /**
      * The guard runs after compilation and rejects baked runtime paths
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function runGuardsBakedPathAfterCompile(): void
@@ -226,7 +226,7 @@ final class CompileRunnerTest extends TestCase
      * the app still on disk.
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function runRejectsUnsafeCompileDirBeforeCleaning(): void
@@ -248,7 +248,7 @@ final class CompileRunnerTest extends TestCase
      *
      * @return array<string, list{int, int}>
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     private function snapshot(string $dir): array
     {

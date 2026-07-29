@@ -167,15 +167,18 @@ final class BinCompileTest extends TestCase
     }
 
     /**
-     * An appDir that does not exist fails with status 1 and names the argument
+     * A missing appDir is a usage error (status 2); a relative one fails the compile
+     * itself (status 1)
      *
-     * The path is resolved before anything is compiled, so the message points at the
-     * argument rather than at a baked path or a mkdir failure downstream.
+     * Existence is checked here, before anything is compiled, so the message points at
+     * the argument rather than at a baked path or a mkdir failure downstream. Shape is
+     * checked inside AppMeta::fromAppDir() instead: it never touches the filesystem, so
+     * a relative appDir surfaces the same way a baked path or an unknown context does.
      *
      * @throws RuntimeException
      */
     #[Test]
-    public function failsWithStatusOneOnMissingAppDir(): void
+    public function distinguishesMissingFromRelativeAppDir(): void
     {
         $appDir = "{$this->baseDir}/nosuch";
 
@@ -185,9 +188,19 @@ final class BinCompileTest extends TestCase
             'prod',
         ]);
 
-        static::assertSame(1, $status, $stderr);
-        static::assertStringContainsString('$appDir does not exist', $stderr);
+        static::assertSame(2, $status, $stderr);
+        static::assertStringContainsString('appDir does not exist', $stderr);
         static::assertStringContainsString($appDir, $stderr);
+        static::assertStringNotContainsString('Stack trace', $stderr);
+
+        [$status, $stderr] = Cli::run(self::SCRIPT, [
+            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            '.',
+            'prod',
+        ]);
+
+        static::assertSame(1, $status, $stderr);
+        static::assertStringContainsString('must be an absolute path', $stderr);
         static::assertStringNotContainsString('Stack trace', $stderr);
     }
 

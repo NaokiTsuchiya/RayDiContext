@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use Countable;
 use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeDevContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 
 #[CoversClass(MapContextProvider::class)]
 final class MapContextProviderTest extends TestCase
@@ -21,6 +24,7 @@ final class MapContextProviderTest extends TestCase
      *
      * @throws UnknownContext
      * @throws ContextClassNotFound
+     * @throws InvalidContextClass
      * @throws InvalidAppMeta
      */
     #[Test]
@@ -43,6 +47,7 @@ final class MapContextProviderTest extends TestCase
      *
      * @throws UnknownContext
      * @throws ContextClassNotFound
+     * @throws InvalidContextClass
      * @throws InvalidAppMeta
      */
     #[Test]
@@ -59,23 +64,95 @@ final class MapContextProviderTest extends TestCase
     /**
      * A mapped class that does not exist is reported naming both the class and the context
      *
-     * A misspelled class name in a bootstrap file would otherwise reach `new $class()` and
-     * surface as a bare Error mentioning neither the context nor this package.
+     * Checked eagerly in the constructor rather than lazily in get(): a misspelled class
+     * name in a bootstrap file is caught the moment the provider is wired up, not only
+     * once that particular context is finally looked up.
      *
-     * @throws UnknownContext
      * @throws ContextClassNotFound
-     * @throws InvalidAppMeta
+     * @throws InvalidContextClass
      */
     #[Test]
-    public function getThrowsOnMissingContextClass(): void
+    public function constructorThrowsOnMissingContextClass(): void
     {
         /** @var array<string, class-string<AbstractContext>> $map A bootstrap typo, as the runtime sees it */
         $map = ['prod' => 'NoSuchContextClass'];
-        $provider = new MapContextProvider($map);
 
         $this->expectException(ContextClassNotFound::class);
         $this->expectExceptionMessage('Context class "NoSuchContextClass" mapped to context "prod" does not exist');
 
-        $provider->get(new AppMeta('/app', 'prod', '/app/var/di/prod', '/app/var/tmp/prod'));
+        new MapContextProvider($map);
+    }
+
+    /**
+     * A mapped class unrelated to AbstractContext is rejected by the constructor
+     *
+     * Without this check, `new $class($meta)` inside get() would reach PHP's own
+     * TypeError ("Return value must be of type ContextInterface, stdClass returned"),
+     * which leaks past this package's exception hierarchy.
+     *
+     * @throws ContextClassNotFound
+     * @throws InvalidContextClass
+     */
+    #[Test]
+    public function constructorThrowsOnClassNotExtendingAbstractContext(): void
+    {
+        /** @var array<string, class-string<AbstractContext>> $map A bootstrap mistake, as the runtime sees it */
+        $map = ['prod' => stdClass::class];
+
+        $this->expectException(InvalidContextClass::class);
+        $this->expectExceptionMessage('Context class "stdClass" mapped to context "prod" must extend '
+        . AbstractContext::class);
+
+        new MapContextProvider($map);
+    }
+
+    /**
+     * A mapped abstract class is rejected by the constructor
+     *
+     * Without this check, `new $class($meta)` inside get() would reach PHP's own Error
+     * ("Cannot instantiate abstract class AbstractContext"), which leaks past this
+     * package's exception hierarchy.
+     *
+     * @throws ContextClassNotFound
+     * @throws InvalidContextClass
+     */
+    #[Test]
+    public function constructorThrowsOnAbstractContextClass(): void
+    {
+        /** @var array<string, class-string<AbstractContext>> $map A bootstrap mistake, as the runtime sees it */
+        $map = ['prod' => AbstractContext::class];
+
+        $this->expectException(InvalidContextClass::class);
+        $this->expectExceptionMessage(
+            'Context class "'
+            . AbstractContext::class
+            . '" mapped to context "prod" is abstract and cannot be instantiated',
+        );
+
+        new MapContextProvider($map);
+    }
+
+    /**
+     * A mapped interface is reported as an interface rather than "does not exist"
+     *
+     * class_exists() alone returns false for an interface name, which would otherwise
+     * make this case indistinguishable from a genuine typo (ContextClassNotFound's
+     * "does not exist").
+     *
+     * @throws ContextClassNotFound
+     * @throws InvalidContextClass
+     */
+    #[Test]
+    public function constructorThrowsOnInterfaceContextClass(): void
+    {
+        /** @var array<string, class-string<AbstractContext>> $map A bootstrap mistake, as the runtime sees it */
+        $map = ['prod' => Countable::class];
+
+        $this->expectException(InvalidContextClass::class);
+        $this->expectExceptionMessage(
+            'Context class "' . Countable::class . '" mapped to context "prod" is an interface, not a class',
+        );
+
+        new MapContextProvider($map);
     }
 }

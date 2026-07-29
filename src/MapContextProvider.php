@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
+use ReflectionClass;
 
 use function array_keys;
 use function class_exists;
 use function implode;
+use function interface_exists;
 use function sprintf;
 
 /**
@@ -29,6 +32,7 @@ final class MapContextProvider implements ContextProviderInterface
      *
      * @throws UnknownContext When no context class is mapped to $meta->context.
      * @throws ContextClassNotFound When the mapped context class does not exist.
+     * @throws InvalidContextClass When the mapped class exists but cannot serve as a context.
      */
     public function get(AppMeta $meta): ContextInterface
     {
@@ -41,12 +45,37 @@ final class MapContextProvider implements ContextProviderInterface
             ));
         }
 
-        $exists = class_exists($class);
-        if (!$exists) {
+        if (!class_exists($class) && !interface_exists($class)) {
             throw new ContextClassNotFound(sprintf(
                 'Context class "%s" mapped to context "%s" does not exist',
                 $class,
                 $meta->context,
+            ));
+        }
+
+        $reflection = new ReflectionClass($class);
+        if ($reflection->isInterface()) {
+            throw new InvalidContextClass(sprintf(
+                'Context class "%s" mapped to context "%s" is an interface, not a class',
+                $class,
+                $meta->context,
+            ));
+        }
+
+        if ($reflection->isAbstract()) {
+            throw new InvalidContextClass(sprintf(
+                'Context class "%s" mapped to context "%s" is abstract and cannot be instantiated',
+                $class,
+                $meta->context,
+            ));
+        }
+
+        if (!$reflection->isSubclassOf(AbstractContext::class)) {
+            throw new InvalidContextClass(sprintf(
+                'Context class "%s" mapped to context "%s" must extend %s',
+                $class,
+                $meta->context,
+                AbstractContext::class,
             ));
         }
 

@@ -6,6 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 
+use function explode;
 use function rtrim;
 use function sprintf;
 use function str_contains;
@@ -97,9 +98,16 @@ final readonly class AppMeta
      *
      * $context is interpolated into the default compileDir/tmpDir here via string
      * concatenation, not path resolution, so most characters (including "/", which just
-     * nests an extra directory level) pass through harmlessly. ".." is the one
-     * exception: the OS resolves it as a parent-dir traversal wherever the resulting
-     * path is later used (mkdir, DirectoryIterator, ...), so it is rejected outright.
+     * nests an extra directory level) pass through harmlessly. But every "/"-delimited
+     * segment of $context becomes a segment of the resulting path, and the OS resolves
+     * some segment spellings specially wherever that path is later used (mkdir,
+     * DirectoryIterator, ...): ".." walks up to the parent, "." is a no-op that
+     * collapses back to the directory it's appended to, and an empty segment (a
+     * leading/trailing/doubled "/") behaves the same as "." collapsing does. A context of
+     * "." or "/" would otherwise make compileDir resolve to "{appDir}/var/di" itself —
+     * the parent shared by every context — so Cleaner emptying it would delete every
+     * other context's compiled scripts, not just this one's. All three spellings are
+     * rejected outright.
      *
      * $appDir must already be absolute; it is rejected otherwise rather than resolved.
      * BakedPathGuard compares meta strings verbatim against literals frozen into compiled
@@ -113,7 +121,8 @@ final readonly class AppMeta
      * bin/ray-di-compile checks it as a usage error); this factory only checks its shape.
      *
      * @throws InvalidAppMeta When appDir is not absolute, appDir/context is empty, or
-     *                        context contains "..".
+     *                        context contains "..", or a "/"-delimited segment of
+     *                        context is empty or ".".
      */
     public static function fromAppDir(
         string $appDir,
@@ -123,6 +132,19 @@ final readonly class AppMeta
     ): self {
         if (str_contains($context, '..')) {
             throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $context must not contain "..": "%s"', $context));
+        }
+
+        // Empty $context is rejected below with a clearer message by the constructor;
+        // explode('/', '') would otherwise produce a spurious "empty segment" report.
+        if ($context !== '') {
+            foreach (explode('/', $context) as $segment) {
+                if ($segment === '' || $segment === '.') {
+                    throw new InvalidAppMeta(sprintf(
+                        'AppMeta::fromAppDir(): $context must not contain an empty or "." path segment (from a leading/trailing/doubled "/" or a bare "."): "%s"',
+                        $context,
+                    ));
+                }
+            }
         }
 
         if ($appDir === '') {

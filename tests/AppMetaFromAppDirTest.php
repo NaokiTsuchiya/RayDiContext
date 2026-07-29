@@ -74,16 +74,27 @@ final class AppMetaFromAppDirTest extends TestCase
     }
 
     /**
-     * A context containing ".." is rejected: the OS resolves it as a parent-dir
-     * traversal wherever the interpolated compileDir/tmpDir is later used
+     * A context that would resolve to something other than a plain, context-specific
+     * subdirectory is rejected: ".." is a parent-dir traversal wherever the interpolated
+     * compileDir/tmpDir is later used, and an empty or "." "/"-delimited segment (from a
+     * leading/trailing/doubled "/" or a bare ".") collapses the interpolated path back to
+     * "{appDir}/var/di" itself — the parent shared by every context, so Cleaner emptying
+     * it would delete every other context's compiled scripts too.
      *
      * @throws InvalidAppMeta
      */
     #[TestWith(['../prod'])]
     #[TestWith(['pro..d'])]
     #[TestWith(['prod/../../etc'])]
+    #[TestWith(['.'])]
+    #[TestWith(['/'])]
+    #[TestWith(['./'])]
+    #[TestWith(['/prod'])]
+    #[TestWith(['prod/'])]
+    #[TestWith(['prod//staging'])]
+    #[TestWith(['prod/./staging'])]
     #[Test]
-    public function rejectsParentDirTraversal(string $context): void
+    public function rejectsUnsafeContext(string $context): void
     {
         $this->expectException(InvalidAppMeta::class);
 

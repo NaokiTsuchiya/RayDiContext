@@ -6,13 +6,13 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function chmod;
 use function copy;
@@ -53,7 +53,7 @@ final class CleanerTest extends TestCase
     /**
      * A missing compile dir is created recursively
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function createsMissingCompileDir(): void
@@ -69,7 +69,7 @@ final class CleanerTest extends TestCase
     /**
      * An existing compile dir is recreated empty, including nested contents
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function recreatesCompileDirAsEmpty(): void
@@ -88,7 +88,7 @@ final class CleanerTest extends TestCase
     /**
      * The cleaner is safely invokable repeatedly on its own
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function invokableRepeatedly(): void
@@ -108,7 +108,7 @@ final class CleanerTest extends TestCase
     /**
      * A symlink inside the compile dir is removed without following it
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function removesSymlinkWithoutFollowingIt(): void
@@ -129,7 +129,7 @@ final class CleanerTest extends TestCase
     /**
      * A compile dir that is itself a symlink is emptied in place, keeping the link
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function emptiesSymlinkedCompileDirInPlace(): void
@@ -153,7 +153,7 @@ final class CleanerTest extends TestCase
      * A regular file blocking a path component is a portable way to make mkdir() fail
      * without relying on permissions, which root ignores.
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function throwsWhenCompileDirCannotBeCreated(): void
@@ -188,7 +188,7 @@ final class CleanerTest extends TestCase
      * opens and only the stat() of each entry would be denied — which, unchecked, leaks a
      * PHP warning per entry instead of a single named exception.
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsAnUnreadableDirectory(): void

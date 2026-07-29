@@ -7,12 +7,15 @@ namespace NaokiTsuchiya\RayDiContext;
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function chmod;
+use function copy;
 use function file_put_contents;
 use function is_link;
 use function iterator_count;
@@ -25,6 +28,9 @@ use function uniqid;
 #[CoversClass(Cleaner::class)]
 final class CleanerTest extends TestCase
 {
+    /** Stands in for a compiled script the tests assert the survival of */
+    private const SCRIPT = __DIR__ . '/Fixture/script.php';
+
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
@@ -168,6 +174,59 @@ final class CleanerTest extends TestCase
         } finally {
             restore_error_handler();
         }
+    }
+
+    /**
+     * A directory this process cannot list or traverse — the compile dir itself, or one
+     * nested below it — raises a RemoveFailed naming it, not a bare UnexpectedValueException,
+     * and nothing inside that directory is removed first
+     *
+     * 0005 is the shape that gets past a naive mode check: the world bits it looks at are
+     * set, but POSIX resolves the owner class first, so the owner is denied and
+     * FilesystemIterator raises an SPL exception that would otherwise escape the declared
+     * contract. 0405 is the other half of that family: read is granted, so the listing
+     * opens and only the stat() of each entry would be denied — which, unchecked, leaks a
+     * PHP warning per entry instead of a single named exception.
+     *
+     * @throws RuntimeException
+     */
+    #[Test]
+    public function rejectsAnUnreadableDirectory(): void
+    {
+        foreach ([0o005, 0o405] as $mode) {
+            $compileDir = "{$this->baseDir}/di_root_{$mode}";
+            mkdir($compileDir, permissions: 0o700, recursive: true);
+            copy(self::SCRIPT, "{$compileDir}/stale.php");
+            chmod($compileDir, permissions: $mode);
+
+            try {
+                (new Cleaner())($this->meta($compileDir));
+                static::fail('RemoveFailed was not thrown');
+            } catch (RemoveFailed $e) {
+                static::assertStringContainsString($compileDir, $e->getMessage());
+            } finally {
+                chmod($compileDir, permissions: 0o700); // tearDown has to be able to remove it
+            }
+
+            static::assertFileExists("{$compileDir}/stale.php");
+        }
+
+        $compileDir = "{$this->baseDir}/di_nested";
+        $nested = "{$compileDir}/nested";
+        mkdir($nested, permissions: 0o700, recursive: true);
+        copy(self::SCRIPT, "{$nested}/stale.php");
+        chmod($nested, permissions: 0o005);
+
+        try {
+            (new Cleaner())($this->meta($compileDir));
+            static::fail('RemoveFailed was not thrown');
+        } catch (RemoveFailed $e) {
+            static::assertStringContainsString($nested, $e->getMessage());
+        } finally {
+            chmod($nested, permissions: 0o700); // tearDown has to be able to remove it
+        }
+
+        static::assertFileExists("{$nested}/stale.php");
     }
 
     /**

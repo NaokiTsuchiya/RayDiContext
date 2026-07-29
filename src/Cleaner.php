@@ -8,13 +8,14 @@ use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
 use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use SplFileInfo;
+use UnexpectedValueException;
 
 use function is_dir;
+use function is_executable;
 use function mkdir;
 use function rmdir;
+use function sprintf;
 use function unlink;
 
 /**
@@ -65,23 +66,32 @@ final class Cleaner
     }
 
     /**
-     * Removes every entry inside a directory
+     * Removes every entry inside a directory, descending into subdirectories depth-first
      *
-     * @throws RemoveFailed When an entry cannot be removed.
+     * The recursion is written out rather than delegated to RecursiveDirectoryIterator +
+     * RecursiveIteratorIterator, whose constructors throw a bare UnexpectedValueException
+     * when a directory cannot be opened — including one reached mid-traversal, after some
+     * entries have already been removed. Written out, each directory is opened through
+     * openDir() before anything below it is touched, so an unreadable directory is
+     * reported as a RemoveFailed naming it, without removing any of its entries first.
+     *
+     * @throws RemoveFailed When a directory cannot be read or an entry cannot be removed.
      */
     private function removeContents(string $dir): void
     {
-        $entries = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST,
-        );
         /** @var SplFileInfo $entry */
-        foreach ($entries as $entry) {
+        foreach ($this->openDir($dir) as $entry) {
             $pathname = $entry->getPathname();
             // A symlink is unlinked, never followed: isDir() resolves to the link target
             $isLink = $entry->isLink();
             $isDir = $entry->isDir();
-            $removed = !$isLink && $isDir ? rmdir($pathname) : unlink($pathname);
+            $isRealDir = !$isLink && $isDir;
+            if ($isRealDir) {
+                $this->removeContents($pathname);
+            }
+
+            $removed = $isRealDir ? rmdir($pathname) : unlink($pathname);
+
             // @codeCoverageIgnoreStart
             // Only reachable via a race (another process removes the entry between the
             // iterator listing it and this call) or a filesystem-level denial that root
@@ -92,5 +102,36 @@ final class Cleaner
 
             // @codeCoverageIgnoreEnd
         }
+    }
+
+    /**
+     * Opens a directory for listing, refusing one whose entries this process cannot reach
+     *
+     * A directory that cannot be listed fails its FilesystemIterator constructor with a
+     * bare UnexpectedValueException, which mago's check-throws cannot see through a
+     * constructor and which the declared contract does not mention. A directory that can
+     * be listed but not traversed (read granted, execute denied — 0405, 0605, ...) opens
+     * without error and instead fails per entry once isLink()/isDir()/getPathname() stat
+     * it, so it is checked separately here before any entry is reached.
+     *
+     * @throws RemoveFailed When the directory cannot be listed or traversed.
+     */
+    private function openDir(string $dir): FilesystemIterator
+    {
+        try {
+            $entries = new FilesystemIterator($dir);
+        } catch (UnexpectedValueException $e) {
+            throw new RemoveFailed(
+                sprintf('Failed to read directory while emptying compile dir: %s', $dir),
+                previous: $e,
+            );
+        }
+
+        $traversable = is_executable($dir);
+        if (!$traversable) {
+            throw new RemoveFailed(sprintf('Failed to traverse directory while emptying compile dir: %s', $dir));
+        }
+
+        return $entries;
     }
 }

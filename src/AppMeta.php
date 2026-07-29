@@ -49,19 +49,15 @@ final readonly class AppMeta
     private const CONTEXT_PATTERN = '/\A[A-Za-z0-9_\\\\-]+\z/';
 
     /**
-     * @param string $appDir     Application root directory
-     * @param string $context    Env/context name (e.g. "prod", "dev")
+     * @param string $appDir     Application root directory; must be absolute — enforced
+     *                           here rather than only in fromAppDir(), since
+     *                           BakedPathGuard/CompileDirGuard read it verbatim regardless
+     *                           of which entry point produced it
+     * @param string $context    Env/context name (e.g. "prod", "dev"); only a lookup key
+     *                           here (e.g. for MapContextProvider), not a path fragment —
+     *                           fromAppDir() validates it as a safe path segment instead
      * @param string $compileDir Read-only DI script directory baked into the image
      * @param string $tmpDir     Runtime-writable directory, never baked
-     *
-     * $context carries no character restriction here: it is only a lookup key (e.g. for
-     * MapContextProvider), not necessarily a path fragment. fromAppDir() is the entry
-     * point that interpolates it into a path, and validates it as a safe segment there.
-     *
-     * $appDir must be absolute regardless of entry point: BakedPathGuard and
-     * CompileDirGuard both read it verbatim, with no path-safety benefit tied to which
-     * constructor produced it, so the check belongs to the type rather than to
-     * fromAppDir() alone.
      *
      * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, or appDir is
      *                        not an absolute path.
@@ -126,14 +122,10 @@ final readonly class AppMeta
      * "{appDir}/var/di" itself — the parent shared by every context — so Cleaner emptying
      * it would delete every other context's compiled scripts, not just this one's.
      *
-     * appDir's absoluteness is enforced by the constructor now, not here: it is an
-     * invariant of the type itself (BakedPathGuard and CompileDirGuard both read
-     * $meta->appDir verbatim, no matter which entry point produced it), not something
-     * specific to interpolating it into a path. What is specific to this factory is the
-     * empty check below — it must run before trimSlash() rather than being left to the
-     * constructor, because trimSlash() folds an all-slash/empty string to "/", which
-     * would turn an empty $appDir into a valid absolute path before the constructor ever
-     * saw it was empty. Whether appDir exists on disk is a caller concern (e.g.
+     * appDir's absoluteness is enforced by the constructor now (see above); the empty
+     * check below still has to run here first, though, since trimSlash() folds an empty
+     * string to "/" and would otherwise mask it as a valid absolute path before the
+     * constructor sees it. Whether appDir exists on disk is a caller concern (e.g.
      * bin/ray-di-compile checks it as a usage error); this factory only checks its shape.
      *
      * @throws InvalidAppMeta When appDir is not absolute or empty, or context does not

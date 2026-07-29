@@ -6,9 +6,9 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 
+use function preg_match;
 use function rtrim;
 use function sprintf;
-use function str_contains;
 use function str_starts_with;
 
 /**
@@ -34,6 +34,19 @@ final readonly class AppMeta
 
     /** @var non-empty-string Runtime-writable directory, never baked */
     public string $tmpDir;
+
+    /**
+     * Characters fromAppDir() accepts in $context: it becomes a single path segment of
+     * the default compileDir/tmpDir, so this is a whitelist rather than a blacklist of
+     * specific dangerous spellings (".", "..", "/", leading/trailing separators, ...) —
+     * every one of those is excluded by construction instead of being named individually.
+     * "\" is included so a namespaced class-string context (e.g. "App\ProdContext") can
+     * be passed through verbatim: unlike "/" and ".", the OS does not resolve "\"
+     * specially in a path segment, so it carries none of the collapse risk that excludes
+     * "/" and "." here — it is just an ordinary filename character on the POSIX
+     * filesystems this package targets.
+     */
+    private const CONTEXT_PATTERN = '/\A[A-Za-z0-9_\\\\-]+\z/';
 
     /**
      * @param string $appDir     Application root directory
@@ -95,11 +108,13 @@ final readonly class AppMeta
      * writable volume. This method does not read the environment itself. Trailing
      * slashes are trimmed so the paths compare verbatim against baked literals.
      *
-     * $context is interpolated into the default compileDir/tmpDir here via string
-     * concatenation, not path resolution, so most characters (including "/", which just
-     * nests an extra directory level) pass through harmlessly. ".." is the one
-     * exception: the OS resolves it as a parent-dir traversal wherever the resulting
-     * path is later used (mkdir, DirectoryIterator, ...), so it is rejected outright.
+     * $context is interpolated into the default compileDir/tmpDir here as a single path
+     * segment, so it is restricted to CONTEXT_PATTERN's alphabet (letters, digits, "_",
+     * "-", "\") rather than validated against a growing list of dangerous spellings. Both
+     * "." and "/" are excluded by that restriction: either one, alone or as part of a
+     * leading/trailing/doubled separator, would otherwise make compileDir resolve to
+     * "{appDir}/var/di" itself — the parent shared by every context — so Cleaner emptying
+     * it would delete every other context's compiled scripts, not just this one's.
      *
      * $appDir must already be absolute; it is rejected otherwise rather than resolved.
      * BakedPathGuard compares meta strings verbatim against literals frozen into compiled
@@ -112,8 +127,8 @@ final readonly class AppMeta
      * than as a bad argument. Whether appDir exists on disk is a caller concern (e.g.
      * bin/ray-di-compile checks it as a usage error); this factory only checks its shape.
      *
-     * @throws InvalidAppMeta When appDir is not absolute, appDir/context is empty, or
-     *                        context contains "..".
+     * @throws InvalidAppMeta When appDir is not absolute or empty, or context does not
+     *                        match CONTEXT_PATTERN (letters, digits, "_", "-", "\" only).
      */
     public static function fromAppDir(
         string $appDir,
@@ -121,8 +136,12 @@ final readonly class AppMeta
         ?string $compileDir = null,
         ?string $tmpDir = null,
     ): self {
-        if (str_contains($context, '..')) {
-            throw new InvalidAppMeta(sprintf('AppMeta::fromAppDir(): $context must not contain "..": "%s"', $context));
+        $isSafeContext = preg_match(self::CONTEXT_PATTERN, $context) === 1;
+        if (!$isSafeContext) {
+            throw new InvalidAppMeta(sprintf(
+                'AppMeta::fromAppDir(): $context must contain only letters, digits, "_", "-", or "\\": "%s"',
+                $context,
+            ));
         }
 
         if ($appDir === '') {

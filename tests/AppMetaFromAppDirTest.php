@@ -6,6 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -54,17 +55,17 @@ final class AppMetaFromAppDirTest extends TestCase
     /**
      * Falls back to conventional paths under the app dir
      *
-     * A context that is not a single conventional path segment — containing "/", as a
-     * namespaced class-string would with "\" — is still accepted: it is concatenated,
-     * not resolved, so it only nests an extra directory level rather than escaping
-     * anywhere.
+     * A namespaced class-string context (e.g. "App\ProdContext") is accepted verbatim:
+     * unlike "/" and ".", "\" carries none of the OS-resolution risk that excludes those
+     * two from CONTEXT_PATTERN, so a caller can pass a ::class-shaped context straight
+     * through without folding it into a different alphabet first.
      *
      * @throws InvalidAppMeta
      */
     #[Test]
     public function defaults(): void
     {
-        $context = 'App/ProdContext';
+        $context = FakeProdContext::class;
         $meta = AppMeta::fromAppDir($this->appDir, $context);
 
         static::assertSame($this->appDir, $meta->appDir);
@@ -74,16 +75,33 @@ final class AppMetaFromAppDirTest extends TestCase
     }
 
     /**
-     * A context containing ".." is rejected: the OS resolves it as a parent-dir
-     * traversal wherever the interpolated compileDir/tmpDir is later used
+     * A context outside CONTEXT_PATTERN's alphabet (letters, digits, "_", "-", "\") is
+     * rejected outright, as a whitelist rather than as a list of specific dangerous
+     * spellings: "/" and "." (whether alone, doubled, or leading/trailing) would
+     * otherwise collapse the interpolated compileDir/tmpDir back to "{appDir}/var/di"
+     * itself — the parent shared by every context, so Cleaner emptying it would delete
+     * every other context's compiled scripts too. A "/"-nested class-string
+     * ("App/ProdContext") is rejected the same way — only "\" is accepted as a
+     * namespace separator, not "/".
      *
      * @throws InvalidAppMeta
      */
+    #[TestWith([''])]
     #[TestWith(['../prod'])]
     #[TestWith(['pro..d'])]
     #[TestWith(['prod/../../etc'])]
+    #[TestWith(['.'])]
+    #[TestWith(['/'])]
+    #[TestWith(['./'])]
+    #[TestWith(['/prod'])]
+    #[TestWith(['prod/'])]
+    #[TestWith(['prod//staging'])]
+    #[TestWith(['prod/./staging'])]
+    #[TestWith(['App/ProdContext'])]
+    #[TestWith(['prod:staging'])]
+    #[TestWith(['prod staging'])]
     #[Test]
-    public function rejectsParentDirTraversal(string $context): void
+    public function rejectsUnsafeContext(string $context): void
     {
         $this->expectException(InvalidAppMeta::class);
 

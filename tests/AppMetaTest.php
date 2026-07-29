@@ -67,4 +67,25 @@ final class AppMetaTest extends TestCase
 
         new AppMeta($appDir, $context, $compileDir, $tmpDir);
     }
+
+    /**
+     * appDir must be absolute through the public constructor too, not just fromAppDir()
+     *
+     * BakedPathGuard and CompileDirGuard both read $meta->appDir verbatim regardless of
+     * which entry point produced it, so a relative appDir is just as unsafe here as it is
+     * through fromAppDir() — the invariant belongs to the type, not to one factory.
+     *
+     * @throws InvalidAppMeta
+     */
+    #[TestWith(['app'])]
+    #[TestWith(['./app'])]
+    #[TestWith(['.'])]
+    #[Test]
+    public function rejectsNonAbsoluteAppDir(string $appDir): void
+    {
+        $this->expectException(InvalidAppMeta::class);
+        $this->expectExceptionMessage('must be an absolute path');
+
+        new AppMeta($appDir, 'prod', '/opt/di', '/tmp/rw');
+    }
 }

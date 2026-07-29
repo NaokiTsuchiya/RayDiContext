@@ -104,3 +104,31 @@ must-be-abstract = true
 must-implement = 'NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface'
 must-extend = 'RuntimeException'
 reason = "The base carries both the marker and the \\RuntimeException lineage every subclass relies on"
+
+# Root-namespace concrete classes are final; AbstractContext is the sole abstract exception.
+[[guard.structural.rules]]
+on = 'NaokiTsuchiya\RayDiContext\*'
+not-on = 'NaokiTsuchiya\RayDiContext\AbstractContext'
+target = "class"
+must-be-final = true
+reason = "Every concrete class in the root namespace is final except AbstractContext, which exists to be extended"
+
+# mago lint's class-name/interface-name rules only check PSR casing, not this package's *Interface suffix convention.
+[[guard.structural.rules]]
+on = 'NaokiTsuchiya\RayDiContext\*'
+target = "interface"
+must-be-named = '*Interface'
+reason = "Every interface in this package is named with an Interface suffix"
+
+# AppMeta's readonly-ness is the core of its "pure value object" design (see #29); guard it structurally.
+[[guard.structural.rules]]
+on = 'NaokiTsuchiya\RayDiContext\AppMeta'
+target = "class"
+must-be-readonly = true
+reason = "AppMeta is a pure value object; losing readonly would silently break that guarantee"
+
+# Keep the Exception namespace free of enums/functions that would blur its declaration-only purpose.
+[[guard.structural.rules]]
+on = 'NaokiTsuchiya\RayDiContext\Exception\*'
+must-be = ["class", "interface"]
+reason = "The Exception namespace holds only exception classes and the marker interface"

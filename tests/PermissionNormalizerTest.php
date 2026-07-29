@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -56,7 +55,6 @@ final class PermissionNormalizerTest extends TestCase
      * dir whose own mode depends on the umask of the build. A qualifier holding a "/"
      * puts one of those scripts in a subdirectory, so the nested case is not academic.
      *
-     * @throws ChmodFailed
      * @throws ExceptionInterface
      */
     #[Test]
@@ -83,7 +81,6 @@ final class PermissionNormalizerTest extends TestCase
      * say — cannot be chmod'ed by that user at all, so an entry that already grants
      * the world bits it needs must not be touched.
      *
-     * @throws ChmodFailed
      * @throws ExceptionInterface
      */
     #[Test]
@@ -106,7 +103,6 @@ final class PermissionNormalizerTest extends TestCase
      * chmod() resolves the link, so following one would change the mode of a file
      * outside the compile dir.
      *
-     * @throws ChmodFailed
      * @throws ExceptionInterface
      */
     #[Test]

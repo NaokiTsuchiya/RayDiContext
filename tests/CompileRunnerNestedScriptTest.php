@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
-use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
-use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Fake\FakeQualifiedContext;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -65,10 +62,7 @@ final class CompileRunnerNestedScriptTest extends TestCase
      * directory of its own. Those scripts are written 0600 like any other, and are the
      * ones a non-recursive normalizer would leave behind.
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
      */
     #[Test]
     public function normalizesAScriptCompiledIntoASubdirectory(): void

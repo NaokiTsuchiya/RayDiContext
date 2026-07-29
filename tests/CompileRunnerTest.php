@@ -6,11 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
-use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
-use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
@@ -51,9 +47,7 @@ final class CompileRunnerTest extends TestCase
     /**
      * {@inheritDoc}
      *
-     * @throws InvalidAppMeta
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
+     * @throws ExceptionInterface
      */
     protected function setUp(): void
     {
@@ -83,7 +77,6 @@ final class CompileRunnerTest extends TestCase
     /**
      * run() cleans stale scripts and compiles the context module
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]
@@ -104,11 +97,7 @@ final class CompileRunnerTest extends TestCase
      * This is the readOnlyRootFilesystem scenario: the compile dir is baked into the
      * image and never written to at runtime.
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
-     * @throws UnknownContext
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
      */
     #[Test]
     public function resolvesFromReadOnlyCompileDir(): void
@@ -133,11 +122,7 @@ final class CompileRunnerTest extends TestCase
      * The tmp dir that existed when the image was built may be absent at runtime; the
      * compiled context must still resolve.
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
-     * @throws UnknownContext
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
      */
     #[Test]
     public function resolvesWithoutCompileTimeTmpDir(): void
@@ -165,7 +150,6 @@ final class CompileRunnerTest extends TestCase
      * scripts 0600 through tempnam(), which leaves them unreadable to the runtime user
      * once the compile dir is baked into the image.
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]
@@ -225,7 +209,6 @@ final class CompileRunnerTest extends TestCase
      * This is the APP_COMPILE_DIR typo the guard exists for: the run must abort with
      * the app still on disk.
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]

@@ -54,7 +54,6 @@ final class BakedPathGuardBoundaryTest extends TestCase
     /**
      * A path inside the compile dir is allowed: it is baked into the image with the scripts
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]

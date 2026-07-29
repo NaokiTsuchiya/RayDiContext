@@ -205,9 +205,7 @@ final class AppMetaFromAppDirTest extends TestCase
      * path. Resolving the symlink here would make the guard fail open under a
      * Capistrano-style "current -> release" deployment layout.
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
-     * @throws InvalidAppMeta
      */
     #[Test]
     public function preservesSymlinkSpellingAgainstBakedPathGuard(): void

@@ -6,7 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use Countable;
 use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeDevContext;
@@ -22,10 +22,7 @@ final class MapContextProviderTest extends TestCase
     /**
      * Returns the context mapped to $meta->context, constructed with the given meta
      *
-     * @throws UnknownContext
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
-     * @throws InvalidAppMeta
+     * @throws ExceptionInterface
      */
     #[Test]
     public function getReturnsMappedContext(): void
@@ -45,10 +42,7 @@ final class MapContextProviderTest extends TestCase
     /**
      * An unmapped context is rejected with the known contexts listed
      *
-     * @throws UnknownContext
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
-     * @throws InvalidAppMeta
+     * @throws ExceptionInterface
      */
     #[Test]
     public function getThrowsOnUnknownContext(): void
@@ -68,8 +62,7 @@ final class MapContextProviderTest extends TestCase
      * name in a bootstrap file is caught the moment the provider is wired up, not only
      * once that particular context is finally looked up.
      *
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
+     * @throws ExceptionInterface
      */
     #[Test]
     public function constructorThrowsOnMissingContextClass(): void
@@ -90,8 +83,7 @@ final class MapContextProviderTest extends TestCase
      * TypeError ("Return value must be of type ContextInterface, stdClass returned"),
      * which leaks past this package's exception hierarchy.
      *
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
+     * @throws ExceptionInterface
      */
     #[Test]
     public function constructorThrowsOnClassNotExtendingAbstractContext(): void
@@ -113,8 +105,7 @@ final class MapContextProviderTest extends TestCase
      * ("Cannot instantiate abstract class AbstractContext"), which leaks past this
      * package's exception hierarchy.
      *
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
+     * @throws ExceptionInterface
      */
     #[Test]
     public function constructorThrowsOnAbstractContextClass(): void
@@ -139,8 +130,7 @@ final class MapContextProviderTest extends TestCase
      * make this case indistinguishable from a genuine typo (ContextClassNotFound's
      * "does not exist").
      *
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
+     * @throws ExceptionInterface
      */
     #[Test]
     public function constructorThrowsOnInterfaceContextClass(): void

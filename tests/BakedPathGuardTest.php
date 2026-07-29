@@ -59,7 +59,6 @@ final class BakedPathGuardTest extends TestCase
     /**
      * Scripts free of runtime paths pass
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]
@@ -94,7 +93,6 @@ final class BakedPathGuardTest extends TestCase
     /**
      * A tmpDir literal is detected even when the tmp dir is outside the app dir
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]
@@ -110,7 +108,6 @@ final class BakedPathGuardTest extends TestCase
     /**
      * A path inside a serialized instance is detected
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]
@@ -127,7 +124,6 @@ final class BakedPathGuardTest extends TestCase
     /**
      * The compile dir itself is baked into the image, so its literal is allowed
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]
@@ -143,7 +139,6 @@ final class BakedPathGuardTest extends TestCase
     /**
      * Only PHP scripts are scanned; compile artifacts like _bindings.log are ignored
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]
@@ -162,7 +157,6 @@ final class BakedPathGuardTest extends TestCase
      * A dangling symlink is a portable way to make file_get_contents() fail without
      * relying on permissions, which root ignores.
      *
-     * @throws BakedPathFound
      * @throws ExceptionInterface
      */
     #[Test]

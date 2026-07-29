@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -59,8 +59,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
      * did not succeed leaves a side effect behind — and it fails as an SPL exception from
      * FilesystemIterator rather than as an exception of this package.
      *
-     * @throws ChmodFailed
-     * @throws CompileDirNotReadable
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsAPathThatIsNotADirectory(): void
@@ -83,8 +82,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
     /**
      * A path that does not exist is rejected by name
      *
-     * @throws ChmodFailed
-     * @throws CompileDirNotReadable
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsAMissingPath(): void
@@ -109,8 +107,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
      * FilesystemIterator raises an SPL exception that would otherwise escape the
      * declared contract.
      *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsACompileDirItCannotList(): void
@@ -130,8 +127,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
     /**
      * An unlistable directory nested in a normal compile dir fails the same way
      *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsANestedDirectoryItCannotList(): void
@@ -157,8 +153,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
      * only the stat() of each entry is denied — which leaked a PHP warning per entry
      * from fileperms() and chmod() before anything failed.
      *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsACompileDirItCannotTraverse(): void
@@ -184,8 +179,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
     /**
      * An untraversable directory nested in a normal compile dir fails the same way
      *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsANestedDirectoryItCannotTraverse(): void

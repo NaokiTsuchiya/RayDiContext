@@ -6,7 +6,9 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
@@ -20,7 +22,6 @@ use PHPUnit\Framework\TestCase;
 use Ray\Compiler\CompiledInjector;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use ReflectionException;
 use RuntimeException;
 use SplFileInfo;
 
@@ -51,6 +52,8 @@ final class CompileRunnerTest extends TestCase
      * {@inheritDoc}
      *
      * @throws InvalidAppMeta
+     * @throws ContextClassNotFound
+     * @throws InvalidContextClass
      */
     protected function setUp(): void
     {
@@ -104,7 +107,8 @@ final class CompileRunnerTest extends TestCase
      * @throws BakedPathFound
      * @throws RuntimeException
      * @throws UnknownContext
-     * @throws ReflectionException
+     * @throws ContextClassNotFound
+     * @throws InvalidContextClass
      */
     #[Test]
     public function resolvesFromReadOnlyCompileDir(): void
@@ -132,7 +136,8 @@ final class CompileRunnerTest extends TestCase
      * @throws BakedPathFound
      * @throws RuntimeException
      * @throws UnknownContext
-     * @throws ReflectionException
+     * @throws ContextClassNotFound
+     * @throws InvalidContextClass
      */
     #[Test]
     public function resolvesWithoutCompileTimeTmpDir(): void

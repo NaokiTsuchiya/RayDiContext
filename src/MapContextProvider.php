@@ -23,18 +23,28 @@ use function sprintf;
  */
 final class MapContextProvider implements ContextProviderInterface
 {
-    /** @param array<string, class-string<AbstractContext>> $map context name to context class */
+    /**
+     * @param array<string, class-string<AbstractContext>> $map context name to context class
+     *
+     * Every entry is checked here, not lazily in get(): a typo in an entry for a
+     * context nobody has requested yet would otherwise surface only once that
+     * context is finally looked up, possibly long after the map was wired up.
+     *
+     * @throws ContextClassNotFound When a mapped context class does not exist.
+     * @throws InvalidContextClass When a mapped class exists but cannot serve as a context.
+     */
     public function __construct(
         private readonly array $map,
-    ) {}
+    ) {
+        foreach ($this->map as $context => $class) {
+            self::assertUsableContextClass($class, $context);
+        }
+    }
 
     /**
      * {@inheritDoc}
      *
      * @throws UnknownContext When no context class is mapped to $meta->context.
-     * @throws ContextClassNotFound When the mapped context class does not exist.
-     * @throws InvalidContextClass When the mapped class exists but cannot serve as a context.
-     * @throws ReflectionException Never in practice: $class was just confirmed to exist above.
      */
     public function get(AppMeta $meta): ContextInterface
     {
@@ -47,20 +57,45 @@ final class MapContextProvider implements ContextProviderInterface
             ));
         }
 
+        // $class was already verified usable by the constructor.
+        return new $class($meta);
+    }
+
+    /**
+     * @throws ContextClassNotFound When $class does not exist.
+     * @throws InvalidContextClass When $class exists but cannot serve as a context.
+     */
+    private static function assertUsableContextClass(string $class, string $context): void
+    {
         if (!class_exists($class) && !interface_exists($class)) {
             throw new ContextClassNotFound(sprintf(
                 'Context class "%s" mapped to context "%s" does not exist',
                 $class,
-                $meta->context,
+                $context,
             ));
         }
 
-        $reflection = new ReflectionClass($class);
+        try {
+            $reflection = new ReflectionClass($class);
+        } catch (ReflectionException $e) {
+            // @codeCoverageIgnoreStart
+            // Unreachable from a test: class_exists()/interface_exists() above already
+            // confirmed $class resolves, so ReflectionClass's constructor cannot fail here.
+            // Caught anyway so this method's contract stays limited to this package's own
+            // exceptions, with nothing left to declare.
+            throw new ContextClassNotFound(
+                sprintf('Context class "%s" mapped to context "%s" does not exist', $class, $context),
+                previous: $e,
+            );
+
+            // @codeCoverageIgnoreEnd
+        }
+
         if ($reflection->isInterface()) {
             throw new InvalidContextClass(sprintf(
                 'Context class "%s" mapped to context "%s" is an interface, not a class',
                 $class,
-                $meta->context,
+                $context,
             ));
         }
 
@@ -68,7 +103,7 @@ final class MapContextProvider implements ContextProviderInterface
             throw new InvalidContextClass(sprintf(
                 'Context class "%s" mapped to context "%s" is abstract and cannot be instantiated',
                 $class,
-                $meta->context,
+                $context,
             ));
         }
 
@@ -76,11 +111,9 @@ final class MapContextProvider implements ContextProviderInterface
             throw new InvalidContextClass(sprintf(
                 'Context class "%s" mapped to context "%s" must extend %s',
                 $class,
-                $meta->context,
+                $context,
                 AbstractContext::class,
             ));
         }
-
-        return new $class($meta);
     }
 }

@@ -6,7 +6,9 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Fake\FakeQualifiedContext;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -65,6 +67,8 @@ final class CompileRunnerNestedScriptTest extends TestCase
      *
      * @throws BakedPathFound
      * @throws RuntimeException
+     * @throws ContextClassNotFound
+     * @throws InvalidContextClass
      */
     #[Test]
     public function normalizesAScriptCompiledIntoASubdirectory(): void

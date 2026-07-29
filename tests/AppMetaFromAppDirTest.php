@@ -6,6 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -64,10 +65,7 @@ final class AppMetaFromAppDirTest extends TestCase
     #[Test]
     public function defaults(): void
     {
-        // Lowercase second segment sidesteps mago's no-literal-namespace-string heuristic
-        // (it flags strings where every "\"-segment starts uppercase); the case doesn't
-        // matter to fromAppDir(), which treats "\" as an ordinary allowed character.
-        $context = 'App\prodContext';
+        $context = FakeProdContext::class;
         $meta = AppMeta::fromAppDir($this->appDir, $context);
 
         static::assertSame($this->appDir, $meta->appDir);

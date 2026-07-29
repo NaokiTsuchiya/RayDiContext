@@ -1,6 +1,35 @@
 # Ray.Di Context
 
+[![CI](https://github.com/NaokiTsuchiya/RayDiContext/actions/workflows/ci.yml/badge.svg)](https://github.com/NaokiTsuchiya/RayDiContext/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/NaokiTsuchiya/RayDiContext/graph/badge.svg)](https://codecov.io/gh/NaokiTsuchiya/RayDiContext)
+[![PHP Version](https://img.shields.io/badge/php-8.2%2B-777BB4)](composer.json)
+[![License](https://img.shields.io/github/license/NaokiTsuchiya/RayDiContext)](LICENSE)
+<!-- Packagist version badge: add once v0.1.0 is tagged and registered, see issue #26 -->
+
 Context, meta, and compile management for [Ray.Di](https://github.com/ray-di/Ray.Di) applications.
+
+## Why
+
+Ray.Di's plain `Injector` compiles each binding into a PHP script written to
+`tmpDir` the first time it's resolved — at request time. A container running
+with a read-only root filesystem (Docker `--read-only`, Kubernetes
+`securityContext.readOnlyRootFilesystem: true`) has nowhere writable for that
+first write to land, so the first request fails.
+
+`Ray\Compiler` solves the *write*: compile ahead of time, ship the compiled
+scripts, run `CompiledInjector` against them at runtime — no writes needed. It
+doesn't solve the *path*: the compiled scripts and the app that reads them have
+to resolve `compileDir`/`tmpDir` to the exact same strings, and nothing stops a
+runtime-only path from getting frozen into a script by accident. `AppMeta`,
+`ContextInterface`, and `BakedPathGuard` exist to make that separation safe —
+`compileDir` stays read-only and gets baked into the image, `tmpDir` stays
+writable and never does, and CI can verify the split before the image is even
+built.
+
+If you're on [BEAR.Sunday](https://bear.sunday.dev/), you already have this —
+`BEAR\AppMeta\Meta` and `AbstractAppContext` solve the same problem, and this
+package's vocabulary (`AppMeta`, context, compile) deliberately echoes theirs.
+You don't need both.
 
 | Directory    | Role                    | Lifecycle                                      |
 |--------------|-------------------------|-------------------------------------------------|
@@ -34,7 +63,30 @@ those two path strings. It won't catch anything else:
 `$this->bind()->annotatedWith('db_password')->toInstance('s3cr3t-P@ssw0rd')` writes
 the password in plaintext into a compiled script under `compileDir`, and nothing
 stops it. Bind secrets and other runtime-determined values through a provider
-instead.
+instead — a provider's `get()` runs each time the compiled injector resolves the
+binding, not once at compile time, so nothing gets frozen into the script:
+
+```php
+use Ray\Di\ProviderInterface;
+
+/** @implements ProviderInterface<string> */
+final class TmpDirProvider implements ProviderInterface
+{
+    public function get(): string
+    {
+        return getenv('APP_TMP_DIR') ?: sys_get_temp_dir();
+    }
+}
+```
+
+```php
+$this->bind()->annotatedWith('tmp_dir')->toProvider(TmpDirProvider::class);
+```
+
+`TmpDirProvider` reads the environment itself, at the moment its value is asked
+for — the same rule this package follows in `AppMeta::fromAppDir()` and the CLI:
+resolve runtime-determined values at runtime, never freeze them into a compiled
+script.
 
 ## Install
 
@@ -145,6 +197,81 @@ foreach ($context->getSavedSingleton() as $class) {
     $injector->getInstance($class);
 }
 ```
+
+`getInjectorInstance()` is called once and the result reused above — see the
+docblock on `ContextInterface::getInjectorInstance()` for why that matters.
+`getSavedSingleton()` names classes to instantiate once, right after boot: a
+compiled injector never unserializes instances, so anything holding a runtime
+resource (a database connection, for example) needs this explicit warmup, or it
+won't exist until something happens to request it first.
+
+## Deploying to Docker / Kubernetes
+
+Build the compiled scripts in a build stage, `COPY` only the result into the
+runtime image, and run as a non-root user with a read-only root filesystem:
+
+```dockerfile
+# syntax=docker/dockerfile:1
+FROM php:8.3-cli AS build
+WORKDIR /build
+COPY . .
+RUN composer install --no-dev --optimize-autoloader \
+ && php bin/ray-di-compile bootstrap.php /build prod /app/var/di/prod
+
+FROM php:8.3-cli
+WORKDIR /app
+COPY --from=build /build /app
+RUN useradd --system appuser
+USER appuser
+CMD ["php", "bin/console"]
+```
+
+The build stage compiles at `/build`; the runtime image runs at `/app`. Left to
+its defaults, `AppMeta::fromAppDir()` would derive `compileDir` from `appDir`, so
+the scripts above would be compiled for `/build/var/di/prod` while the running
+app looks for them at `/app/var/di/prod` — a mismatch that `CompiledInjector`
+reports as `ScriptDirNotReadable` the moment the first class is resolved. That's
+why the `RUN` step above passes `APP_COMPILE_DIR` explicitly, resolved to the
+*runtime* path, not the build path — and the app's own bootstrap must resolve
+`APP_COMPILE_DIR` to that same runtime path:
+
+```php
+$meta = AppMeta::fromAppDir(dirname(__DIR__), 'prod', '/app/var/di/prod');
+```
+
+`APP_TMP_DIR` doesn't fail this loudly at compile time — a `tmpDir` that doesn't
+exist yet only surfaces once something tries to write to it, silently, in
+`sys_get_temp_dir()` (see above) — but resolve it to the runtime path for the
+same reason.
+
+`APP_COMPILE_DIR`/`APP_TMP_DIR` override the whole directory, not just the
+`appDir` they're derived from, so they ignore `context` entirely. One override
+can only ever serve one context: baking `prod-cli` and `prod-html` into the same
+image means compiling both to their conventional, context-suffixed paths
+(`{appDir}/var/di/prod-cli`, `{appDir}/var/di/prod-html`) and `COPY`-ing the
+whole `appDir`, rather than pointing `APP_COMPILE_DIR` at one shared path.
+
+In Kubernetes, mount `tmpDir` as an `emptyDir` (`medium: Memory` for tmpfs) and
+leave everything else read-only:
+
+```yaml
+securityContext:
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+volumeMounts:
+  - name: tmp
+    mountPath: /app/var/tmp
+volumes:
+  - name: tmp
+    emptyDir: {}
+```
+
+Ray.Compiler writes two housekeeping files into `compileDir` alongside the
+compiled scripts: `compile.lock` (held only during the compile) and
+`_bindings.log` (a human-readable dump of the binding graph, including the
+compile-time `compileDir` path). Both get baked into the image along with the
+rest of `compileDir` — neither is meant to hold secrets, but they're not
+scripts `BakedPathGuard` scans, either.
 
 ## Requirements
 

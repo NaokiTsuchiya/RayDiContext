@@ -19,9 +19,22 @@ Context, meta, and compile management for [Ray.Di](https://github.com/ray-di/Ray
   overrides in explicitly (e.g. as CLI arguments, sourced from env vars by your shell
   or Dockerfile). Compile-time and runtime code must agree on the same values, or the
   compiled scripts and the running app will look in different places
+- This package creates `compileDir` for you but never creates `tmpDir` — `mkdir` it
+  yourself before runtime (e.g. in your Dockerfile or bootstrap script). Ray.Di's
+  `Injector` silently falls back to `sys_get_temp_dir()` when `tmpDir` doesn't exist,
+  so a missing directory doesn't throw — writes just land somewhere you didn't expect.
+  Add `var/di/` and `var/tmp/` (or wherever your `compileDir`/`tmpDir` point) to your
+  application's `.gitignore`
 
-**Never bind `AppMeta` with `toInstance()`** — Ray.Compiler freezes bound objects into
-the compiled scripts. `BakedPathGuard` fails the compile if `appDir`/`tmpDir` leaks in.
+**Never bind a runtime-determined value or secret with `toInstance()`** —
+Ray.Compiler freezes whatever you pass into the compiled scripts, and `compileDir`
+ships inside your image. Binding `AppMeta` this way leaks `appDir`/`tmpDir`, which
+`BakedPathGuard` catches and fails the compile on — but the guard only scans for
+those two path strings. It won't catch anything else:
+`$this->bind()->annotatedWith('db_password')->toInstance('s3cr3t-P@ssw0rd')` writes
+the password in plaintext into a compiled script under `compileDir`, and nothing
+stops it. Bind secrets and other runtime-determined values through a provider
+instead.
 
 ## Install
 
@@ -32,6 +45,13 @@ composer require naoki-tsuchiya/ray-di-context
 ## Usage
 
 ```php
+use NaokiTsuchiya\RayDiContext\AbstractContext;
+use Ray\Compiler\CompiledInjector;
+use Ray\Compiler\DiCompileModule;
+use Ray\Di\AbstractModule;
+use Ray\Di\Injector;
+use Ray\Di\InjectorInterface;
+
 final class ProdContext extends AbstractContext
 {
     public function __invoke(): AbstractModule
@@ -111,6 +131,7 @@ to the CLI above — a mismatch means the running app looks for compiled scripts
 different place than they were baked into:
 
 ```php
+$provider = require 'bootstrap.php';
 $meta = AppMeta::fromAppDir(
     dirname(__DIR__),
     getenv('APP_ENV') ?: 'prod',

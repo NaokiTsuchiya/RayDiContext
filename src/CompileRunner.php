@@ -47,7 +47,7 @@ final class CompileRunner
      * @throws RemoveFailed When an entry inside the compile dir cannot be removed.
      * @throws ScriptNotReadable When a compiled script cannot be read.
      * @throws ChmodFailed When a compiled script cannot be made readable.
-     * @throws CompileDirNotFound When the compile dir is gone by the time it is normalized.
+     * @throws CompileDirNotFound When the compile dir is gone by the time it is guarded or normalized.
      * @throws CompileDirNotReadable When a directory in the compile dir cannot be listed or traversed.
      */
     public function run(AppMeta $meta): void

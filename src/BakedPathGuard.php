@@ -38,9 +38,6 @@ use function sprintf;
 final class BakedPathGuard
 {
     /**
-     * A compile dir that is missing, not a directory, or unreadable — or one that becomes so
-     * partway through traversal — is reported as a package exception rather than a bare SPL one.
-     *
      * @param non-empty-string $compileDir
      *
      * @throws CompileDirNotFound When the compile dir is not an existing directory.

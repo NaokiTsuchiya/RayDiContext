@@ -6,12 +6,17 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use UnexpectedValueException;
 
 use function file_get_contents;
+use function is_dir;
+use function is_executable;
 use function sprintf;
 
 /**
@@ -33,25 +38,50 @@ use function sprintf;
 final class BakedPathGuard
 {
     /**
+     * A compile dir that is missing, not a directory, or unreadable fails
+     * RecursiveDirectoryIterator's constructor with a bare UnexpectedValueException (or, for
+     * an empty string, a ValueError) — neither implements ExceptionInterface, so a
+     * `catch (ExceptionInterface)` around this call would not see it, and mago's
+     * check-throws cannot see through the constructor to flag the gap. The same failure
+     * reaches a subdirectory found mid-traversal, since RecursiveDirectoryIterator opens
+     * each one lazily via getChildren(). Both are turned into a package exception here.
+     *
      * @param non-empty-string $compileDir
      *
+     * @throws CompileDirNotFound When the compile dir is not an existing directory.
+     * @throws CompileDirNotReadable When the compile dir, or a directory below it, cannot be
+     *                                listed or traversed.
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
      * @throws ScriptNotReadable When a compiled script cannot be read.
      */
     public function __invoke(string $compileDir, AppMeta $meta): void
     {
-        $entries = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(
-            $compileDir,
-            FilesystemIterator::SKIP_DOTS,
-        ));
-        /** @var SplFileInfo $entry */
-        foreach ($entries as $entry) {
-            $extension = $entry->getExtension();
-            if ($extension !== 'php') {
-                continue;
-            }
+        $isDir = is_dir($compileDir);
+        if (!$isDir) {
+            throw new CompileDirNotFound(sprintf('Compile dir is not an existing directory: "%s"', $compileDir));
+        }
 
-            $this->guardScript($entry->getPathname(), $compileDir, $meta);
+        $traversable = is_executable($compileDir);
+        if (!$traversable) {
+            throw new CompileDirNotReadable(sprintf('Compile dir cannot be traversed: "%s"', $compileDir));
+        }
+
+        try {
+            $entries = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(
+                $compileDir,
+                FilesystemIterator::SKIP_DOTS,
+            ));
+            /** @var SplFileInfo $entry */
+            foreach ($entries as $entry) {
+                $extension = $entry->getExtension();
+                if ($extension !== 'php') {
+                    continue;
+                }
+
+                $this->guardScript($entry->getPathname(), $compileDir, $meta);
+            }
+        } catch (UnexpectedValueException $e) {
+            throw new CompileDirNotReadable(sprintf('Compile dir cannot be read: "%s"', $compileDir), previous: $e);
         }
     }
 

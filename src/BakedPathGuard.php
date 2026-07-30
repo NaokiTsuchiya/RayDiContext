@@ -72,6 +72,14 @@ final class BakedPathGuard
                     continue;
                 }
 
+                $isFile = $entry->isFile();
+                if (!$isFile) {
+                    throw new ScriptNotReadable(sprintf(
+                        'Compiled script path is not a regular file: "%s"',
+                        $entry->getPathname(),
+                    ));
+                }
+
                 $this->guardScript($entry->getPathname(), $compileDir, $meta);
             }
         } catch (UnexpectedValueException $e) {

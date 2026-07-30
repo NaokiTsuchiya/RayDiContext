@@ -89,11 +89,6 @@ final class BakedPathGuard
      */
     private function guardScript(string $path, string $compileDir, AppMeta $meta): void
     {
-        // file_get_contents() raises an E_WARNING of its own when it fails.
-        // ScriptNotReadable carries the same information with the path attached, and a
-        // warning on top of it would escape a class whose contract is that a failure
-        // arrives as one package exception — so the diagnostic is swallowed for this call
-        // and the exception is what is left.
         set_error_handler(static fn(): bool => true);
         try {
             $script = file_get_contents($path);

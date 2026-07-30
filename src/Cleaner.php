@@ -60,11 +60,6 @@ final class Cleaner
             return;
         }
 
-        // mkdir() raises an E_WARNING of its own when it fails. CompileDirNotWritable
-        // carries the same information with the path attached, and a warning on top of it
-        // would escape a class whose contract is that a failure arrives as one package
-        // exception — so the diagnostic is swallowed for this call and the exception is
-        // what is left.
         set_error_handler(static fn(): bool => true);
         try {
             $created = mkdir($compileDir, permissions: 0o755, recursive: true);
@@ -103,9 +98,6 @@ final class Cleaner
                 $this->removeContents($pathname);
             }
 
-            // rmdir()/unlink() raise an E_WARNING of their own when they fail. RemoveFailed
-            // carries the same information with the path attached, so the diagnostic is
-            // swallowed here for the same reason as the mkdir() call above.
             set_error_handler(static fn(): bool => true);
             try {
                 $removed = $isRealDir ? rmdir($pathname) : unlink($pathname);

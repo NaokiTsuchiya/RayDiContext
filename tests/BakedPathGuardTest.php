@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
@@ -14,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 use function chmod;
+use function copy;
 use function file_put_contents;
 use function mkdir;
 use function serialize;
@@ -22,6 +24,9 @@ use function uniqid;
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardTest extends TestCase
 {
+    /** Stands in for a compiled script whose content is irrelevant to the test */
+    private const SCRIPT = __DIR__ . '/Fixture/script.php';
+
     /** Per-test working directory */
     private string $baseDir;
 
@@ -162,14 +167,13 @@ final class BakedPathGuardTest extends TestCase
      * failure has to come from file_get_contents() itself, which is what this exercises.
      * Root ignores the permission, so this only means something under a non-root process.
      *
-     * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function throwsWhenScriptCannotBeRead(): void
     {
         $unreadable = "{$this->meta->compileDir}/unreadable.php";
-        file_put_contents($unreadable, data: '<?php return new stdClass();');
+        copy(self::SCRIPT, $unreadable);
         chmod($unreadable, permissions: 0o000);
 
         try {

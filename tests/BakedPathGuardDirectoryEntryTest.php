@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function file_put_contents;
 use function mkdir;
@@ -64,11 +64,9 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
      *
      * RecursiveDirectoryIterator does not descend into symlinks by default, so a symlink
      * named e.g. "cache.php" pointing at a directory is visited as a leaf, not recursed
-     * into. Guarding on is_file() before reading it means the rejection no longer depends
-     * on how file_get_contents() happens to report a directory path on the host platform.
+     * into.
      *
-     * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function throwsOnSymlinkToDirectoryNamedLikeAScript(): void
@@ -88,8 +86,7 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
      * A real directory named like a script is traversed as a directory; scripts inside
      * it are still scanned normally
      *
-     * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function scansScriptsInsideADirectoryNamedLikeAScript(): void

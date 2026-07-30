@@ -17,6 +17,8 @@ use UnexpectedValueException;
 use function file_get_contents;
 use function is_dir;
 use function is_executable;
+use function restore_error_handler;
+use function set_error_handler;
 use function sprintf;
 
 /**
@@ -87,7 +89,13 @@ final class BakedPathGuard
      */
     private function guardScript(string $path, string $compileDir, AppMeta $meta): void
     {
-        $script = file_get_contents($path);
+        set_error_handler(static fn(): bool => true);
+        try {
+            $script = file_get_contents($path);
+        } finally {
+            restore_error_handler();
+        }
+
         if ($script === false) {
             throw new ScriptNotReadable("Failed to read compiled script: {$path}");
         }

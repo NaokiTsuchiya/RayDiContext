@@ -15,9 +15,7 @@ use RuntimeException;
 
 use function file_put_contents;
 use function mkdir;
-use function restore_error_handler;
 use function serialize;
-use function set_error_handler;
 use function symlink;
 use function uniqid;
 
@@ -174,13 +172,6 @@ final class BakedPathGuardTest extends TestCase
         $this->expectException(ScriptNotReadable::class);
         $this->expectExceptionMessage($broken);
 
-        // file_get_contents() emits its own E_WARNING on top of the exception the guard
-        // throws; a no-op handler swallows it since the exception is what's under test.
-        set_error_handler(static fn(): bool => true);
-        try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
-        } finally {
-            restore_error_handler();
-        }
+        ($this->guard)($this->meta->compileDir, $this->meta);
     }
 }

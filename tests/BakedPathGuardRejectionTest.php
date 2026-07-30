@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function chmod;
 use function file_put_contents;
@@ -59,7 +60,9 @@ final class BakedPathGuardRejectionTest extends TestCase
      * A compile dir that does not exist is rejected by name, instead of RecursiveDirectoryIterator's
      * bare UnexpectedValueException
      *
-     * @throws RuntimeException
+     * @throws BakedPathFound
+     * @throws CompileDirNotReadable
+     * @throws ScriptNotReadable
      */
     #[Test]
     public function rejectsAMissingCompileDir(): void
@@ -75,7 +78,9 @@ final class BakedPathGuardRejectionTest extends TestCase
     /**
      * A compile dir path that is a regular file is rejected the same way
      *
-     * @throws RuntimeException
+     * @throws BakedPathFound
+     * @throws CompileDirNotReadable
+     * @throws ScriptNotReadable
      */
     #[Test]
     public function rejectsACompileDirThatIsAFile(): void
@@ -99,8 +104,9 @@ final class BakedPathGuardRejectionTest extends TestCase
      * RecursiveDirectoryIterator raises an SPL exception that would otherwise escape the
      * declared contract.
      *
+     * @throws BakedPathFound
      * @throws CompileDirNotFound
-     * @throws RuntimeException
+     * @throws ScriptNotReadable
      */
     #[Test]
     public function rejectsACompileDirItCannotList(): void
@@ -124,8 +130,9 @@ final class BakedPathGuardRejectionTest extends TestCase
      * 0405 is the other half of that family: read is granted so listing opens, but every
      * per-entry stat() the iterator performs while traversing is denied.
      *
+     * @throws BakedPathFound
      * @throws CompileDirNotFound
-     * @throws RuntimeException
+     * @throws ScriptNotReadable
      */
     #[Test]
     public function rejectsACompileDirItCannotTraverse(): void
@@ -148,8 +155,9 @@ final class BakedPathGuardRejectionTest extends TestCase
      * An unlistable directory nested below a normal compile dir fails the same way, once
      * RecursiveDirectoryIterator opens it mid-traversal
      *
+     * @throws BakedPathFound
      * @throws CompileDirNotFound
-     * @throws RuntimeException
+     * @throws ScriptNotReadable
      */
     #[Test]
     public function rejectsANestedDirectoryItCannotList(): void

@@ -13,10 +13,10 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function chmod;
 use function file_put_contents;
 use function mkdir;
 use function serialize;
-use function symlink;
 use function uniqid;
 
 #[CoversClass(BakedPathGuard::class)]
@@ -155,10 +155,12 @@ final class BakedPathGuardTest extends TestCase
     }
 
     /**
-     * A script that cannot be read raises a ScriptNotReadable naming the path
+     * A script that is a regular file but cannot be read raises a ScriptNotReadable
+     * naming the path
      *
-     * A dangling symlink is a portable way to make file_get_contents() fail without
-     * relying on permissions, which root ignores.
+     * is_file() only stats the entry, so it passes for a permission-denied file; the
+     * failure has to come from file_get_contents() itself, which is what this exercises.
+     * Root ignores the permission, so this only means something under a non-root process.
      *
      * @throws BakedPathFound
      * @throws RuntimeException
@@ -166,12 +168,17 @@ final class BakedPathGuardTest extends TestCase
     #[Test]
     public function throwsWhenScriptCannotBeRead(): void
     {
-        $broken = "{$this->meta->compileDir}/broken.php";
-        symlink("{$this->meta->compileDir}/missing-target.php", $broken);
+        $unreadable = "{$this->meta->compileDir}/unreadable.php";
+        file_put_contents($unreadable, data: '<?php return new stdClass();');
+        chmod($unreadable, permissions: 0o000);
 
-        $this->expectException(ScriptNotReadable::class);
-        $this->expectExceptionMessage($broken);
-
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        try {
+            ($this->guard)($this->meta->compileDir, $this->meta);
+            static::fail('ScriptNotReadable was not thrown');
+        } catch (ScriptNotReadable $e) {
+            static::assertStringContainsString($unreadable, $e->getMessage());
+        } finally {
+            chmod($unreadable, permissions: 0o644); // tearDown has to be able to remove it
+        }
     }
 }

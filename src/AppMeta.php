@@ -107,9 +107,6 @@ final readonly class AppMeta
     /**
      * Creates a meta whose directories default to conventional paths under the app dir
      *
-     * This method does not read the environment itself; pass explicit compileDir/tmpDir
-     * (e.g. read from APP_COMPILE_DIR/APP_TMP_DIR by the caller) to override the defaults.
-     *
      * @param string      $appDir     Application root directory; must be absolute, as
      *                                enforced by the constructor (see __construct())
      * @param string      $context    Env/context name; must match CONTEXT_PATTERN (see

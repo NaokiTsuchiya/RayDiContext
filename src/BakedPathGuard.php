@@ -38,13 +38,8 @@ use function sprintf;
 final class BakedPathGuard
 {
     /**
-     * A compile dir that is missing, not a directory, or unreadable fails
-     * RecursiveDirectoryIterator's constructor with a bare UnexpectedValueException (or, for
-     * an empty string, a ValueError) — neither implements ExceptionInterface, so a
-     * `catch (ExceptionInterface)` around this call would not see it, and mago's
-     * check-throws cannot see through the constructor to flag the gap. The same failure
-     * reaches a subdirectory found mid-traversal, since RecursiveDirectoryIterator opens
-     * each one lazily via getChildren(). Both are turned into a package exception here.
+     * A compile dir that is missing, not a directory, or unreadable — or one that becomes so
+     * partway through traversal — is reported as a package exception rather than a bare SPL one.
      *
      * @param non-empty-string $compileDir
      *

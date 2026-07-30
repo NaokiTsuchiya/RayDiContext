@@ -17,6 +17,8 @@ use UnexpectedValueException;
 use function file_get_contents;
 use function is_dir;
 use function is_executable;
+use function restore_error_handler;
+use function set_error_handler;
 use function sprintf;
 
 /**
@@ -87,7 +89,18 @@ final class BakedPathGuard
      */
     private function guardScript(string $path, string $compileDir, AppMeta $meta): void
     {
-        $script = file_get_contents($path);
+        // file_get_contents() raises an E_WARNING of its own when it fails.
+        // ScriptNotReadable carries the same information with the path attached, and a
+        // warning on top of it would escape a class whose contract is that a failure
+        // arrives as one package exception — so the diagnostic is swallowed for this call
+        // and the exception is what is left.
+        set_error_handler(static fn(): bool => true);
+        try {
+            $script = file_get_contents($path);
+        } finally {
+            restore_error_handler();
+        }
+
         if ($script === false) {
             throw new ScriptNotReadable("Failed to read compiled script: {$path}");
         }

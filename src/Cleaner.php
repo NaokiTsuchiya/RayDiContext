@@ -14,7 +14,9 @@ use UnexpectedValueException;
 use function is_dir;
 use function is_executable;
 use function mkdir;
+use function restore_error_handler;
 use function rmdir;
+use function set_error_handler;
 use function sprintf;
 use function unlink;
 
@@ -58,7 +60,18 @@ final class Cleaner
             return;
         }
 
-        $created = mkdir($compileDir, permissions: 0o755, recursive: true);
+        // mkdir() raises an E_WARNING of its own when it fails. CompileDirNotWritable
+        // carries the same information with the path attached, and a warning on top of it
+        // would escape a class whose contract is that a failure arrives as one package
+        // exception — so the diagnostic is swallowed for this call and the exception is
+        // what is left.
+        set_error_handler(static fn(): bool => true);
+        try {
+            $created = mkdir($compileDir, permissions: 0o755, recursive: true);
+        } finally {
+            restore_error_handler();
+        }
+
         $createdConcurrently = is_dir($compileDir);
         if (!$created && !$createdConcurrently) {
             throw new CompileDirNotWritable("Failed to create compile dir: {$compileDir}");
@@ -90,7 +103,15 @@ final class Cleaner
                 $this->removeContents($pathname);
             }
 
-            $removed = $isRealDir ? rmdir($pathname) : unlink($pathname);
+            // rmdir()/unlink() raise an E_WARNING of their own when they fail. RemoveFailed
+            // carries the same information with the path attached, so the diagnostic is
+            // swallowed here for the same reason as the mkdir() call above.
+            set_error_handler(static fn(): bool => true);
+            try {
+                $removed = $isRealDir ? rmdir($pathname) : unlink($pathname);
+            } finally {
+                restore_error_handler();
+            }
 
             // @codeCoverageIgnoreStart
             // Only reachable via a race (another process removes the entry between the

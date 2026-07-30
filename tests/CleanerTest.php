@@ -20,8 +20,6 @@ use function file_put_contents;
 use function is_link;
 use function iterator_count;
 use function mkdir;
-use function restore_error_handler;
-use function set_error_handler;
 use function symlink;
 use function uniqid;
 
@@ -166,14 +164,7 @@ final class CleanerTest extends TestCase
         $this->expectException(CompileDirNotWritable::class);
         $this->expectExceptionMessage($compileDir);
 
-        // mkdir() emits its own E_WARNING on top of the exception the cleaner throws;
-        // a no-op handler swallows it since the exception is what's under test.
-        set_error_handler(static fn(): bool => true);
-        try {
-            (new Cleaner())($this->meta($compileDir));
-        } finally {
-            restore_error_handler();
-        }
+        (new Cleaner())($this->meta($compileDir));
     }
 
     /**

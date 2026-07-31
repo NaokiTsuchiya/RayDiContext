@@ -62,8 +62,25 @@ ships inside your image. Binding `AppMeta` this way leaks `appDir`/`tmpDir`, whi
 those two path strings. It won't catch anything else:
 `$this->bind()->annotatedWith('db_password')->toInstance('s3cr3t-P@ssw0rd')` writes
 the password in plaintext into a compiled script under `compileDir`, and nothing
-stops it. Bind secrets and other runtime-determined values through a provider
-instead — a provider's `get()` runs each time the compiled injector resolves the
+stops it *by default*. If you know what your own secrets look like, hand them to the
+guard and it will fail the compile the same way it does for a baked path:
+
+```php
+use NaokiTsuchiya\RayDiContext\BakedPathGuard;
+
+$dbPassword = getenv('DB_PASSWORD');
+$needles = $dbPassword === false || $dbPassword === '' ? [] : [$dbPassword];
+
+(new CompileRunner($provider, guard: new BakedPathGuard($needles)))->run($meta);
+```
+
+A rejection names the script but never repeats the value — these are supplied precisely
+because they must not ship, and quoting one would move it out of the image and into your
+CI log. For anything the bundled scanner can't express, implement `BakedPathGuardInterface`
+yourself and pass that instead.
+
+Better still, bind secrets and other runtime-determined values through a provider
+— a provider's `get()` runs each time the compiled injector resolves the
 binding, not once at compile time, so nothing gets frozen into the script:
 
 ```php
@@ -159,7 +176,9 @@ unreadable to a non-root runtime user; the compiled scripts are normalized to `0
 (their directories to `0755`) so the image stays readable after a `USER` switch.
 
 The CLI cleans the compile dir, compiles the context, guards the result against baked
-paths, and normalizes the permissions of what it wrote. Under the hood it is:
+paths, and normalizes the permissions of what it wrote. **A compile that fails the guard
+leaves `compileDir` empty**, so scripts it refused can never be `COPY`-ed into an image by a
+later build step. Under the hood it is:
 
 ```php
 $provider = require 'bootstrap.php';

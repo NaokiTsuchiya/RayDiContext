@@ -98,6 +98,12 @@ must-extend = 'NaokiTsuchiya\RayDiContext\Exception\AbstractRuntimeException'
 reason = "Concrete exceptions are final and inherit the marker from AbstractRuntimeException"
 
 [[guard.structural.rules]]
+on = 'NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface'
+target = "interface"
+must-extend = 'Throwable'
+reason = "`catch (ExceptionInterface $e)` is the documented entry point; without Throwable that $e has no getMessage()"
+
+[[guard.structural.rules]]
 on = 'NaokiTsuchiya\RayDiContext\Exception\AbstractRuntimeException'
 target = "class"
 must-be-abstract = true

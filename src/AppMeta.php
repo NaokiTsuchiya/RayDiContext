@@ -59,8 +59,8 @@ final readonly class AppMeta
      * @param string $compileDir Read-only DI script directory baked into the image
      * @param string $tmpDir     Runtime-writable directory, never baked
      *
-     * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, or appDir is
-     *                        not an absolute path.
+     * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, appDir is not an
+     *                        absolute path, or compileDir and tmpDir are the same directory.
      */
     public function __construct(string $appDir, string $context, string $compileDir, string $tmpDir)
     {
@@ -84,10 +84,28 @@ final readonly class AppMeta
             throw new InvalidAppMeta('AppMeta::$tmpDir must not be empty');
         }
 
+        $normalizedCompileDir = self::trimSlash($compileDir);
+        $normalizedTmpDir = self::trimSlash($tmpDir);
+
+        // Rejected because it is the one shape BakedPathGuard cannot see. The guard allows a
+        // literal that lies inside a compileDir literal — the compile dir is baked in with the
+        // scripts, so that is legitimate — and reports the tmpDir otherwise. When the two are
+        // the same string, every tmpDir occurrence is exactly a compileDir occurrence, so the
+        // tmpDir check silently passes on scripts it exists to reject. A tmpDir merely nested
+        // under the compile dir extends past the allowed literal and is still caught, so it is
+        // left to the guard rather than refused here.
+        if ($normalizedCompileDir === $normalizedTmpDir) {
+            throw new InvalidAppMeta(sprintf(
+                'AppMeta::$compileDir and AppMeta::$tmpDir must be different directories, both are: "%s". '
+                . 'The compile dir is read-only at runtime and cannot host the writable tmp dir.',
+                $normalizedCompileDir,
+            ));
+        }
+
         $this->appDir = self::trimSlash($appDir);
         $this->context = $context;
-        $this->compileDir = self::trimSlash($compileDir);
-        $this->tmpDir = self::trimSlash($tmpDir);
+        $this->compileDir = $normalizedCompileDir;
+        $this->tmpDir = $normalizedTmpDir;
     }
 
     /**

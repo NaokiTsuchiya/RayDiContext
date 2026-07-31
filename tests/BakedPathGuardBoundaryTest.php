@@ -65,7 +65,7 @@ final class BakedPathGuardBoundaryTest extends TestCase
             data: "<?php return '{$this->meta->compileDir}/scripts/x.php';",
         );
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
 
         $this->expectNotToPerformAssertions();
     }
@@ -90,7 +90,7 @@ final class BakedPathGuardBoundaryTest extends TestCase
 
         $this->expectException(BakedPathFound::class);
 
-        ($this->guard)($this->meta->compileDir, $meta);
+        ($this->guard)($meta);
     }
 
     /**
@@ -109,6 +109,6 @@ final class BakedPathGuardBoundaryTest extends TestCase
 
         $this->expectException(BakedPathFound::class);
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
     }
 }

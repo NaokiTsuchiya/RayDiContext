@@ -68,7 +68,7 @@ final class BakedPathGuardRejectionTest extends TestCase
     public function rejectsAMissingCompileDir(): void
     {
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotFound was not thrown');
         } catch (CompileDirNotFound $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
@@ -89,7 +89,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         file_put_contents($this->meta->compileDir, data: '');
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotFound was not thrown');
         } catch (CompileDirNotFound $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
@@ -115,7 +115,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         chmod($this->meta->compileDir, permissions: 0o005);
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotReadable was not thrown');
         } catch (CompileDirNotReadable $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
@@ -142,7 +142,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         chmod($this->meta->compileDir, permissions: 0o405);
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotReadable was not thrown');
         } catch (CompileDirNotReadable $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
@@ -167,7 +167,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         chmod($nested, permissions: 0o005);
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotReadable was not thrown');
         } catch (CompileDirNotReadable $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());

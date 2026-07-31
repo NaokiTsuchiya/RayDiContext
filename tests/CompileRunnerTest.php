@@ -200,12 +200,17 @@ final class CompileRunnerTest extends TestCase
     }
 
     /**
-     * The guard runs after compilation and rejects baked runtime paths
+     * A rejected compile names the baked path and leaves the compile dir empty
+     *
+     * The scripts the guard just refused must not survive for the next COPY to bake into an
+     * image. Previously they did, and the only thing making them unusable was the normalizer
+     * not having run — so they were still 0600, a property of how ray/compiler happens to
+     * write rather than anything this package decided.
      *
      * @throws RuntimeException
      */
     #[Test]
-    public function runGuardsBakedPathAfterCompile(): void
+    public function runEmptiesTheCompileDirWhenTheGuardRejects(): void
     {
         $bakedMeta = new AppMeta($this->meta->appDir, 'baked', $this->meta->compileDir, $this->meta->tmpDir);
 
@@ -214,8 +219,8 @@ final class CompileRunnerTest extends TestCase
             static::fail('BakedPathFound was not thrown');
         } catch (BakedPathFound $e) {
             static::assertStringContainsString($this->meta->appDir, $e->getMessage());
-            // The compiled scripts exist: compilation preceded the guard
-            static::assertNotSame([], glob("{$this->meta->compileDir}/*.php"));
+            // Not just the scripts: nothing at all is left behind, _bindings.log included
+            static::assertSame([], glob("{$this->meta->compileDir}/*"));
         }
     }
 

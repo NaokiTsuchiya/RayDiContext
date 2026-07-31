@@ -12,7 +12,6 @@ use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
 use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
-use Ray\Compiler\Compiler;
 
 /**
  * Compiles the context of an env into the compile dir
@@ -22,24 +21,32 @@ use Ray\Compiler\Compiler;
 final class CompileRunner
 {
     /**
-     * @param ContextProviderInterface $contextProvider Application env-to-context mapping
-     * @param Cleaner                  $cleaner         Recreates the compile dir before compiling
-     * @param BakedPathGuard           $guard           Verifies the compiled scripts afterwards
+     * @param ContextProviderInterface  $contextProvider Application env-to-context mapping
+     * @param Cleaner                   $cleaner         Empties the compile dir before compiling
+     * @param BakedPathGuardInterface   $guard           Verifies the compiled scripts afterwards
+     * @param ScriptCompilerInterface   $compiler        Writes the scripts
      */
     public function __construct(
         private readonly ContextProviderInterface $contextProvider,
         private readonly Cleaner $cleaner = new Cleaner(),
-        private readonly BakedPathGuard $guard = new BakedPathGuard(),
+        private readonly BakedPathGuardInterface $guard = new BakedPathGuard(),
+        private readonly ScriptCompilerInterface $compiler = new RayScriptCompiler(),
     ) {}
 
     /**
      * Cleans the compile dir, compiles the context module, guards against baked paths,
      * then normalizes the permissions of what was written
      *
-     * Only a compile that passed the guard is normalized: a rejected one leaves nothing
-     * to run, so its scripts stay as Ray.Compiler wrote them. The normalizer is built
-     * here rather than injected: it is a fix for how Ray.Compiler writes, not a policy
-     * an application chooses.
+     * A rejected compile leaves the compile dir empty. Without that the scripts the guard just
+     * refused stayed on disk, fully formed, for the next COPY to bake into the image; the only
+     * thing making them unusable was that the normalizer had not run, so they were still 0600 —
+     * a property of how ray/compiler happens to write today, and one PermissionNormalizer exists
+     * to stop depending on. Emptying says it outright instead. The failure is reported either
+     * way, and it names the file and the literal, so nothing diagnosable is lost with the
+     * scripts.
+     *
+     * The normalizer is built here rather than injected: it is a fix for how ray/compiler
+     * writes, not a policy an application chooses.
      *
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
@@ -52,10 +59,26 @@ final class CompileRunner
      */
     public function run(AppMeta $meta): void
     {
+        // The context is resolved before the cleaner runs, so an unknown context aborts with the
+        // compile dir untouched. That ordering is the only thing standing between a mistyped
+        // context name and an emptied compile dir with nothing written back into it.
         $context = $this->contextProvider->get($meta);
         ($this->cleaner)($meta);
-        (new Compiler())->compile($context(), $meta->compileDir);
-        ($this->guard)($meta->compileDir, $meta);
+
+        // Emptied through a flag and finally rather than catch-and-rethrow: a rethrow is typed as
+        // the marker interface, which would widen this method's declared throws from the precise
+        // list below back to "anything this package throws".
+        $guarded = false;
+        try {
+            $this->compiler->compile($context(), $meta->compileDir);
+            ($this->guard)($meta);
+            $guarded = true;
+        } finally {
+            if (!$guarded) {
+                ($this->cleaner)($meta);
+            }
+        }
+
         (new PermissionNormalizer())($meta->compileDir);
     }
 }

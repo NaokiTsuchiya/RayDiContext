@@ -70,7 +70,7 @@ final class BakedPathGuardTest extends TestCase
     {
         file_put_contents("{$this->meta->compileDir}/clean.php", data: '<?php return new stdClass();');
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
 
         $this->expectNotToPerformAssertions();
     }
@@ -86,7 +86,7 @@ final class BakedPathGuardTest extends TestCase
         file_put_contents("{$this->meta->compileDir}/baked.php", "<?php return '{$this->meta->appDir}/src/Index.php';");
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('BakedPathFound was not thrown');
         } catch (BakedPathFound $e) {
             static::assertStringContainsString($this->meta->appDir, $e->getMessage());
@@ -107,7 +107,7 @@ final class BakedPathGuardTest extends TestCase
 
         $this->expectException(BakedPathFound::class);
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
     }
 
     /**
@@ -124,7 +124,7 @@ final class BakedPathGuardTest extends TestCase
 
         $this->expectException(BakedPathFound::class);
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
     }
 
     /**
@@ -138,7 +138,7 @@ final class BakedPathGuardTest extends TestCase
     {
         file_put_contents("{$this->meta->compileDir}/script-dir.php", "<?php return '{$this->meta->compileDir}';");
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
 
         $this->expectNotToPerformAssertions();
     }
@@ -154,7 +154,7 @@ final class BakedPathGuardTest extends TestCase
     {
         file_put_contents("{$this->meta->compileDir}/_bindings.log", "toInstance('{$this->meta->appDir}')");
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
 
         $this->expectNotToPerformAssertions();
     }
@@ -177,7 +177,7 @@ final class BakedPathGuardTest extends TestCase
         chmod($unreadable, permissions: 0o000);
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('ScriptNotReadable was not thrown');
         } catch (ScriptNotReadable $e) {
             static::assertStringContainsString($unreadable, $e->getMessage());

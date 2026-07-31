@@ -78,10 +78,9 @@ final class CompileRunnerOrderingTest extends TestCase
     #[Test]
     public function resolvesTheContextBeforeEmptyingTheCompileDir(): void
     {
-        $runner = new CompileRunner(
-            new MapContextProvider(['prod' => FakeProdContext::class]),
-            compiler: $this->compiler,
-        );
+        $runner = new CompileRunner(new MapContextProvider([
+            'prod' => FakeProdContext::class,
+        ]), compiler: $this->compiler);
         $unknown = new AppMeta($this->meta->appDir, 'nosuch', $this->meta->compileDir, $this->meta->tmpDir);
 
         try {
@@ -106,10 +105,9 @@ final class CompileRunnerOrderingTest extends TestCase
     #[Test]
     public function emptiesTheCompileDirBeforeCompiling(): void
     {
-        $runner = new CompileRunner(
-            new MapContextProvider(['prod' => FakeProdContext::class]),
-            compiler: $this->compiler,
-        );
+        $runner = new CompileRunner(new MapContextProvider([
+            'prod' => FakeProdContext::class,
+        ]), compiler: $this->compiler);
 
         $runner->run($this->meta);
 

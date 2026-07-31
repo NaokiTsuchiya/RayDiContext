@@ -21,12 +21,6 @@ final class Fs
 {
     /**
      * Removes a directory recursively, restoring permissions along the way
-     *
-     * A test that chmods a directory unreadable to exercise a guard (see CleanerTest,
-     * BakedPathGuardTest, ...) leaves that directory behind if the test fails before its
-     * own cleanup runs. A RecursiveDirectoryIterator throws a bare UnexpectedValueException
-     * on such a directory, which used to fail tearDown itself and, with it, every later
-     * test. Each directory is made readable/traversable before it is listed.
      */
     public static function removeDir(string $dir): void
     {

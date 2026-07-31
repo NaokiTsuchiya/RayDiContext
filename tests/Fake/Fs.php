@@ -26,8 +26,7 @@ final class Fs
      * BakedPathGuardTest, ...) leaves that directory behind if the test fails before its
      * own cleanup runs. A RecursiveDirectoryIterator throws a bare UnexpectedValueException
      * on such a directory, which used to fail tearDown itself and, with it, every later
-     * test. Each directory is made readable/traversable before it is listed, so this
-     * always finishes instead of compounding one test's failure into many.
+     * test. Each directory is made readable/traversable before it is listed.
      */
     public static function removeDir(string $dir): void
     {

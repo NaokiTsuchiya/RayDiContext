@@ -175,7 +175,7 @@ The exit status is a public contract — gate your CI on it.
 | Code | Meaning |
 |------|---------|
 | `0`  | The context compiled successfully |
-| `1`  | The compile failed. Every exception of this package (`UnknownContext`, `BakedPathFound`, `CompileDirNotWritable`, `InvalidAppMeta` — e.g. a relative `appDir` — …) is caught and its message written to STDERR as a single line — no stack trace, so the CI log stays readable |
+| `1`  | The compile failed. **Anything** thrown while loading the bootstrap or compiling is caught and its message written to STDERR as a single line — no stack trace, so the CI log stays readable. That covers this package's own exceptions (`UnknownContext`, `BakedPathFound`, `CompileDirNotWritable`, `InvalidAppMeta` — e.g. a relative `appDir` — …) and equally the failures that come from your module: a missing binding surfaces as `Ray\Di\Exception\Unbound`, and anything foreign is prefixed with its class name so you can tell where it came from. The autoloader also being unfindable reports here |
 | `2`  | Usage error: wrong number of arguments, `appDir` does not exist, bootstrap file not found, or a bootstrap that does not return a `ContextProviderInterface` |
 
 Bootstrap at runtime. Resolve `compileDir`/`tmpDir` to the **same** values you passed

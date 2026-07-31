@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext\Fake;
 
 use FilesystemIterator;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use SplFileInfo;
 
+use function chmod;
 use function is_dir;
+use function is_executable;
+use function is_readable;
 use function rmdir;
 use function unlink;
 
@@ -19,7 +20,7 @@ use function unlink;
 final class Fs
 {
     /**
-     * Removes a directory recursively
+     * Removes a directory recursively, restoring permissions along the way
      */
     public static function removeDir(string $dir): void
     {
@@ -28,20 +29,22 @@ final class Fs
             return;
         }
 
-        $entries = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST,
-        );
+        $traversable = is_readable($dir) && is_executable($dir);
+        if (!$traversable) {
+            chmod($dir, permissions: 0o700);
+        }
+
         /** @var SplFileInfo $entry */
-        foreach ($entries as $entry) {
+        foreach (new FilesystemIterator($dir, FilesystemIterator::SKIP_DOTS) as $entry) {
+            $pathname = $entry->getPathname();
             $isLink = $entry->isLink();
             $isDir = $entry->isDir();
             if (!$isLink && $isDir) {
-                rmdir($entry->getPathname());
+                self::removeDir($pathname);
                 continue;
             }
 
-            unlink($entry->getPathname());
+            unlink($pathname);
         }
 
         rmdir($dir);

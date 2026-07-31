@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext\Fake;
 
+use PHPUnit\Framework\TestCase;
+
 use function chmod;
 use function mkdir;
 use function restore_error_handler;
@@ -27,6 +29,25 @@ use function uniqid;
  */
 final class PermissionBits
 {
+    /**
+     * Skips the calling test when the bits it is about to set would be ignored
+     *
+     * @param non-empty-string $scratchDir Writable directory to probe below; created if absent
+     */
+    public static function skipUnlessEnforced(string $scratchDir): void
+    {
+        $enforced = self::areEnforced($scratchDir);
+        if ($enforced) {
+            return;
+        }
+
+        TestCase::markTestSkipped(
+            'This process is not denied by the permission bits it sets — running as root, or '
+            . 'holding CAP_DAC_OVERRIDE, or on a filesystem that does not enforce modes. A test '
+            . 'that asserts a denial cannot say anything here. CI runs as a non-root user.',
+        );
+    }
+
     /**
      * Returns whether a directory this process owns can be made unreadable to it
      *

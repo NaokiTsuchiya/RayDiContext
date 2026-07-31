@@ -27,10 +27,9 @@ use SplFileInfo;
 
 use function chmod;
 use function file_put_contents;
-use function filemtime;
 use function fileperms;
-use function filesize;
 use function glob;
+use function hash_file;
 use function is_dir;
 use function ksort;
 use function mkdir;
@@ -249,9 +248,14 @@ final class CompileRunnerTest extends TestCase
     }
 
     /**
-     * Returns file names with size and mtime for change detection
+     * Returns a content hash per file, for change detection that does not depend on the mode
      *
-     * @return array<string, list{int, int}>
+     * Hashed rather than sized and timestamped, because mtime has one-second granularity: a
+     * rewrite of the same length within the same second left size and mtime identical and went
+     * unnoticed. The 0555 above closes that gap only for a process the mode actually denies,
+     * which root is not — so the comparison, not the mode, is what has to carry the assertion.
+     *
+     * @return array<string, string>
      *
      * @throws RuntimeException
      */
@@ -261,7 +265,8 @@ final class CompileRunnerTest extends TestCase
         /** @var SplFileInfo $entry */
         foreach (new FilesystemIterator($dir) as $entry) {
             $pathname = $entry->getPathname();
-            $files[$pathname] = [(int) filesize($pathname), (int) filemtime($pathname)];
+            $hash = hash_file('sha256', $pathname);
+            $files[$pathname] = $hash === false ? '' : $hash;
         }
 
         ksort($files);

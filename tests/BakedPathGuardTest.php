@@ -9,6 +9,7 @@ use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
+use NaokiTsuchiya\RayDiContext\Fake\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -27,7 +28,7 @@ final class BakedPathGuardTest extends TestCase
     /** Stands in for a compiled script whose content is irrelevant to the test */
     private const SCRIPT = __DIR__ . '/Fixture/script.php';
 
-    /** Per-test working directory */
+    /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
     /** Meta whose tmp dir lives outside the app dir */
@@ -172,6 +173,8 @@ final class BakedPathGuardTest extends TestCase
     #[Test]
     public function throwsWhenScriptCannotBeRead(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         $unreadable = "{$this->meta->compileDir}/unreadable.php";
         copy(self::SCRIPT, $unreadable);
         chmod($unreadable, permissions: 0o000);

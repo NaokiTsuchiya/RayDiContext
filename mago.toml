@@ -59,11 +59,14 @@ class-name = { enabled = true, psr = true }
 minimum-fail-level = "note"
 # PHPUnit assertion failures are the framework's control flow; they are the only
 # exceptions treated as unchecked. Package exceptions remain fully checked.
+# Listed one by one rather than by base class: matching here is exact, so
+# SkippedWithMessageException needs naming even though it extends AssertionFailedError.
 unchecked-exception-classes = [
     "PHPUnit\\Framework\\Exception",
     "PHPUnit\\Framework\\AssertionFailedError",
     "PHPUnit\\Framework\\ExpectationFailedException",
     "PHPUnit\\Framework\\UnknownClassOrInterfaceException",
+    "PHPUnit\\Framework\\SkippedWithMessageException",
 ]
 # PHPUnit initializes fixtures in setUp(), not in the constructor.
 class-initializers = ["setUp"]

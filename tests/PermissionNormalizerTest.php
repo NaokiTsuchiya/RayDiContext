@@ -35,7 +35,7 @@ final class PermissionNormalizerTest extends TestCase
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('perm_', more_entropy: true);
         $this->compileDir = "{$this->baseDir}/di";
         mkdir($this->compileDir, permissions: 0o700, recursive: true);
-        chmod($this->compileDir, permissions: 0o700); // mkdir() applies the umask, chmod() does not
+        chmod($this->compileDir, permissions: 0o700);
     }
 
     /** {@inheritDoc} */

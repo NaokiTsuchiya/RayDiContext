@@ -61,7 +61,7 @@ final class CompileRunnerTest extends TestCase
     {
         $exists = is_dir($this->meta->compileDir);
         if ($exists) {
-            chmod($this->meta->compileDir, permissions: 0o755); // testResolvesFromReadOnlyCompileDir makes it read-only
+            chmod($this->meta->compileDir, permissions: 0o755);
         }
 
         Fs::removeDir($this->baseDir);

@@ -9,8 +9,7 @@ use Ray\Di\AbstractModule;
 /**
  * Compiles a module into a directory of scripts
  *
- * The seam over ray/compiler, so the pipeline's ordering can be asserted without a real compile.
- * Implementations pass their compiler's exceptions through unchanged.
+ * The seam over ray/compiler. Implementations pass their compiler's exceptions through unchanged.
  *
  * @api
  */

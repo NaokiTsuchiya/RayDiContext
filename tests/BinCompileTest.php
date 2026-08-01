@@ -101,8 +101,7 @@ final class BinCompileTest extends TestCase
     }
 
     /**
-     * This is the CI guard the package exists for: the status has to be usable, and the
-     * message has to be the first thing in the log rather than buried under a trace.
+     * The status has to be usable in CI and the message readable without a trace.
      *
      * @throws RuntimeException
      */

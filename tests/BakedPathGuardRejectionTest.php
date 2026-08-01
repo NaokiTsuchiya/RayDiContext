@@ -81,12 +81,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         }
     }
 
-    /**
-     * 0005 sets the world bits a bare mode check looks at, but POSIX resolves the owner
-     * class first, so the owner is denied.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsACompileDirItCannotList(): void
     {
@@ -105,11 +100,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         }
     }
 
-    /**
-     * 0405 grants read, so the listing opens and only the per-entry stat() is denied.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsACompileDirItCannotTraverse(): void
     {

@@ -51,9 +51,6 @@ final class AppMetaFromAppDirTest extends TestCase
     /**
      * Falls back to conventional paths under the app dir
      *
-     * A ::class-shaped context passes through verbatim: "\" carries none of the OS-resolution
-     * risk that keeps "/" and "." out of CONTEXT_PATTERN.
-     *
      * @throws ExceptionInterface
      */
     #[Test]

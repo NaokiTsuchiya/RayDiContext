@@ -146,9 +146,6 @@ final class CleanerTest extends TestCase
      * nested below it — raises a RemoveFailed naming it, and nothing inside it is removed
      * first
      *
-     * 0005 sets the world bits a naive mode check looks at, but POSIX resolves the owner
-     * class first, so the owner is denied. 0405 grants read, so the listing opens and only
-     * the per-entry stat() is denied.
      *
      * @throws ExceptionInterface
      */

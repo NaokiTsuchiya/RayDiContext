@@ -11,14 +11,8 @@ use function strpos;
 /**
  * Scans one compiled script for baked path literals
  *
- * A needle occurrence is a violation unless it lies fully inside a compile dir literal:
- * the compile dir is baked into the image together with the scripts, so the compile dir
- * itself — and any path inside it — is allowed. A tmp dir nested under the compile dir
- * extends beyond the literal, so it is still detected.
- *
- * Boundaries are byte-wise against the ASCII segment class, so a multi-byte character beside
- * a match counts as one and the occurrence is reported: fail-close, matching the guard.
- * Matching is case-sensitive, like the verbatim comparison it is part of.
+ * An occurrence inside a compile dir literal is allowed: the compile dir ships with the
+ * scripts. Boundary matching is byte-wise and fail-close.
  *
  * @internal Used by BakedPathGuard
  */
@@ -97,11 +91,6 @@ final class BakedPathScanner
 
     /**
      * Returns whether the $length bytes at $position span whole path segments
-     *
-     * A path-segment character on either side means the match runs on into a longer segment
-     * and so names a different path: "/app" both in "/appdata" and in "/var/backup/app",
-     * "…/prod" in "…/production_logs". "/" is not a segment character, so a match continues
-     * to hold when a path nests deeper; neither is the start or the end of the script.
      */
     private function isWholePath(int $position, int $length): bool
     {
@@ -114,8 +103,8 @@ final class BakedPathScanner
     /**
      * Returns whether the byte at $index continues a path segment
      *
-     * An index outside the script does not: it bounds the match. The negative case is spelled
-     * out because PHP reads a negative offset from the end of the string.
+     * @param int $index Byte offset; outside the script it bounds the match. Negative is
+     *                   checked explicitly — PHP would read it from the end of the string
      */
     private function isSegmentChar(int $index): bool
     {

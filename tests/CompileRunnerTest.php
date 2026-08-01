@@ -128,13 +128,7 @@ final class CompileRunnerTest extends TestCase
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
 
-    /**
-     * This is the build-as-root, run-as-non-root container: Ray.Compiler writes the
-     * scripts 0600 through tempnam(), which leaves them unreadable to the runtime user
-     * once the compile dir is baked into the image.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function runMakesCompiledScriptsWorldReadable(): void
     {

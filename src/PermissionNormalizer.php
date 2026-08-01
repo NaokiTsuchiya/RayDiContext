@@ -22,13 +22,8 @@ use function sprintf;
 /**
  * Makes the compiled scripts readable by the user that runs the application
  *
- * ray/compiler writes every script through tempnam(), which creates 0600 regardless of
- * umask, so a compile leaves the whole compile dir owner-only. That breaks the deployment
- * this package is built for: build the image as root, COPY the compile dir in, run the
- * container as a non-root user.
- *
- * Subdirectories are descended into: a qualifier holding a "/" — annotatedWith('a/b') —
- * makes ray/compiler put the script in a directory of its own.
+ * ray/compiler writes every script through tempnam(), which creates 0600 regardless of umask,
+ * leaving the compile dir unreadable to the non-root user the container runs as.
  *
  * @internal
  */
@@ -73,7 +68,6 @@ final class PermissionNormalizer
     {
         /** @var SplFileInfo $entry */
         foreach ($this->openDir($dir) as $entry) {
-            // A symlink is left as it is, never followed: chmod resolves to the target
             $isLink = $entry->isLink();
             if ($isLink) {
                 continue;
@@ -95,10 +89,8 @@ final class PermissionNormalizer
     /**
      * Opens a directory for listing, refusing one whose entries this process cannot reach
      *
-     * apply() reads the other-class bits while POSIX resolves the owner class first, so a
-     * mode whose owner class is the narrower of the two (0005, 0405, ...) satisfies apply()
-     * and still denies this process. Missing read then fails as an SPL exception from the
-     * iterator; missing execute fails every stat() below instead, one warning per entry.
+     * apply() reads the other-class bits while POSIX resolves the owner class first, so a mode
+     * whose owner class is the narrower (0005, 0405, ...) satisfies apply() and still denies us.
      *
      * @throws CompileDirNotReadable When the directory cannot be listed or traversed.
      */

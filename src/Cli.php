@@ -19,7 +19,7 @@ use function sprintf;
  * Argument handling and exit-status mapping for bin/ray-di-compile
  *
  * The exit status is this package's public contract; this class is not. It stays out of the bin
- * script, which a "*.php" source glob never discovers, so the analyzer reaches it.
+ * script, which a "*.php" source glob never discovers.
  *
  * @internal Build on the exit-status contract, not on this class
  */
@@ -85,8 +85,8 @@ final class Cli
     /**
      * Loads the bootstrap and runs the compile
      *
-     * An empty override reads as "not given". Compared against "" rather than for truthiness, so a
-     * directory named "0" survives.
+     * An override is compared against "" rather than for truthiness, so a directory named "0"
+     * survives.
      */
     private function compile(
         string $bootstrap,
@@ -142,8 +142,8 @@ final class Cli
     /**
      * Writes the one line a failure gets, best effort
      *
-     * An unwritable error stream has no second channel to be reported on, and this package does
-     * not let E_WARNING reach its caller, so the diagnostic is dropped rather than raised.
+     * An unwritable error stream has no second channel to be reported on, so the diagnostic is
+     * dropped rather than raised.
      */
     private function write(string $message): void
     {

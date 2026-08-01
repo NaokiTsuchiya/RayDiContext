@@ -19,8 +19,8 @@ use function uniqid;
 /**
  * Literals an application adds to the two the guard knows about
  *
- * The guard itself only knows appDir and tmpDir, yet `toInstance('s3cr3t')` writes the secret
- * into a compiled script all the same. These are how an application names its own.
+ * `toInstance('s3cr3t')` writes the secret into a compiled script; these are how an
+ * application says so.
  */
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardExtraNeedleTest extends TestCase

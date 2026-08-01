@@ -87,12 +87,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
         }
     }
 
-    /**
-     * 0005 sets the world bits the mode check looks at, but POSIX resolves the owner class
-     * first, so the owner is denied.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsACompileDirItCannotList(): void
     {
@@ -131,8 +126,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
     }
 
     /**
-     * 0405 grants read, so the listing opens and only the stat() of each entry is denied —
-     * unchecked, one warning per entry rather than one named exception.
+     * Unchecked, 0405 leaks one warning per entry rather than one named exception.
      *
      * @throws ExceptionInterface
      */

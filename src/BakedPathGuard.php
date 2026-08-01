@@ -24,12 +24,8 @@ use function sprintf;
 /**
  * Detects appDir and tmpDir literals baked into compiled scripts
  *
- * Paths bound with toInstance() are frozen into the compiled scripts, including every
- * path held by an object bound with toInstance(). Run this guard in CI to catch them
- * before a runtime-dependent path is baked into the image.
- *
- * The comparison is a verbatim match against the meta strings, so spelling variants such as
- * symlink-resolved paths are not recognized. Which occurrences count is BakedPathScanner's.
+ * toInstance() freezes a bound value into the compiled script, paths included. The comparison
+ * is verbatim, so symlink-resolved spellings are not recognized.
  *
  * @api
  */

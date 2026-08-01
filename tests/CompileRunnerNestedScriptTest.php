@@ -45,12 +45,7 @@ final class CompileRunnerNestedScriptTest extends TestCase
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * A qualifier holding a "/" — annotatedWith('a/b') — lands the script in a directory
-     * of its own, which is what a non-recursive normalizer would leave behind at 0600.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function normalizesAScriptCompiledIntoASubdirectory(): void
     {

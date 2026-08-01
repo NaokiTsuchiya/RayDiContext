@@ -64,12 +64,7 @@ final class MapContextProviderTest extends TestCase
         new MapContextProvider($map);
     }
 
-    /**
-     * Without the check, `new $class($meta)` inside get() reaches PHP's own TypeError,
-     * which leaks past this package's exception hierarchy.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function constructorThrowsOnClassNotExtendingAbstractContext(): void
     {
@@ -84,8 +79,8 @@ final class MapContextProviderTest extends TestCase
     }
 
     /**
-     * Without the check, `new $class($meta)` inside get() reaches PHP's own Error,
-     * which leaks past this package's exception hierarchy.
+     * Without the check, `new $class($meta)` reaches PHP's own Error, outside this package's
+     * exception hierarchy.
      *
      * @throws ExceptionInterface
      */

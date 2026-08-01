@@ -14,11 +14,6 @@ use function str_starts_with;
 /**
  * Application metadata with separated compile-time and runtime directories
  *
- * The compileDir holds DI scripts compiled ahead of time. It is baked into the
- * container image and stays read-only at runtime. The tmpDir is a runtime-writable
- * area such as /tmp and must never be baked into the image; resolve it at runtime
- * through a provider, never with toInstance().
- *
  * @api
  */
 final readonly class AppMeta
@@ -37,9 +32,8 @@ final readonly class AppMeta
 
     /**
      * Characters fromAppDir() accepts in $context, which becomes one path segment of the
-     * default compileDir/tmpDir. A whitelist, so ".", "..", "/" and separators are excluded
-     * by construction rather than named one by one. "\" is in it so a namespaced
-     * class-string context passes through verbatim: the OS does not resolve it in a segment.
+     * default compileDir/tmpDir. "\" is in the set so a namespaced class-string context passes
+     * through: unlike "/" and ".", the OS does not resolve it inside a segment.
      */
     private const CONTEXT_PATTERN = '/\A[A-Za-z0-9_\\\\-]+\z/';
 

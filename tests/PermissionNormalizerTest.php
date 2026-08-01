@@ -44,12 +44,7 @@ final class PermissionNormalizerTest extends TestCase
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * This is what Ray.Compiler leaves behind: 0600 files from tempnam(), in a compile
-     * dir whose own mode depends on the umask of the build.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function normalizesFilesAndDirectories(): void
     {
@@ -67,12 +62,7 @@ final class PermissionNormalizerTest extends TestCase
         static::assertSame(0o644, $this->mode("{$nested}/script.php"));
     }
 
-    /**
-     * A compile dir the compiling user does not own — a root-owned container volume,
-     * say — cannot be chmod'ed by that user at all.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function leavesAlreadyReadableEntriesAlone(): void
     {
@@ -87,12 +77,7 @@ final class PermissionNormalizerTest extends TestCase
         static::assertSame(0o664, $this->mode("{$this->compileDir}/script.php"));
     }
 
-    /**
-     * chmod() resolves the link, so following one would change the mode of a file
-     * outside the compile dir.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function doesNotFollowSymlinks(): void
     {

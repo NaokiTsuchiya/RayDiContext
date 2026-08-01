@@ -23,12 +23,8 @@ use function unlink;
 /**
  * Empties the compile dir, creating it when missing
  *
- * A recompile must not leave scripts from previous compiles behind: renamed classes and
- * changed bindings would otherwise survive as stale scripts. The directory itself is kept
- * rather than recreated, so a compile dir that is a mount point or a symlink still works.
- *
- * Everything below it is removed without asking, so a CompileDirGuardInterface verifies it
- * first; the whole meta is taken so the guard can compare the compile dir against the app dir.
+ * The directory itself is kept rather than recreated, so a compile dir that is a mount point
+ * or a symlink still works.
  *
  * @internal Built by CompileRunner; an application's knob is CompileDirGuardInterface
  */
@@ -74,10 +70,8 @@ final class Cleaner
     /**
      * Removes every entry inside a directory, descending into subdirectories depth-first
      *
-     * The recursion is written out rather than delegated to RecursiveDirectoryIterator, whose
-     * constructor throws a bare UnexpectedValueException for a directory it cannot open — even
-     * one reached mid-traversal, after entries have already been removed. Written out, each
-     * directory is opened through openDir() before anything below it is touched.
+     * Written out rather than delegated to RecursiveDirectoryIterator, whose constructor throws
+     * a bare UnexpectedValueException for a directory it cannot open, even one reached mid-walk.
      *
      * @throws RemoveFailed When a directory cannot be read or an entry cannot be removed.
      */
@@ -86,7 +80,6 @@ final class Cleaner
         /** @var SplFileInfo $entry */
         foreach ($this->openDir($dir) as $entry) {
             $pathname = $entry->getPathname();
-            // A symlink is unlinked, never followed: isDir() resolves to the link target
             $isLink = $entry->isLink();
             $isDir = $entry->isDir();
             $isRealDir = !$isLink && $isDir;
@@ -116,10 +109,8 @@ final class Cleaner
     /**
      * Opens a directory for listing, refusing one whose entries this process cannot reach
      *
-     * A directory that cannot be listed fails its FilesystemIterator constructor with a bare
-     * UnexpectedValueException, which mago's check-throws cannot see through a constructor.
-     * One that can be listed but not traversed (0405, 0605, ...) opens without error and fails
-     * per entry instead, so it is checked separately before any entry is reached.
+     * A mode granting read but not execute (0405, 0605, ...) opens without error and fails per
+     * entry instead, so traversal is checked separately before any entry is reached.
      *
      * @throws RemoveFailed When the directory cannot be listed or traversed.
      */

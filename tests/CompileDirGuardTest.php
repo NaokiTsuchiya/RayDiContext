@@ -90,8 +90,7 @@ final class CompileDirGuardTest extends TestCase
     }
 
     /**
-     * A literal comparison would let the link through: the link and the app dir share
-     * no prefix until both are resolved.
+     * A literal comparison would let the link through: no shared prefix until both resolve.
      *
      * @throws ExceptionInterface
      */
@@ -130,8 +129,7 @@ final class CompileDirGuardTest extends TestCase
     }
 
     /**
-     * /app is not an ancestor of /appdata, so matching on the prefix alone would
-     * reject a legitimate compile dir.
+     * /app is not an ancestor of /appdata, so a prefix match alone would reject it.
      *
      * @throws ExceptionInterface
      */

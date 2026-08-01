@@ -7,17 +7,14 @@ namespace NaokiTsuchiya\RayDiContext;
 /**
  * Base context holding the application meta
  *
- * The constructor is final because a provider instantiates a context it only knows by
- * name — MapContextProvider does `new $class($meta)` — and a subclass that widened or
- * reordered it would turn that call into a runtime fatal.
+ * The constructor is final: a provider instantiates a context by name, so a widened one
+ * would turn `new $class($meta)` into a runtime fatal. Nothing in mago can pin this.
  *
  * @api
  */
 abstract class AbstractContext implements ContextInterface
 {
-    /**
-     * @param AppMeta $meta Application metadata
-     */
+    /** @param AppMeta $meta Application metadata */
     final public function __construct(
         protected readonly AppMeta $meta,
     ) {}

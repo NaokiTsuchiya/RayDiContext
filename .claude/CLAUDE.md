@@ -261,30 +261,51 @@ single required status check — the matrix can grow/shrink without touching bra
   are `final` and one-per-file as described above.
 - Every builtin function used is explicitly `use function`-imported (no fully-qualified `\strlen(...)`
   calls) — `mago`'s `no-fully-qualified-global-function` rule enforces this.
-- **Write comments for the file, not for the review.** This is the failure mode here, and it is
-  specifically an AI-authored one: comment aimed at whoever is reading the diff *right now* —
-  justifying the change, narrating what the code used to do, answering an objection before it is
-  raised. It reads as thorough at review time and as noise a month later. PR #69 collected
-  seventeen "不要"/"削除" on exactly that. **Before keeping a comment, ask whether it still earns
-  its place for a reader with no diff, no PR and no memory of the change.**
-  - **Out**: "previously…", "used to…", "left uncaught it escaped…", "kept to one line so that…",
-    and anything the signature, the type or the next line already says. It goes in the commit
-    message, which is where someone looking for the history will be.
-  - **In**: a constraint not visible from the code — an upstream quirk, an OS behaviour, a security
-    boundary — and a shape a future maintainer would otherwise "fix" back. `fromAppDir()`'s absent
-    `realpath()` is the model: one line, names the issue, stops the change from being re-made.
-  - Length follows from that: an inline comment is one line, a docblock is a summary plus at most
-    two lines of prose. Needing more means it was written for the review.
-  - **A docblock that has nothing to add is one line.** `missing-docs` requires a docblock on every
-    class, property, constant and method, so ceremony is unavoidable — but `/** {@inheritDoc} */`
-    and `/** @throws ExceptionInterface */` satisfy it in one line each instead of five. Three
-    delimiter lines around one line of content is the same waste as prose written for the review.
-  - Say a thing once. The 0005/0405 owner-class-versus-other-class behaviour belongs in the
-    `openDir()` that reads around it, not repeated in each of the four tests that exercise it.
+- **The default is no comment.** Not "short comments" — none. A comment is an exception that has
+  to be argued for, and the argument is one specific thing: *a reader with the code in front of
+  them still cannot know this.* Everything else is deleted. This matters here more than in most
+  repos because the failure mode is AI-authored: a model writes for whoever is reading the diff
+  right now — justifying the change, narrating what the code used to do, answering an objection
+  before it is raised — and that reads as thorough at review time and as noise a month later.
+  PR #69 collected seventeen "不要"/"削除" on exactly that; PR #71 collected six more after a
+  first pass had already halved the volume. Assume the next comment you write is one of them.
 
-  Nothing enforces this. `mago`'s only comment rules are `no-empty-comment`, `no-hash-comment`,
-  `valid-docblock` and `missing-docs`, none of which looks at length or audience, and a CI
-  line-count would fail on blocks already on `main`. It is a write-time and review-time check.
+  Run these four checks in order. The first one that fires deletes the comment.
+
+  1. **Does a tool already enforce it?** Then it is not documentation, it is a second copy of a
+     rule that can drift. `mago.toml`'s `[[guard.structural.rules]]` is where the exception
+     hierarchy lives, not a docblock on `AbstractRuntimeException` — and when an invariant is
+     worth writing down, the first move is to try to add a rule for it, not to write a sentence.
+     (`AbstractContext`'s final constructor is the counter-example: `guard`'s `target` only takes
+     class-like kinds, so nothing can pin a constructor. That is why it keeps its one line.)
+  2. **Does the code already say it?** A name, a type, a signature, the next line. "A symlink is
+     unlinked, never followed" above `$isLink = $entry->isLink()` is deleted. A docblock summary
+     that is the method name in English — "The filesystem root is rejected" over
+     `rejectsFilesystemRoot()` — is deleted, and the docblock becomes `/** @throws … */`.
+  3. **Is it said somewhere else already?** Then it belongs in one place, the one it acts on. The
+     0005/0405 owner-class ordering lives in the two `openDir()` methods that read around it —
+     not in the four tests that exercise it, and not in the class docblock above them.
+  4. **Is it about the change rather than the code?** "previously…", "used to…", "left uncaught it
+     escaped…", "kept to one line so that…" — that is the commit message, which is where someone
+     looking for history will be.
+
+  What survives is a constraint the code cannot show: an upstream quirk (`tempnam()` writing 0600),
+  an OS behaviour (POSIX resolving the owner class first), a security boundary (the
+  `APP_COMPILE_DIR` footgun), or a shape a future maintainer would otherwise "fix" back
+  (`fromAppDir()`'s absent `realpath()`). One or two lines, naming the issue. Needing a paragraph
+  means it was written for the review.
+
+  Two consequences worth stating outright:
+  - **A docblock with nothing to add is one line.** `missing-docs` demands a docblock on every
+    class, property, constant and method, so the ceremony is unavoidable — but `/** {@inheritDoc} */`
+    and `/** @throws ExceptionInterface */` satisfy it in one line each instead of five. Three
+    delimiter lines wrapped around one line of content is the same waste as prose for the review.
+  - **What a parameter means goes in `@param`, not in a paragraph above it.** If the prose is
+    explaining an argument, it is a tag that was written as prose.
+
+  Nothing enforces any of this. `mago`'s only comment rules are `no-empty-comment`,
+  `no-hash-comment`, `valid-docblock` and `missing-docs`, none of which looks at length, audience
+  or redundancy. It is a write-time and review-time check, and the review has caught it twice.
 - `@api` marks the public surface — everything under `src/` except two. `PermissionNormalizer` is
   `@internal` (a workaround for a `ray/compiler` quirk, not something to build on) and so is `Cli`
   (the *exit-status contract* is public; the class carrying it is not, so it stays free to change).

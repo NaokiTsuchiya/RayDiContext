@@ -64,8 +64,7 @@ final class CleanerGuardTest extends TestCase
     }
 
     /**
-     * The compile dir here is the conventional one, which the default guard allows, so
-     * only the application guard can be what stopped the removal.
+     * The compile dir is the conventional one, which the default guard allows.
      *
      * @throws ExceptionInterface
      */

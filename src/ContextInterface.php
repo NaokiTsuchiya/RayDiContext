@@ -10,8 +10,6 @@ use Ray\Di\InjectorInterface;
 /**
  * Application context
  *
- * A context maps an environment to a module, an injector, and process-start singletons.
- *
  * @api
  */
 interface ContextInterface

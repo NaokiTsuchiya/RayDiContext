@@ -12,8 +12,6 @@ use PHPUnit\Framework\TestCase;
 /**
  * Boundary matrix for the scanner, driven straight by (script, compileDir, needle) triples
  *
- * BakedPathGuard covers the same class through the filesystem, where one more boundary case
- * costs a directory and a file.
  */
 #[CoversClass(BakedPathScanner::class)]
 final class BakedPathScannerTest extends TestCase

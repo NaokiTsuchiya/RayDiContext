@@ -6,7 +6,7 @@
   },
   "constraintsFiltering": "strict",
   "pinDigests": true,
-  "platformAutomerge": false,
+  "platformAutomerge": true,
   "minimumReleaseAge": "3 days",
   "timezone": "Asia/Tokyo",
   "schedule": ["before 5am"],
@@ -42,10 +42,11 @@
       "addLabels": ["automerge"]
     },
     {
-      "description": "The public contract — never widened automatically.",
+      "description": "The public contract — never widened without a manual OK from the Dependency Dashboard.",
       "matchManagers": ["composer"],
       "matchDepTypes": ["require"],
-      "enabled": false
+      "dependencyDashboardApproval": true,
+      "rangeStrategy": "widen"
     },
     {
       "description": "Renovate reads its own constraints block as a dependency. Not an update.",

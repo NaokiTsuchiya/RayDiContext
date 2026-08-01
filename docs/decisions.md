@@ -71,7 +71,7 @@ The same probe under `NaokiTsuchiya\RayDiContext\Support` is not reported — `o
 'NaokiTsuchiya\RayDiContext\*'` matches one namespace segment, not a subtree. That is a way past the
 rule, not a licence to use it. Shared setup goes through the final helpers in `tests/Support/`:
 static utilities (`Fs`, `PermissionBits`, `PhpProcess`) and per-test objects (`CliFixture`,
-`AppDirFixture`, `CompileDirFixture`).
+`AppDirFixture`, `CompileDirFixture`, `SeparatedDirFixture`).
 
 **Would change it:** a second `not-on` entry naming a base class, worth adding only for a case that
 earns its place beside `AbstractContext`.
@@ -119,6 +119,17 @@ created at all.
 
 Under the usual `umask 022` the `chmod()` changes nothing and reads as a redundant line. It is not:
 without it the suite depends on the umask of whoever runs it.
+
+### Folding `BakedPathGuardRejectionTest` into `Support\SeparatedDirFixture` — [#86][86]
+
+Its `setUp()` is the same four lines as the other four `BakedPathGuard` test classes up to the
+`uniqid()` prefix, which is why the fold keeps being proposed. It does not fit: the fixture's
+defining act is creating the compile dir, and that class exists to assert what the guard does when
+the compile dir is *missing*, is a *file*, or carries a mode it cannot list — so it puts the compile
+dir at `{baseDir}/di` and creates nothing. Sharing the fixture would mean two more constructor
+arguments (layout, and create-or-not) whose only non-default caller is that one file.
+
+**Would change it:** a second class needing the same non-default shape.
 
 ### Naming a concrete test count in `CLAUDE.md` or here — [#82][82]
 
@@ -205,5 +216,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [79]: https://github.com/NaokiTsuchiya/RayDiContext/issues/79
 [82]: https://github.com/NaokiTsuchiya/RayDiContext/issues/82
 [84]: https://github.com/NaokiTsuchiya/RayDiContext/issues/84
+[86]: https://github.com/NaokiTsuchiya/RayDiContext/issues/86
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

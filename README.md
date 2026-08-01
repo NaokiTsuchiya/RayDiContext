@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/NaokiTsuchiya/RayDiContext/actions/workflows/ci.yml/badge.svg)](https://github.com/NaokiTsuchiya/RayDiContext/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/NaokiTsuchiya/RayDiContext/graph/badge.svg)](https://codecov.io/gh/NaokiTsuchiya/RayDiContext)
-[![PHP Version](https://img.shields.io/badge/php-8.2%2B-777BB4)](composer.json)
+[![PHP Version](https://img.shields.io/badge/php-8.2%20--%208.5-777BB4)](composer.json)
 [![License](https://img.shields.io/github/license/NaokiTsuchiya/RayDiContext)](LICENSE)
 <!-- Packagist version badge: add once v0.1.0 is tagged and registered, see issue #26 -->
 
@@ -305,11 +305,27 @@ Renovate PR or a new PHP minor suddenly fails for no apparent reason, check
 here first. If it happens, either add `#[WithoutErrorHandler]` to the
 affected test or relax `failOnDeprecation` for that PHP version only.
 
+### Releasing
+
+Tags carry no `v` prefix — `0.1.0`, not `v0.1.0`. Composer accepts either, so
+the only thing that matters is not mixing the two.
+
+```bash
+git tag -a 0.1.0 -m 'Initial release'
+git push origin 0.1.0
+gh release create 0.1.0 --generate-notes
+```
+
+Packagist builds the version from the git tag, not from the GitHub release —
+the release is for humans. A published tag is never re-pointed: the tag ruleset
+restricts updates and deletions, and anything wrong in a tag is fixed by the
+next patch version.
+
 ## Versioning
 
 While on 0.x, minor releases may include backwards-incompatible changes.
 v1.0.0 will be tagged once the package has run in a real production
-application.
+application. From v1.0.0 on, semantic versioning applies strictly.
 
 ## License
 

@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeQualifiedContext;
 use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
+use NaokiTsuchiya\RayDiContext\Support\CompiledTree;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 
+use function array_filter;
 use function dirname;
-use function fileperms;
+use function str_ends_with;
 
 /** A compile whose output is not flat is normalized all the way down */
 #[CoversClass(CompileRunner::class)]
@@ -47,30 +45,11 @@ final class CompileRunnerNestedScriptTest extends TestCase
     {
         (new CompileRunner(new MapContextProvider(['prod' => FakeQualifiedContext::class])))->run($this->meta);
 
-        $nested = [];
-        $entries = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($this->meta->compileDir, FilesystemIterator::SKIP_DOTS),
+        $compileDir = $this->meta->compileDir;
+        $nested = array_filter(
+            CompiledTree::assertWorldReadable($compileDir),
+            static fn(string $path): bool => str_ends_with($path, '.php') && $compileDir !== dirname($path),
         );
-        /** @var SplFileInfo $entry */
-        foreach ($entries as $entry) {
-            $pathname = $entry->getPathname();
-            $mode = (int) fileperms($pathname) & 0o777;
-            $isDir = $entry->isDir();
-            $required = $isDir ? 0o005 : 0o004;
-            static::assertSame($required, $mode & $required, $pathname);
-            $isScript = $entry->getExtension() === 'php';
-            if ($isScript) {
-                static::assertSame(0o644, $mode, $pathname);
-            }
-
-            $parent = dirname($pathname);
-            $isNestedScript = $isScript && $parent !== $this->meta->compileDir;
-            if (!$isNestedScript) {
-                continue;
-            }
-
-            $nested[] = $pathname;
-        }
 
         static::assertNotSame([], $nested);
     }

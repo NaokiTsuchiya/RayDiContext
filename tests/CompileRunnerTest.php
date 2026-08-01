@@ -13,19 +13,17 @@ use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
+use NaokiTsuchiya\RayDiContext\Support\CompiledTree;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Ray\Compiler\CompiledInjector;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use SplFileInfo;
 
 use function chmod;
 use function dirname;
 use function file_put_contents;
-use function fileperms;
 use function glob;
 use function hash_file;
 use function is_dir;
@@ -122,27 +120,8 @@ final class CompileRunnerTest extends TestCase
     {
         $this->runner->run($this->meta);
 
-        static::assertSame(0o755, $this->mode($this->meta->compileDir));
-        $entries = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($this->meta->compileDir, FilesystemIterator::SKIP_DOTS),
-        );
-        $count = 0;
-        /** @var SplFileInfo $entry */
-        foreach ($entries as $entry) {
-            $pathname = $entry->getPathname();
-            $mode = $this->mode($pathname);
-            $isDir = $entry->isDir();
-            $required = $isDir ? 0o005 : 0o004;
-            static::assertSame($required, $mode & $required, $pathname);
-            $isScript = $entry->getExtension() === 'php';
-            if ($isScript) {
-                static::assertSame(0o644, $mode, $pathname);
-            }
-
-            $count++;
-        }
-
-        static::assertGreaterThan(0, $count);
+        static::assertSame(0o755, Fs::mode($this->meta->compileDir));
+        static::assertNotSame([], CompiledTree::assertWorldReadable($this->meta->compileDir));
     }
 
     /** @throws ExceptionInterface */
@@ -192,11 +171,5 @@ final class CompileRunnerTest extends TestCase
         ksort($files);
 
         return $files;
-    }
-
-    /** Returns the permission bits of a path */
-    private function mode(string $path): int
-    {
-        return (int) fileperms($path) & 0o777;
     }
 }

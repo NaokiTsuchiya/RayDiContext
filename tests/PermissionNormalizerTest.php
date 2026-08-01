@@ -6,13 +6,13 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Support\CompileDirFixture;
+use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function chmod;
 use function copy;
-use function fileperms;
 use function mkdir;
 use function symlink;
 
@@ -53,10 +53,10 @@ final class PermissionNormalizerTest extends TestCase
 
         (new PermissionNormalizer())($this->compileDir);
 
-        static::assertSame(0o755, $this->mode($this->compileDir));
-        static::assertSame(0o755, $this->mode($nested));
-        static::assertSame(0o644, $this->mode("{$this->compileDir}/script.php"));
-        static::assertSame(0o644, $this->mode("{$nested}/script.php"));
+        static::assertSame(0o755, Fs::mode($this->compileDir));
+        static::assertSame(0o755, Fs::mode($nested));
+        static::assertSame(0o644, Fs::mode("{$this->compileDir}/script.php"));
+        static::assertSame(0o644, Fs::mode("{$nested}/script.php"));
     }
 
     /** @throws ExceptionInterface */
@@ -70,8 +70,8 @@ final class PermissionNormalizerTest extends TestCase
 
         (new PermissionNormalizer())($this->compileDir);
 
-        static::assertSame(0o775, $this->mode($nested));
-        static::assertSame(0o664, $this->mode("{$this->compileDir}/script.php"));
+        static::assertSame(0o775, Fs::mode($nested));
+        static::assertSame(0o664, Fs::mode("{$this->compileDir}/script.php"));
     }
 
     /** @throws ExceptionInterface */
@@ -86,8 +86,8 @@ final class PermissionNormalizerTest extends TestCase
 
         (new PermissionNormalizer())($this->compileDir);
 
-        static::assertSame(0o700, $this->mode($target));
-        static::assertSame(0o600, $this->mode("{$target}/script.php"));
+        static::assertSame(0o700, Fs::mode($target));
+        static::assertSame(0o600, Fs::mode("{$target}/script.php"));
     }
 
     /** Copies the fixture script in and gives it a mode the umask cannot narrow */
@@ -95,11 +95,5 @@ final class PermissionNormalizerTest extends TestCase
     {
         copy(self::SCRIPT, $path);
         chmod($path, $mode);
-    }
-
-    /** Returns the permission bits of a path */
-    private function mode(string $path): int
-    {
-        return (int) fileperms($path) & 0o777;
     }
 }

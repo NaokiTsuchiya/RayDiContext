@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
-use NaokiTsuchiya\RayDiContext\Support\Fs;
+use NaokiTsuchiya\RayDiContext\Support\CompileDirFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -15,7 +15,6 @@ use function copy;
 use function fileperms;
 use function mkdir;
 use function symlink;
-use function uniqid;
 
 #[CoversClass(PermissionNormalizer::class)]
 final class PermissionNormalizerTest extends TestCase
@@ -23,8 +22,8 @@ final class PermissionNormalizerTest extends TestCase
     /** Stands in for a compiled script the tests assert the mode of */
     private const SCRIPT = __DIR__ . '/Fixture/script.php';
 
-    /** @var non-empty-string Per-test working directory */
-    private string $baseDir;
+    /** Working directory holding the compile dir these tests start from */
+    private CompileDirFixture $fixture;
 
     /** @var non-empty-string Directory standing in for the compile dir */
     private string $compileDir;
@@ -32,16 +31,14 @@ final class PermissionNormalizerTest extends TestCase
     /** {@inheritDoc} */
     protected function setUp(): void
     {
-        $this->baseDir = __DIR__ . '/tmp/' . uniqid('perm_', more_entropy: true);
-        $this->compileDir = "{$this->baseDir}/di";
-        mkdir($this->compileDir, permissions: 0o700, recursive: true);
-        chmod($this->compileDir, permissions: 0o700);
+        $this->fixture = new CompileDirFixture('perm_');
+        $this->compileDir = $this->fixture->compileDir;
     }
 
     /** {@inheritDoc} */
     protected function tearDown(): void
     {
-        Fs::removeDir($this->baseDir);
+        $this->fixture->remove();
     }
 
     /** @throws ExceptionInterface */
@@ -81,7 +78,7 @@ final class PermissionNormalizerTest extends TestCase
     #[Test]
     public function doesNotFollowSymlinks(): void
     {
-        $target = "{$this->baseDir}/outside";
+        $target = "{$this->fixture->baseDir}/outside";
         mkdir($target, permissions: 0o700);
         chmod($target, permissions: 0o700);
         $this->copyScript("{$target}/script.php", mode: 0o600);

@@ -71,7 +71,7 @@ The same probe under `NaokiTsuchiya\RayDiContext\Support` is not reported — `o
 'NaokiTsuchiya\RayDiContext\*'` matches one namespace segment, not a subtree. That is a way past the
 rule, not a licence to use it. Shared setup goes through the final helpers in `tests/Support/`:
 static utilities (`Fs`, `PermissionBits`, `PhpProcess`) and per-test objects (`CliFixture`,
-`AppDirFixture`).
+`AppDirFixture`, `CompileDirFixture`).
 
 **Would change it:** a second `not-on` entry naming a base class, worth adding only for a case that
 earns its place beside `AbstractContext`.
@@ -98,6 +98,27 @@ Rejected without trying it, on an outcome already observed locally: running the 
 tests that an ordinary user runs, with the same total either way. Containers run as root,
 `Support\PermissionBits` finds the bits unenforced, and the tests that exist to assert the package
 reports a directory it cannot read skip silently. A green matrix would mean less than it appears.
+
+### Dropping the `chmod()` that follows `mkdir()` in the test fixtures — [#84][84]
+
+`mkdir()` masks its mode argument with the process umask; `chmod()` does not. Probed on PHP 8.5 with
+`umask(0o277)`, first on a leaf inside a directory that already exists, then on a path `mkdir()` has
+to create recursively:
+
+```
+leaf mkdir ok=1 mode=500
+after chmod mode=700
+recursive ok=0 base=500 di_exists=0
+```
+
+The permission tests compare against exact modes — `assertSame(0o700, ...)` on the compile dir they
+start from — so `Support\CompileDirFixture` calls `chmod()` after creating a directory. The third
+line is why it creates each level itself instead of passing `recursive: true` and fixing only the
+leaf: an intermediate directory narrowed to `0o500` is not writable, so the child below it is never
+created at all.
+
+Under the usual `umask 022` the `chmod()` changes nothing and reads as a redundant line. It is not:
+without it the suite depends on the umask of whoever runs it.
 
 ### Naming a concrete test count in `CLAUDE.md` or here — [#82][82]
 
@@ -183,5 +204,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [71]: https://github.com/NaokiTsuchiya/RayDiContext/pull/71
 [79]: https://github.com/NaokiTsuchiya/RayDiContext/issues/79
 [82]: https://github.com/NaokiTsuchiya/RayDiContext/issues/82
+[84]: https://github.com/NaokiTsuchiya/RayDiContext/issues/84
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

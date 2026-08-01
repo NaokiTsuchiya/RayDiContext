@@ -1,0 +1,101 @@
+---
+name: decisions
+description: Approaches this repo already tried and rejected, with the evidence and what would change the answer. Read before proposing a mago/CI rule to enforce a convention, before adding a dependency, before changing how paths or @throws are declared, and any time the thought is "why doesn't this just do X" — X has often been tried. Add an entry here when a change is abandoned for a reason a future reader would not rediscover.
+---
+
+# Already tried
+
+Each entry is what was attempted, what actually happened, and what would have to change for the
+answer to be different. An entry with a live premise is worth re-testing; one without is settled.
+
+## Cannot be done with the tooling
+
+### Enforce the comment rule with a `mago` lint rule — #70
+
+`mago`'s only comment rules are `no-empty-comment`, `no-hash-comment`, `valid-docblock` and
+`missing-docs`. None looks at length, audience or redundancy, which is the whole of the rule. There
+is nothing to configure.
+
+**Would change it:** a `mago` release adding a comment-length or duplicate-prose rule.
+
+### Pin a `final` constructor with `mago guard` — #71
+
+`[[guard.structural.rules]]` accepts `target` values `class-like`, `class`, `interface`, `trait`,
+`enum`, `constant`, `function`. Passing `method` fails at config-parse time:
+
+```
+ERROR unknown variant `method`, expected one of `class-like`, `class`, `interface`, `trait`, `enum`, `constant`, `function`
+```
+
+`must-be-final` on the class does not reach `AbstractContext::__construct()`, so a subclass widening
+it is caught by nothing. That is why the constraint is one of the few lines left in CLAUDE.md.
+
+**Would change it:** `mago guard` gaining a method target.
+
+### Add `bin` to mago's `[source] paths`
+
+Does nothing. A bin script has no `.php` extension, so the source glob never discovers it. Pointed
+at the file explicitly, the old `bin/ray-di-compile` reported 26 analyzer and 6 lint issues. The fix
+was to move the logic into `src/Cli.php` and leave only the autoloader lookup in the script, which
+cannot move — it has to run before `Cli` is loadable. Two rules make that remainder permanently
+unfixable rather than merely unfixed: `no-inline` fires on the shebang every executable PHP script
+needs, and `no-global` on the `$GLOBALS['_composer_autoload_path']` lookup. Only `mago fmt`, which
+handles both, is wired into `composer fmt` for it.
+
+### Collapse `BinCompileTest`'s `@throws RuntimeException` to `ExceptionInterface` — #71
+
+`ExceptionInterface` does not cover a plain `RuntimeException`, and `BinCompileTest` never calls
+package code in-process: it goes through `Fake\Cli::run()`, which throws a bare `RuntimeException`
+when `proc_open()` fails. Swapping the tag produces 8 `unhandled-thrown-type` errors from
+`mago analyze`. The eight tags stay, for the same reason the one in `Fake\Cli` does.
+
+**Would change it:** `Fake\Cli` throwing a package exception instead, which would mean giving a test
+double a dependency on the hierarchy it exists to stay outside of.
+
+## Deliberate direction — do not reverse
+
+### `fromAppDir()` calling `realpath()` — #53
+
+Rejected. `BakedPathScanner` compares strings verbatim, so resolving symlinks at construction would
+let the guard fail open whenever the resolved spelling differs from the one the running app binds —
+a Capistrano-style `current -> release` layout is the ordinary case. A relative `$appDir` is
+rejected outright instead, and the factory never touches the filesystem.
+
+### Collapsing `src/`'s `@throws` to `ExceptionInterface` — 34f6a95, reaffirmed in #70
+
+34f6a95 moved deliberately in the other direction: "Declare precise exception types instead of the
+generic `RuntimeException`". Tests may collapse to the marker interface, because a test that calls
+one method and lets everything escape gains nothing from ten tags. `src/` keeps the enumeration.
+
+### Running the `test` CI job in a `container:`
+
+Rejected. Containers run as root, root ignores permission bits, and nine tests exist to assert the
+package reports a directory it cannot read. They would skip silently and the coverage would be
+theatre.
+
+## Declined for cost
+
+### `ext-posix` to detect root in tests — #14
+
+Rejected. It adds a required extension for one branch in a test helper, and it would still be wrong:
+a non-root process holding `CAP_DAC_OVERRIDE` also ignores permission bits and would not be detected
+by a uid check. `Fake\PermissionBits` measures the capability directly — it creates a directory,
+makes it unreadable, and checks whether the process is actually denied.
+
+## Possible, not done
+
+### A CI check for comment length
+
+#70 rejected a line-count gate because `main` then held blocks of 37, 19 and 18 lines, so any useful
+threshold failed existing code. **That premise is gone**: after #71 the longest block is 16 lines
+(`CompileRunner::run()`, of which 8 are the `@throws` enumeration), and the next is 12. A threshold
+around 20 would pass today.
+
+Worth weighing against what it would actually catch. A line count does not see audience, and the
+rule that keeps being violated is about audience — a 6-line comment written for the diff passes a
+20-line gate. Re-open only with a specific failure it would have caught.
+
+### A CI check for change-narrating words in added lines — #70
+
+Detecting "previously", "used to" and similar, restricted to added lines of a diff so existing code
+cannot fail it. Implementable; nobody has needed it. Would be a separate issue.

@@ -4,8 +4,11 @@
 into a container image, keeping it separate from a runtime-writable `tmpDir`. Build as root, `COPY`
 the scripts in, run as non-root on a read-only root filesystem. No framework, no HTTP, no database.
 
-For the compile pipeline, the extension points, or why a step is ordered the way it is, run the
-`architecture` skill. This file is only what you would get wrong without it.
+Two skills carry what does not belong here: `architecture` for the compile pipeline, the extension
+points and why a step sits where it does, and `decisions` for approaches already tried and rejected
+— read that one before proposing a mago or CI rule, adding a dependency, or asking "why doesn't this
+just do X", and add to it whenever a change is abandoned for a reason worth not rediscovering. This
+file is only what you would get wrong without them.
 
 ## Commands
 
@@ -23,8 +26,7 @@ Run `composer cs && composer sa` before calling a change to `src/` done.
 
 **Run the suite as a non-root user.** Nine tests set a directory unreadable and assert the package
 reports it; root ignores permission bits, so they `markTestSkipped()` via `Fake\PermissionBits`,
-which measures the capability instead of reading the uid (that would need `ext-posix`, declined in
-#14, and would still miss a non-root process holding `CAP_DAC_OVERRIDE`). Root gives
+which measures the capability rather than reading the uid (#14). Root gives
 `143 tests, 9 skipped`; non-root gives `143 tests, 0 skipped`. CI is non-root on purpose — don't
 move the `test` job into a `container:`.
 
@@ -87,7 +89,7 @@ one exception is the justification `@codeCoverageIgnore` requires.
 
 Be suspicious of your own output here: the failure mode is writing for whoever reads the diff right
 now, and it has been caught twice in review (PR #69, seventeen times; PR #71, six more after a pass
-that had already halved the volume). `mago` has no length or redundancy check.
+that had already halved the volume). Nothing enforces it — see `decisions` for why not.
 
 ## Other conventions
 

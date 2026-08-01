@@ -30,11 +30,9 @@ interface ContextInterface
      * A production context returns CompiledInjector($meta->compileDir); a development
      * context returns Ray\Di\Injector.
      *
-     * Whether repeated calls return the same instance or a fresh one each time is not
-     * part of this contract — a concrete context may do either. Call it once per
-     * process and reuse the result, particularly around getSavedSingleton(): warming
-     * up singletons against one instance and then serving requests from another
-     * defeats the warmup.
+     * Whether repeated calls return the same instance is not part of this contract. Call
+     * it once per process and reuse the result: warming up getSavedSingleton() against one
+     * instance and then serving requests from another defeats the warmup.
      */
     public function getInjectorInstance(): InjectorInterface;
 

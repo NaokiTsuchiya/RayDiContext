@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
-use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
-use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeQualifiedContext;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -16,7 +13,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use RuntimeException;
 use SplFileInfo;
 
 use function dirname;
@@ -39,7 +35,7 @@ final class CompileRunnerNestedScriptTest extends TestCase
     /**
      * {@inheritDoc}
      *
-     * @throws InvalidAppMeta
+     * @throws ExceptionInterface
      */
     protected function setUp(): void
     {
@@ -60,15 +56,10 @@ final class CompileRunnerNestedScriptTest extends TestCase
     /**
      * A script Ray.Compiler wrote into a subdirectory is made readable too
      *
-     * Ray.Compiler replaces the namespace separators of a dependency index and nothing
-     * else, so a qualifier holding a "/" — annotatedWith('a/b') — lands the script in a
-     * directory of its own. Those scripts are written 0600 like any other, and are the
-     * ones a non-recursive normalizer would leave behind.
+     * A qualifier holding a "/" — annotatedWith('a/b') — lands the script in a directory
+     * of its own, which is what a non-recursive normalizer would leave behind at 0600.
      *
-     * @throws BakedPathFound
-     * @throws RuntimeException
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
+     * @throws ExceptionInterface
      */
     #[Test]
     public function normalizesAScriptCompiledIntoASubdirectory(): void

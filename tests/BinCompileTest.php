@@ -170,10 +170,8 @@ final class BinCompileTest extends TestCase
      * A missing appDir is a usage error (status 2); a relative one fails the compile
      * itself (status 1)
      *
-     * Existence is checked here, before anything is compiled, so the message points at
-     * the argument rather than at a baked path or a mkdir failure downstream. Shape is
-     * checked inside AppMeta::fromAppDir() instead: it never touches the filesystem, so
-     * a relative appDir surfaces the same way a baked path or an unknown context does.
+     * The CLI checks existence before compiling so the message points at the argument;
+     * shape is left to AppMeta::fromAppDir(), which never touches the filesystem.
      *
      * @throws RuntimeException
      */

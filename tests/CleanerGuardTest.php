@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRejectingGuard;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function copy;
 use function mkdir;
@@ -58,7 +58,7 @@ final class CleanerGuardTest extends TestCase
     /**
      * The default guard rejects a compile dir holding the app dir, removing nothing
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsCompileDirHoldingAppDirWithoutRemovingAnything(): void
@@ -79,7 +79,7 @@ final class CleanerGuardTest extends TestCase
      * The compile dir here is the conventional one, which the default guard allows, so
      * only the application guard can be what stopped the removal.
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function honoursApplicationSuppliedGuard(): void

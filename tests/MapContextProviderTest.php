@@ -64,10 +64,6 @@ final class MapContextProviderTest extends TestCase
     /**
      * A mapped class that does not exist is reported naming both the class and the context
      *
-     * Checked eagerly in the constructor rather than lazily in get(): a misspelled class
-     * name in a bootstrap file is caught the moment the provider is wired up, not only
-     * once that particular context is finally looked up.
-     *
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
      */
@@ -86,8 +82,7 @@ final class MapContextProviderTest extends TestCase
     /**
      * A mapped class unrelated to AbstractContext is rejected by the constructor
      *
-     * Without this check, `new $class($meta)` inside get() would reach PHP's own
-     * TypeError ("Return value must be of type ContextInterface, stdClass returned"),
+     * Without the check, `new $class($meta)` inside get() reaches PHP's own TypeError,
      * which leaks past this package's exception hierarchy.
      *
      * @throws ContextClassNotFound
@@ -109,9 +104,8 @@ final class MapContextProviderTest extends TestCase
     /**
      * A mapped abstract class is rejected by the constructor
      *
-     * Without this check, `new $class($meta)` inside get() would reach PHP's own Error
-     * ("Cannot instantiate abstract class AbstractContext"), which leaks past this
-     * package's exception hierarchy.
+     * Without the check, `new $class($meta)` inside get() reaches PHP's own Error,
+     * which leaks past this package's exception hierarchy.
      *
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
@@ -135,9 +129,8 @@ final class MapContextProviderTest extends TestCase
     /**
      * A mapped interface is reported as an interface rather than "does not exist"
      *
-     * class_exists() alone returns false for an interface name, which would otherwise
-     * make this case indistinguishable from a genuine typo (ContextClassNotFound's
-     * "does not exist").
+     * class_exists() alone returns false for an interface name, which would make this
+     * indistinguishable from a genuine typo.
      *
      * @throws ContextClassNotFound
      * @throws InvalidContextClass

@@ -16,13 +16,10 @@ use function strpos;
  * itself — and any path inside it — is allowed. A tmp dir nested under the compile dir
  * extends beyond the literal, so it is still detected.
  *
- * Both the needle and the compile dir only match on path-segment boundaries: an occurrence
- * flanked by a path-segment character continues into a longer segment and therefore names a
- * different path — "/app" in "/appdata/config.php" or in "/var/backup/app", "…/prod" in
- * "…/production_logs". Boundaries are decided byte-wise against the ASCII segment class, so
- * a multi-byte character beside a match counts as a boundary and the occurrence is reported:
- * fail-close, matching the guard. Matching is case-sensitive, like the verbatim comparison
- * it is part of, so "/App/src" does not match a needle of "/app".
+ * Boundaries are decided byte-wise against the ASCII segment class, so a multi-byte
+ * character beside a match counts as a boundary and the occurrence is reported: fail-close,
+ * matching the guard. Matching is case-sensitive, like the verbatim comparison it is part
+ * of, so "/App/src" does not match a needle of "/app".
  *
  * @internal Used by BakedPathGuard
  */
@@ -105,8 +102,7 @@ final class BakedPathScanner
      * A path-segment character on either side means the match runs on into a longer segment
      * and so names a different path: "/app" both in "/appdata" and in "/var/backup/app",
      * "…/prod" in "…/production_logs". "/" is not a segment character, so a match continues
-     * to hold when a path nests deeper or sits below a parent; neither is the start or the
-     * end of the script, both of which bound a match.
+     * to hold when a path nests deeper; neither is the start or the end of the script.
      */
     private function isWholePath(int $position, int $length): bool
     {

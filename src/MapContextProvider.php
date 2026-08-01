@@ -26,9 +26,8 @@ final class MapContextProvider implements ContextProviderInterface
     /**
      * @param array<string, class-string<AbstractContext>> $map context name to context class
      *
-     * Every entry is checked here, not lazily in get(): a typo in an entry for a
-     * context nobody has requested yet would otherwise surface only once that
-     * context is finally looked up, possibly long after the map was wired up.
+     * Every entry is checked here rather than lazily in get(), so a typo for a context
+     * nobody has requested yet fails when the map is wired up.
      *
      * @throws ContextClassNotFound When a mapped context class does not exist.
      * @throws InvalidContextClass When a mapped class exists but cannot serve as a context.
@@ -80,10 +79,8 @@ final class MapContextProvider implements ContextProviderInterface
 
             // @codeCoverageIgnoreStart
         } catch (ReflectionException $e) {
-            // Unreachable from a test: class_exists()/interface_exists() above already
-            // confirmed $class resolves, so ReflectionClass's constructor cannot fail here.
-            // Caught anyway so this method's contract stays limited to this package's own
-            // exceptions, with nothing left to declare.
+            // class_exists()/interface_exists() above already resolved $class, so this cannot
+            // fail; caught anyway so the contract stays limited to this package's exceptions.
             throw new ContextClassNotFound(
                 sprintf('Context class "%s" mapped to context "%s" does not exist', $class, $context),
                 previous: $e,

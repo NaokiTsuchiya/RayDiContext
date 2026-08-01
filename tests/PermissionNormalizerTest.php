@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function chmod;
 use function copy;
@@ -53,11 +52,9 @@ final class PermissionNormalizerTest extends TestCase
      * Owner-only scripts and directories become world-readable, nested ones included
      *
      * This is what Ray.Compiler leaves behind: 0600 files from tempnam(), in a compile
-     * dir whose own mode depends on the umask of the build. A qualifier holding a "/"
-     * puts one of those scripts in a subdirectory, so the nested case is not academic.
+     * dir whose own mode depends on the umask of the build.
      *
-     * @throws ChmodFailed
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function normalizesFilesAndDirectories(): void
@@ -80,11 +77,9 @@ final class PermissionNormalizerTest extends TestCase
      * An entry that is already readable keeps the mode it has
      *
      * A compile dir the compiling user does not own — a root-owned container volume,
-     * say — cannot be chmod'ed by that user at all, so an entry that already grants
-     * the world bits it needs must not be touched.
+     * say — cannot be chmod'ed by that user at all.
      *
-     * @throws ChmodFailed
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function leavesAlreadyReadableEntriesAlone(): void
@@ -106,8 +101,7 @@ final class PermissionNormalizerTest extends TestCase
      * chmod() resolves the link, so following one would change the mode of a file
      * outside the compile dir.
      *
-     * @throws ChmodFailed
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function doesNotFollowSymlinks(): void

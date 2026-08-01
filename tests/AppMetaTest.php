@@ -39,10 +39,10 @@ final class AppMetaTest extends TestCase
     }
 
     /** @throws ExceptionInterface */
-    #[TestWith(['', 'prod', '/opt/di', '/tmp/rw', 'AppMeta::$appDir must not be empty'])]
-    #[TestWith(['/path/to/app', '', '/opt/di', '/tmp/rw', 'AppMeta::$context must not be empty'])]
-    #[TestWith(['/path/to/app', 'prod', '', '/tmp/rw', 'AppMeta::$compileDir must not be empty'])]
-    #[TestWith(['/path/to/app', 'prod', '/opt/di', '', 'AppMeta::$tmpDir must not be empty'])]
+    #[TestWith(['', 'prod', '/opt/di', '/tmp/rw', 'AppMeta::$appDir must not be empty'], 'empty appDir')]
+    #[TestWith(['/path/to/app', '', '/opt/di', '/tmp/rw', 'AppMeta::$context must not be empty'], 'empty context')]
+    #[TestWith(['/path/to/app', 'prod', '', '/tmp/rw', 'AppMeta::$compileDir must not be empty'], 'empty compileDir')]
+    #[TestWith(['/path/to/app', 'prod', '/opt/di', '', 'AppMeta::$tmpDir must not be empty'], 'empty tmpDir')]
     #[Test]
     public function rejectsEmptyField(
         string $appDir,
@@ -58,9 +58,9 @@ final class AppMetaTest extends TestCase
     }
 
     /** @throws ExceptionInterface */
-    #[TestWith(['app'])]
-    #[TestWith(['./app'])]
-    #[TestWith(['.'])]
+    #[TestWith(['app'], 'bare relative segment')]
+    #[TestWith(['./app'], 'explicitly relative path')]
+    #[TestWith(['.'], 'current directory')]
     #[Test]
     public function rejectsNonAbsoluteAppDir(string $appDir): void
     {
@@ -71,9 +71,9 @@ final class AppMetaTest extends TestCase
     }
 
     /** @throws ExceptionInterface */
-    #[TestWith(['/opt/di', '/opt/di'])]
-    #[TestWith(['/opt/di/', '/opt/di'])]
-    #[TestWith(['/opt/di', '/opt/di///'])]
+    #[TestWith(['/opt/di', '/opt/di'], 'identical spelling')]
+    #[TestWith(['/opt/di/', '/opt/di'], 'equal after trimming the compile dir trailing slash')]
+    #[TestWith(['/opt/di', '/opt/di///'], 'equal after trimming repeated tmp dir trailing slashes')]
     #[Test]
     public function rejectsCompileDirEqualToTmpDir(string $compileDir, string $tmpDir): void
     {

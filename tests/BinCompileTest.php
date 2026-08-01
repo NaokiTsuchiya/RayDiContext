@@ -14,7 +14,7 @@ use function glob;
 use function mkdir;
 use function uniqid;
 
-/** End-to-end test for the bin/ray-di-compile CLI */
+/** End-to-end test for the bin/ray-di-compile CLI; BinCompileRejectionTest covers its usage errors */
 final class BinCompileTest extends TestCase
 {
     /** Path to the compile CLI under test */
@@ -78,30 +78,6 @@ final class BinCompileTest extends TestCase
 
     /** @throws RuntimeException */
     #[Test]
-    public function failsWithUsageWhenArgumentsMissing(): void
-    {
-        [$status, $stderr] = PhpProcess::run(self::SCRIPT, []);
-
-        static::assertSame(2, $status);
-        static::assertStringContainsString('Usage:', $stderr);
-    }
-
-    /** @throws RuntimeException */
-    #[Test]
-    public function failsWhenBootstrapReturnsWrongType(): void
-    {
-        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_invalid.php',
-            "{$this->baseDir}/app",
-            'prod',
-        ]);
-
-        static::assertSame(2, $status);
-        static::assertStringContainsString('must return', $stderr);
-    }
-
-    /** @throws RuntimeException */
-    #[Test]
     public function failsWithStatusOneOnBakedPath(): void
     {
         $appDir = "{$this->baseDir}/app";
@@ -135,21 +111,8 @@ final class BinCompileTest extends TestCase
 
     /** @throws RuntimeException */
     #[Test]
-    public function distinguishesMissingFromRelativeAppDir(): void
+    public function failsWithStatusOneOnRelativeAppDir(): void
     {
-        $appDir = "{$this->baseDir}/nosuch";
-
-        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_valid.php',
-            $appDir,
-            'prod',
-        ]);
-
-        static::assertSame(2, $status, $stderr);
-        static::assertStringContainsString('appDir does not exist', $stderr);
-        static::assertStringContainsString($appDir, $stderr);
-        static::assertStringNotContainsString('Stack trace', $stderr);
-
         [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
             '.',
@@ -159,26 +122,5 @@ final class BinCompileTest extends TestCase
         static::assertSame(1, $status, $stderr);
         static::assertStringContainsString('must be an absolute path', $stderr);
         static::assertStringNotContainsString('Stack trace', $stderr);
-    }
-
-    /** @throws RuntimeException */
-    #[Test]
-    public function failsWithUsageWhenTooManyArguments(): void
-    {
-        $appDir = "{$this->baseDir}/app";
-
-        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_valid.php',
-            $appDir,
-            'prod',
-            '',
-            '',
-            'surplus',
-        ]);
-
-        static::assertSame(2, $status);
-        static::assertStringContainsString('Too many arguments', $stderr);
-        static::assertStringContainsString('Usage:', $stderr);
-        static::assertSame([], glob("{$appDir}/var/di/prod/*.php"));
     }
 }

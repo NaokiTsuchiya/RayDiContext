@@ -54,9 +54,9 @@ final class BakedPathGuardBoundaryTest extends TestCase
             data: "<?php return '{$this->meta->compileDir}/scripts/x.php';",
         );
 
-        ($this->guard)($this->meta);
-
         $this->expectNotToPerformAssertions();
+
+        ($this->guard)($this->meta);
     }
 
     /** @throws ExceptionInterface */

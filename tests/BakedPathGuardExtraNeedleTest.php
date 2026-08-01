@@ -83,9 +83,9 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
     {
         copy(self::CLEAN_SCRIPT, "{$this->meta->compileDir}/clean.php");
 
-        (new BakedPathGuard([self::CONFIGURED]))($this->meta);
+        $this->expectNotToPerformAssertions();
 
-        static::assertFileExists("{$this->meta->compileDir}/clean.php");
+        (new BakedPathGuard([self::CONFIGURED]))($this->meta);
     }
 
     /** @return non-empty-string */

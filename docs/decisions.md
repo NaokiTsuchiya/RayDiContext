@@ -98,6 +98,14 @@ tests that an ordinary user runs, with the same total either way. Containers run
 `Support\PermissionBits` finds the bits unenforced, and the tests that exist to assert the package
 reports a directory it cannot read skip silently. A green matrix would mean less than it appears.
 
+### Naming a concrete test count in `CLAUDE.md` or here — [#82][82]
+
+Removed in [28ea330][28ea330] after review, and not to be restored. A total was a tripwire every
+test-touching change had to re-measure, and a skip count cannot be measured at all on the machine
+that usually runs the suite — it takes a root run to observe. What survives is the part a reader
+needs, and it stays true whatever the totals are: a root run skips the tests that assert a denial, a
+non-root run skips nothing.
+
 ## Declined for cost
 
 ### `ext-posix` to detect root in tests
@@ -148,4 +156,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [70]: https://github.com/NaokiTsuchiya/RayDiContext/issues/70
 [71]: https://github.com/NaokiTsuchiya/RayDiContext/pull/71
 [79]: https://github.com/NaokiTsuchiya/RayDiContext/issues/79
+[82]: https://github.com/NaokiTsuchiya/RayDiContext/issues/82
+[28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

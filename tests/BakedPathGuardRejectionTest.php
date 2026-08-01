@@ -20,7 +20,6 @@ use function uniqid;
 
 /**
  * The guard refuses a compile dir it cannot open, as a package exception rather than a
- * bare SPL one
  */
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardRejectionTest extends TestCase
@@ -49,12 +48,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * A compile dir that does not exist is rejected by name, instead of RecursiveDirectoryIterator's
-     * bare UnexpectedValueException
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsAMissingCompileDir(): void
     {

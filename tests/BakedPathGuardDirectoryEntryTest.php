@@ -19,9 +19,6 @@ use function uniqid;
 
 /**
  * A compileDir entry whose name ends in ".php" is not necessarily a script: it can be a
- * directory, or a symlink to one. The guard must not rely on file_get_contents() to tell
- * the difference, since a directory path fed to it returns false on Linux but an empty
- * string on macOS — the exact inconsistency this class guards against.
  */
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardDirectoryEntryTest extends TestCase
@@ -51,14 +48,7 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * A symlink to a directory, named like a script, is rejected instead of silently skipped
-     *
-     * RecursiveDirectoryIterator does not descend into symlinks, so one named "cache.php"
-     * is visited as a leaf.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function throwsOnSymlinkToDirectoryNamedLikeAScript(): void
     {
@@ -73,12 +63,7 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
         ($this->guard)($this->meta);
     }
 
-    /**
-     * A real directory named like a script is traversed as a directory; scripts inside
-     * it are still scanned normally
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function scansScriptsInsideADirectoryNamedLikeAScript(): void
     {

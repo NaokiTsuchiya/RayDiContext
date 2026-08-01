@@ -23,9 +23,6 @@ use function unlink;
 /**
  * Empties the compile dir, creating it when missing
  *
- * The directory itself is kept rather than recreated, so a compile dir that is a mount point
- * or a symlink still works.
- *
  * @internal Built by CompileRunner; an application's knob is CompileDirGuardInterface
  */
 final class Cleaner
@@ -70,8 +67,6 @@ final class Cleaner
     /**
      * Removes every entry inside a directory, descending into subdirectories depth-first
      *
-     * Written out rather than delegated to RecursiveDirectoryIterator, whose constructor throws
-     * a bare UnexpectedValueException for a directory it cannot open, even one reached mid-walk.
      *
      * @throws RemoveFailed When a directory cannot be read or an entry cannot be removed.
      */
@@ -109,8 +104,6 @@ final class Cleaner
     /**
      * Opens a directory for listing, refusing one whose entries this process cannot reach
      *
-     * A mode granting read but not execute (0405, 0605, ...) opens without error and fails per
-     * entry instead, so traversal is checked separately before any entry is reached.
      *
      * @throws RemoveFailed When the directory cannot be listed or traversed.
      */

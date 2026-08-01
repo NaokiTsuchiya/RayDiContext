@@ -53,12 +53,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(new AppMeta('/app', 'prod', '/', '/tmp'));
     }
 
-    /**
-     * APP_COMPILE_DIR=/ falls back to the default because AppMeta trims trailing
-     * slashes, but APP_COMPILE_DIR=/. reaches the compile dir verbatim.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsRootReachedThroughDotSegment(): void
     {
@@ -76,11 +71,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(new AppMeta($this->appDir, 'prod', $this->appDir, "{$this->appDir}/var/tmp"));
     }
 
-    /**
-     * This is the APP_COMPILE_DIR=/app typo when the app lives in /app/src.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsCompileDirHoldingAppDir(): void
     {
@@ -89,11 +80,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(new AppMeta($this->appDir, 'prod', $this->baseDir, "{$this->appDir}/var/tmp"));
     }
 
-    /**
-     * A literal comparison would let the link through: no shared prefix until both resolve.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsSymlinkedCompileDirHoldingAppDir(): void
     {
@@ -128,11 +115,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(AppMeta::fromAppDir($this->appDir, 'prod'));
     }
 
-    /**
-     * /app is not an ancestor of /appdata, so a prefix match alone would reject it.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function allowsCompileDirSharingNamePrefixWithAppDir(): void
     {

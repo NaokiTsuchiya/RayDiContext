@@ -21,9 +21,6 @@ use function uniqid;
 
 /**
  * Covers the fromAppDir() factory; AppMetaTest covers the public constructor
- *
- * The factory validates appDir's shape but never touches the filesystem, so an app dir need
- * not exist on disk for most cases here.
  */
 #[CoversClass(AppMeta::class)]
 final class AppMetaFromAppDirTest extends TestCase
@@ -48,11 +45,7 @@ final class AppMetaFromAppDirTest extends TestCase
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * Falls back to conventional paths under the app dir
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function defaults(): void
     {
@@ -88,14 +81,7 @@ final class AppMetaFromAppDirTest extends TestCase
         AppMeta::fromAppDir($this->appDir, $context);
     }
 
-    /**
-     * Explicit compileDir/tmpDir override the conventional defaults independently
-     *
-     * An override reaches AppMeta verbatim: compile time and runtime have to agree on the
-     * literal, and resolving it here would silently change it under a symlink.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function override(): void
     {
@@ -105,11 +91,7 @@ final class AppMetaFromAppDirTest extends TestCase
         static::assertSame('/tmp/rw', $meta->tmpDir);
     }
 
-    /**
-     * Overriding only the compile dir leaves the tmp dir at its default
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function partialOverride(): void
     {
@@ -130,13 +112,7 @@ final class AppMetaFromAppDirTest extends TestCase
         static::assertSame('/tmp/rw', $meta->tmpDir);
     }
 
-    /**
-     * A relative appDir is rejected rather than resolved: left as-is it would reach
-     * BakedPathGuard as a needle matching nearly every literal — "." matches all of them —
-     * and fail the compile as a baked path rather than as a bad argument.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[TestWith(['.', 'must be an absolute path'])]
     #[TestWith(['app', 'must be an absolute path'])]
     #[TestWith(['./app', 'must be an absolute path'])]
@@ -150,11 +126,7 @@ final class AppMetaFromAppDirTest extends TestCase
         AppMeta::fromAppDir($appDir, 'prod');
     }
 
-    /**
-     * appDir need not exist on disk — existence is a caller concern, not this factory's
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function doesNotRequireAppDirToExist(): void
     {
@@ -165,13 +137,7 @@ final class AppMetaFromAppDirTest extends TestCase
         static::assertSame($appDir, $meta->appDir);
     }
 
-    /**
-     * BakedPathGuard compares verbatim, so compile time and runtime must bind the same
-     * string. Resolving the symlink would make the guard fail open under a
-     * Capistrano-style "current -> release" layout.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function preservesSymlinkSpellingAgainstBakedPathGuard(): void
     {

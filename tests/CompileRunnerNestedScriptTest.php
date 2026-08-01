@@ -60,7 +60,6 @@ final class CompileRunnerNestedScriptTest extends TestCase
             $pathname = $entry->getPathname();
             $mode = (int) fileperms($pathname) & 0o777;
             $isDir = $entry->isDir();
-            // A directory additionally has to be traversable to reach what is inside
             $required = $isDir ? 0o005 : 0o004;
             static::assertSame($required, $mode & $required, $pathname);
             $isScript = $entry->getExtension() === 'php';
@@ -77,7 +76,6 @@ final class CompileRunnerNestedScriptTest extends TestCase
             $nested[] = $pathname;
         }
 
-        // Guards the premise: without a script below the top level this proves nothing
         static::assertNotSame([], $nested);
     }
 }

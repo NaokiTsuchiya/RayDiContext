@@ -16,17 +16,10 @@ use function uniqid;
 
 /**
  * Whether this process is actually denied by the permission bits it sets
- *
- * Measured rather than read off the uid: that would need ext-posix, and would still miss a
- * non-root process holding CAP_DAC_OVERRIDE.
  */
 final class PermissionBits
 {
-    /**
-     * Skips the calling test when the bits it is about to set would be ignored
-     *
-     * @param non-empty-string $scratchDir Writable directory to probe below; created if absent
-     */
+    /** @param non-empty-string $scratchDir Writable directory to probe below; created if absent */
     public static function skipUnlessEnforced(string $scratchDir): void
     {
         $enforced = self::areEnforced($scratchDir);
@@ -41,16 +34,11 @@ final class PermissionBits
         );
     }
 
-    /**
-     * Returns whether a directory this process owns can be made unreadable to it
-     *
-     * @param non-empty-string $scratchDir Writable directory to probe below; created if absent
-     */
+    /** @param non-empty-string $scratchDir Writable directory to probe below; created if absent */
     public static function areEnforced(string $scratchDir): bool
     {
         $probe = $scratchDir . '/' . uniqid('.permission-probe_', more_entropy: true);
 
-        // scandir() on an unreadable directory raises E_WARNING, and the suite fails on warnings
         set_error_handler(static fn(): bool => true);
         try {
             mkdir($probe, permissions: 0o700, recursive: true);

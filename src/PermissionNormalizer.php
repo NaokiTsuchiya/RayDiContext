@@ -22,9 +22,6 @@ use function sprintf;
 /**
  * Makes the compiled scripts readable by the user that runs the application
  *
- * ray/compiler writes every script through tempnam(), which creates 0600 regardless of umask,
- * leaving the compile dir unreadable to the non-root user the container runs as.
- *
  * @internal
  */
 final class PermissionNormalizer
@@ -58,8 +55,6 @@ final class PermissionNormalizer
     /**
      * Normalizes every entry inside a directory, descending into real subdirectories
      *
-     * The recursion is written out rather than delegated to RecursiveDirectoryIterator,
-     * which follows symlinked directories and would chmod outside the compile dir.
      *
      * @throws CompileDirNotReadable When the directory cannot be listed or traversed.
      * @throws ChmodFailed When an entry cannot be made readable.
@@ -89,8 +84,6 @@ final class PermissionNormalizer
     /**
      * Opens a directory for listing, refusing one whose entries this process cannot reach
      *
-     * apply() reads the other-class bits while POSIX resolves the owner class first, so a mode
-     * whose owner class is the narrower (0005, 0405, ...) satisfies apply() and still denies us.
      *
      * @throws CompileDirNotReadable When the directory cannot be listed or traversed.
      */
@@ -113,15 +106,12 @@ final class PermissionNormalizer
     /**
      * Applies a mode unless the entry already grants the world bits that mode carries
      *
-     * A compile dir the compiling user does not own — a root-owned 0777 volume, say — is
-     * already readable, and chmod on it would fail for no gain.
      *
      * @throws ChmodFailed When the mode cannot be applied.
      */
     private function apply(string $path, int $mode): void
     {
         $required = $mode & 0o007;
-        // A failed fileperms() reads as 0, falling through to chmod() so that call reports it.
         $perms = (int) fileperms($path);
         $readable = ($perms & $required) === $required;
         if ($readable) {

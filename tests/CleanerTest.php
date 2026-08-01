@@ -121,12 +121,7 @@ final class CleanerTest extends TestCase
         static::assertSame(0, iterator_count(new FilesystemIterator($link)));
     }
 
-    /**
-     * A regular file blocking a path component is a portable way to make mkdir() fail
-     * without relying on permissions, which root ignores.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function throwsWhenCompileDirCannotBeCreated(): void
     {
@@ -141,14 +136,7 @@ final class CleanerTest extends TestCase
         (new Cleaner())($this->meta($compileDir));
     }
 
-    /**
-     * A directory this process cannot list or traverse — the compile dir itself, or one
-     * nested below it — raises a RemoveFailed naming it, and nothing inside it is removed
-     * first
-     *
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsAnUnreadableDirectory(): void
     {
@@ -191,8 +179,6 @@ final class CleanerTest extends TestCase
     }
 
     /**
-     * Returns a meta whose app dir is unrelated to the given compile dir
-     *
      * @param non-empty-string $compileDir
      * @throws ExceptionInterface
      */

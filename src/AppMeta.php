@@ -32,8 +32,7 @@ final readonly class AppMeta
 
     /**
      * Characters fromAppDir() accepts in $context, which becomes one path segment of the
-     * default compileDir/tmpDir. "\" is in the set so a namespaced class-string context passes
-     * through: unlike "/" and ".", the OS does not resolve it inside a segment.
+     * default compileDir/tmpDir
      */
     private const CONTEXT_PATTERN = '/\A[A-Za-z0-9_\\\\-]+\z/';
 
@@ -73,8 +72,6 @@ final readonly class AppMeta
         $normalizedCompileDir = self::trimSlash($compileDir);
         $normalizedTmpDir = self::trimSlash($tmpDir);
 
-        // The one shape BakedPathGuard cannot see: every tmpDir occurrence is also a compileDir
-        // occurrence, so its check passes on the scripts it exists to reject.
         if ($normalizedCompileDir === $normalizedTmpDir) {
             throw new InvalidAppMeta(sprintf(
                 'AppMeta::$compileDir and AppMeta::$tmpDir must be different directories, both are: "%s". '
@@ -129,13 +126,10 @@ final readonly class AppMeta
             ));
         }
 
-        // Checked ahead of trimSlash(), which folds "" to "/" and would then pass the
-        // constructor's absolute-path check.
         if ($appDir === '') {
             throw new InvalidAppMeta('AppMeta::fromAppDir(): $appDir must not be empty');
         }
 
-        // Trimmed before interpolation so a trailing slash does not double in the defaults.
         $appDir = self::trimSlash($appDir);
 
         return new self(

@@ -19,10 +19,6 @@ use function uniqid;
 
 /**
  * The order of the pipeline's steps, which is a guarantee in its own right
- *
- * Swapping the first two lines of run(), or wrapping the clean in a try/finally, leaves every
- * other test green while turning a mistyped context name into an emptied compile dir with
- * nothing written back into it. These cases pin the order down directly.
  */
 #[CoversClass(CompileRunner::class)]
 final class CompileRunnerOrderingTest extends TestCase

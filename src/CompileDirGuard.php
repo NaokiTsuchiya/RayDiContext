@@ -12,10 +12,6 @@ use function str_starts_with;
 /**
  * Rejects a compile dir whose contents must never be emptied
  *
- * The compile dir is emptied on every compile and reaches the CLI as an argument, so
- * APP_COMPILE_DIR=/app instead of /app/var/di/prod would wipe the application. Paths are
- * compared after realpath(), so a symlink or a `.` segment cannot slip one past.
- *
  * @api
  */
 final class CompileDirGuard implements CompileDirGuardInterface

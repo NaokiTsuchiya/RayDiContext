@@ -58,11 +58,7 @@ final class BakedPathGuardBoundaryTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * A read-only compile dir can never host the writable tmp dir, so this literal must fail CI.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function detectsTmpDirNestedUnderCompileDir(): void
     {
@@ -83,7 +79,6 @@ final class BakedPathGuardBoundaryTest extends TestCase
     #[Test]
     public function detectsPathWithCompileDirStringPrefix(): void
     {
-        // compileDir is …/var/di/prod; this is …/var/di/production_logs/app.log
         file_put_contents(
             "{$this->meta->compileDir}/baked.php",
             data: "<?php return '{$this->meta->compileDir}uction_logs/app.log';",

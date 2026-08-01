@@ -44,10 +44,7 @@ final class CliTest extends TestCase
         static::assertNotSame([], glob("{$this->fixture->appDir}/var/di/prod/*FakeCarInterface*.php"));
     }
 
-    /**
-     * The documented invocation forwards "$APP_COMPILE_DIR" through the shell, so an unset
-     * variable arrives as an empty argument rather than as no argument at all.
-     */
+    /** Asserts through the CLI's exit status */
     #[Test]
     public function treatsEmptyOverrideAsAbsent(): void
     {
@@ -88,11 +85,7 @@ final class CliTest extends TestCase
         static::assertStringNotContainsString('Stack trace', $this->fixture->stderr());
     }
 
-    /**
-     * Requiring the bootstrap and compiling the module run application code and Ray.Di, so the
-     * most ordinary compile failure — a missing binding — arrives as a foreign exception.
-     * Uncaught it would be a fatal with a stack trace and exit 255, outside the contract.
-     */
+    /** Asserts through the CLI's exit status */
     #[Test]
     public function reportsForeignThrowableAsRuntimeFailure(): void
     {

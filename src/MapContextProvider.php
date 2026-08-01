@@ -56,7 +56,6 @@ final class MapContextProvider implements ContextProviderInterface
             ));
         }
 
-        // $class was already verified usable by the constructor.
         return new $class($meta);
     }
 

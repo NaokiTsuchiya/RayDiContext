@@ -18,9 +18,6 @@ use function sprintf;
 /**
  * Argument handling and exit-status mapping for bin/ray-di-compile
  *
- * The exit status is this package's public contract; this class is not. It stays out of the bin
- * script, which a "*.php" source glob never discovers.
- *
  * @internal Build on the exit-status contract, not on this class
  */
 final class Cli
@@ -72,7 +69,6 @@ final class Cli
             return $this->usageError(sprintf("Bootstrap file not found: %s\n", $bootstrap));
         }
 
-        // Checked here so a missing appDir stays a usage error; a relative one is a compile failure.
         $appDir = $argv[2] ?? '';
         $appDirExists = is_dir($appDir);
         if (!$appDirExists) {
@@ -85,8 +81,6 @@ final class Cli
     /**
      * Loads the bootstrap and runs the compile
      *
-     * An override is compared against "" rather than for truthiness, so a directory named "0"
-     * survives.
      */
     private function compile(
         string $bootstrap,
@@ -116,7 +110,6 @@ final class Cli
         } catch (ExceptionInterface $e) {
             return $this->runtimeError("{$e->getMessage()}\n");
         } catch (Throwable $e) {
-            // Named by class: a foreign throwable's message rarely says where it came from.
             return $this->runtimeError(sprintf("%s: %s\n", $e::class, $e->getMessage()));
         }
 
@@ -142,8 +135,6 @@ final class Cli
     /**
      * Writes the one line a failure gets, best effort
      *
-     * An unwritable error stream has no second channel to be reported on, so the diagnostic is
-     * dropped rather than raised.
      */
     private function write(string $message): void
     {

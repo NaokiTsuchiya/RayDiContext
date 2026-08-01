@@ -157,6 +157,10 @@ README's exit-status/environment-variable discussion if you're touching anything
 - `AppMeta::fromAppDir()` adds only what it needs for the paths it builds: it rejects a `$context`
   that isn't a safe path segment (it *does* get interpolated into a path here) and defaults
   `compileDir`/`tmpDir` to `{appDir}/var/di/{context}` / `{appDir}/var/tmp/{context}`.
+  `CONTEXT_PATTERN` is a whitelist, so `.`, `..`, `/` and stray separators are excluded by
+  construction rather than named one at a time. `\` is *in* the set, which looks wrong until you
+  see why: a `::class`-shaped context (`App\ProdContext`) has to pass through, and unlike `/` and
+  `.` the OS does not resolve a backslash inside a path segment.
 
 **`fromAppDir()` does not call `realpath()`** — it rejects a relative `$appDir` outright instead.
 That's deliberate (#53): `BakedPathScanner` compares strings verbatim, so resolving symlinks here
@@ -261,47 +265,28 @@ single required status check — the matrix can grow/shrink without touching bra
   are `final` and one-per-file as described above.
 - Every builtin function used is explicitly `use function`-imported (no fully-qualified `\strlen(...)`
   calls) — `mago`'s `no-fully-qualified-global-function` rule enforces this.
-- **The default is no comment.** Not "short comments" — none. A comment is an exception that has
-  to be argued for, and the argument is one specific thing: *a reader with the code in front of
-  them still cannot know this.* Everything else is deleted. This matters here more than in most
-  repos because the failure mode is AI-authored: a model writes for whoever is reading the diff
-  right now — justifying the change, narrating what the code used to do, answering an objection
-  before it is raised — and that reads as thorough at review time and as noise a month later.
-  PR #69 collected seventeen "不要"/"削除" on exactly that; PR #71 collected six more after a
-  first pass had already halved the volume. Assume the next comment you write is one of them.
+- **A docblock documents an interface. Nothing else gets a comment.**
 
-  Run these four checks in order. The first one that fires deletes the comment.
+  Prose in a docblock is for a caller who needs it to use the thing: the contract on an `@api`
+  interface, the exit-status mapping on `Cli::__invoke()`, a `@param` constraint the type cannot
+  carry. A private method, a concrete implementation, a test has no such caller — `missing-docs`
+  still demands a docblock, so it gets one line, or only its tags (`/** {@inheritDoc} */`,
+  `/** @throws ExceptionInterface */`). Everything else — inline `//`, rationale paragraphs,
+  summaries that are the method name written out in English — is deleted. The exception is the
+  justification `@codeCoverageIgnore` requires, and even that is two lines.
 
-  1. **Does a tool already enforce it?** Then it is not documentation, it is a second copy of a
-     rule that can drift. `mago.toml`'s `[[guard.structural.rules]]` is where the exception
-     hierarchy lives, not a docblock on `AbstractRuntimeException` — and when an invariant is
-     worth writing down, the first move is to try to add a rule for it, not to write a sentence.
-     (`AbstractContext`'s final constructor is the counter-example: `guard`'s `target` only takes
-     class-like kinds, so nothing can pin a constructor. That is why it keeps its one line.)
-  2. **Does the code already say it?** A name, a type, a signature, the next line. "A symlink is
-     unlinked, never followed" above `$isLink = $entry->isLink()` is deleted. A docblock summary
-     that is the method name in English — "The filesystem root is rejected" over
-     `rejectsFilesystemRoot()` — is deleted, and the docblock becomes `/** @throws … */`.
-  3. **Is it said somewhere else already?** Then it belongs in one place, the one it acts on. The
-     0005/0405 owner-class ordering lives in the two `openDir()` methods that read around it —
-     not in the four tests that exercise it, and not in the class docblock above them.
-  4. **Is it about the change rather than the code?** "previously…", "used to…", "left uncaught it
-     escaped…", "kept to one line so that…" — that is the commit message, which is where someone
-     looking for history will be.
+  Why the code is the way it is belongs in **this file**, not next to the code. The `tempnam()`
+  quirk, the 0005/0405 owner-class ordering, `fromAppDir()`'s absent `realpath()`, the
+  `try`/`finally` in `run()` — all of it is above, and a second copy in a docblock is a copy that
+  drifts. Before writing an explanation in `src/`, check whether it is already here; it usually is.
+  Prefer a `mago.toml` rule over either, when the invariant can be expressed as one.
 
-  What survives is a constraint the code cannot show: an upstream quirk (`tempnam()` writing 0600),
-  an OS behaviour (POSIX resolving the owner class first), a security boundary (the
-  `APP_COMPILE_DIR` footgun), or a shape a future maintainer would otherwise "fix" back
-  (`fromAppDir()`'s absent `realpath()`). One or two lines, naming the issue. Needing a paragraph
-  means it was written for the review.
-
-  Two consequences worth stating outright:
-  - **A docblock with nothing to add is one line.** `missing-docs` demands a docblock on every
-    class, property, constant and method, so the ceremony is unavoidable — but `/** {@inheritDoc} */`
-    and `/** @throws ExceptionInterface */` satisfy it in one line each instead of five. Three
-    delimiter lines wrapped around one line of content is the same waste as prose for the review.
-  - **What a parameter means goes in `@param`, not in a paragraph above it.** If the prose is
-    explaining an argument, it is a tag that was written as prose.
+  This is worth being blunt about because the failure mode is AI-authored: a model writes for
+  whoever is reading the diff right now — justifying the change, narrating what the code used to
+  do, answering an objection before it is raised. PR #69 collected seventeen "不要"/"削除" on
+  exactly that, and PR #71 collected six more after a pass that had already halved the volume.
+  Nothing enforces the rule; `mago` has no length or redundancy check. Assume the next comment
+  you write is one of them.
 
   Nothing enforces any of this. `mago`'s only comment rules are `no-empty-comment`,
   `no-hash-comment`, `valid-docblock` and `missing-docs`, none of which looks at length, audience

@@ -11,7 +11,6 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Boundary matrix for the scanner, driven straight by (script, compileDir, needle) triples
- *
  */
 #[CoversClass(BakedPathScanner::class)]
 final class BakedPathScannerTest extends TestCase
@@ -20,8 +19,6 @@ final class BakedPathScannerTest extends TestCase
     private const COMPILE_DIR = '/app/var/di/prod';
 
     /**
-     * A needle spanning whole path segments outside every compile dir literal is baked
-     *
      * @param non-empty-string $compileDir
      * @param non-empty-string $needle
      */
@@ -35,8 +32,6 @@ final class BakedPathScannerTest extends TestCase
     }
 
     /**
-     * Anything else is a different path, or the compile dir baked in with the scripts
-     *
      * @param non-empty-string $compileDir
      * @param non-empty-string $needle
      */
@@ -49,11 +44,7 @@ final class BakedPathScannerTest extends TestCase
         static::assertFalse($scanner->hasBakedPath($needle));
     }
 
-    /**
-     * The needle names a path of its own
-     *
-     * @return iterable<string, array{string, non-empty-string, non-empty-string}>
-     */
+    /** @return iterable<string, array{string, non-empty-string, non-empty-string}> */
     public static function bakedCases(): iterable
     {
         yield 'needle followed by a separator' => ["<?php return '/app/var/log';", self::COMPILE_DIR, '/app'];
@@ -81,8 +72,6 @@ final class BakedPathScannerTest extends TestCase
             '/app',
         ];
 
-        // Only a relative compile dir reaches this: under an absolute one every needle position
-        // but its own start is preceded by a segment character and dropped on the needle side.
         yield 'path with the compile dir as a string suffix' => [
             "<?php return '/srv/predeploy/app/var/di/prod/x.php';",
             'deploy/app/var/di/prod',
@@ -90,11 +79,7 @@ final class BakedPathScannerTest extends TestCase
         ];
     }
 
-    /**
-     * The match runs into a longer segment, or lies inside the compile dir
-     *
-     * @return iterable<string, array{string, non-empty-string, non-empty-string}>
-     */
+    /** @return iterable<string, array{string, non-empty-string, non-empty-string}> */
     public static function allowedCases(): iterable
     {
         yield 'letter after the needle' => ["<?php return '/appdata/config.php';", self::COMPILE_DIR, '/app'];
@@ -119,7 +104,6 @@ final class BakedPathScannerTest extends TestCase
         ];
         yield 'the compile dir itself' => ["<?php return '/app/var/di/prod';", self::COMPILE_DIR, '/app'];
 
-        // The half-open [start, end) range has to include a needle that fills it exactly.
         yield 'needle equal to the compile dir' => [
             "<?php return '/app/var/di/prod';",
             self::COMPILE_DIR,

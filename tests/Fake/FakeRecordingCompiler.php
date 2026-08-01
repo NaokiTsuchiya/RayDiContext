@@ -26,7 +26,6 @@ final class FakeRecordingCompiler implements ScriptCompilerInterface
         $entries = glob("{$compileDir}/*");
         $this->entriesWhenCalled = $entries === false ? [] : $entries;
 
-        // The guard that runs next needs something to scan, and the normalizer something to chmod
         file_put_contents("{$compileDir}/compiled.php", data: '<?php return 0;');
     }
 }

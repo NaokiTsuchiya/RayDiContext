@@ -40,7 +40,6 @@ final class BakedPathGuardTest extends TestCase
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_', more_entropy: true);
         $appDir = "{$this->baseDir}/app";
-        // The tmp dir is deliberately outside the app dir to exercise both needles
         $this->meta = new AppMeta($appDir, 'prod', "{$appDir}/var/di/prod", "{$this->baseDir}/rw-tmp");
         mkdir($this->meta->compileDir, permissions: 0o755, recursive: true);
         $this->guard = new BakedPathGuard();
@@ -123,13 +122,7 @@ final class BakedPathGuardTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * is_file() only stats the entry, so it passes for a permission-denied file; the
-     * failure has to come from file_get_contents() itself, which is what this exercises.
-     * Root ignores the permission, so this only means something under a non-root process.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function throwsWhenScriptCannotBeRead(): void
     {

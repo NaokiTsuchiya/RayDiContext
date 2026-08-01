@@ -15,14 +15,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(AppMeta::class)]
 final class AppMetaTest extends TestCase
 {
-    /**
-     * Keeps constructor arguments as-is
-     *
-     * The constructor restricts context to non-empty: it is only a lookup key here, not a
-     * path fragment, so "prod:staging" is still accepted.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function construct(): void
     {
@@ -58,12 +51,7 @@ final class AppMetaTest extends TestCase
         new AppMeta($appDir, $context, $compileDir, $tmpDir);
     }
 
-    /**
-     * Both guards read $meta->appDir verbatim whichever entry point produced it, so the
-     * invariant belongs to the type rather than to one factory.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[TestWith(['app'])]
     #[TestWith(['./app'])]
     #[TestWith(['.'])]

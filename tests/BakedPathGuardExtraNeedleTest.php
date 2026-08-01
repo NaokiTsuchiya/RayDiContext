@@ -18,9 +18,6 @@ use function uniqid;
 
 /**
  * Literals an application adds to the two the guard knows about
- *
- * `toInstance('s3cr3t')` writes the secret into a compiled script; these are how an
- * application says so.
  */
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardExtraNeedleTest extends TestCase
@@ -66,12 +63,7 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
         }
     }
 
-    /**
-     * These are supplied precisely because they must not ship, so a message quoting one would
-     * move it out of the image and into the CI log rather than keep it out of both.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function doesNotEchoTheConfiguredLiteral(): void
     {
@@ -96,11 +88,7 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
         static::assertFileExists("{$this->meta->compileDir}/clean.php");
     }
 
-    /**
-     * Writes a compiled script holding $value and returns its path
-     *
-     * @return non-empty-string
-     */
+    /** @return non-empty-string */
     private function writeScriptHolding(string $value): string
     {
         $script = "{$this->meta->compileDir}/-db_password.php";

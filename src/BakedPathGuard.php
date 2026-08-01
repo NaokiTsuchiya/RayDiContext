@@ -24,9 +24,6 @@ use function sprintf;
 /**
  * Detects appDir and tmpDir literals baked into compiled scripts
  *
- * toInstance() freezes a bound value into the compiled script, paths included. The comparison
- * is verbatim, so symlink-resolved spellings are not recognized.
- *
  * @api
  */
 final class BakedPathGuard implements BakedPathGuardInterface
@@ -116,7 +113,6 @@ final class BakedPathGuard implements BakedPathGuardInterface
         foreach ($this->extraNeedles as $needle) {
             $hasNeedle = $scanner->hasBakedPath($needle);
             if ($hasNeedle) {
-                // Named by position, never by value: printing one moves it into the CI log.
                 throw new BakedPathFound(sprintf(
                     'A configured literal was found in %s. '
                     . 'Bind runtime values through a provider instead of toInstance().',

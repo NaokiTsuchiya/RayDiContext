@@ -11,8 +11,6 @@ use function uniqid;
 /**
  * Working directory and error stream shared by the CLI test classes
  *
- * The Cli is left to the test to construct: it is the system under test, not part of the fixture.
- *
  * @internal
  */
 final class CliFixture

@@ -19,11 +19,7 @@ use stdClass;
 #[CoversClass(MapContextProvider::class)]
 final class MapContextProviderTest extends TestCase
 {
-    /**
-     * Returns the context mapped to $meta->context, constructed with the given meta
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function getReturnsMappedContext(): void
     {
@@ -78,12 +74,7 @@ final class MapContextProviderTest extends TestCase
         new MapContextProvider($map);
     }
 
-    /**
-     * Without the check, `new $class($meta)` reaches PHP's own Error, outside this package's
-     * exception hierarchy.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function constructorThrowsOnAbstractContextClass(): void
     {
@@ -100,12 +91,7 @@ final class MapContextProviderTest extends TestCase
         new MapContextProvider($map);
     }
 
-    /**
-     * class_exists() alone returns false for an interface name, which would make this
-     * indistinguishable from a genuine typo.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function constructorThrowsOnInterfaceContextClass(): void
     {

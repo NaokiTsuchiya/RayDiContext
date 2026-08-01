@@ -63,11 +63,7 @@ final class CleanerGuardTest extends TestCase
         }
     }
 
-    /**
-     * The compile dir is the conventional one, which the default guard allows.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function honoursApplicationSuppliedGuard(): void
     {

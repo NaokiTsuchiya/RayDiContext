@@ -47,12 +47,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * Without the check the file is chmod'ed to 0755 and only then fails, leaving a side
-     * effect behind from a call that did not succeed.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsAPathThatIsNotADirectory(): void
     {
@@ -65,7 +60,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
             static::fail('CompileDirNotFound was not thrown');
         } catch (CompileDirNotFound $e) {
             static::assertStringContainsString($script, $e->getMessage());
-            // Nothing was chmod'ed: the rejected path still has the mode it had
             static::assertSame(0o600, $this->mode($script));
             static::assertSame(0o700, $this->mode($this->compileDir));
         }
@@ -125,11 +119,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
         }
     }
 
-    /**
-     * Unchecked, 0405 leaks one warning per entry rather than one named exception.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsACompileDirItCannotTraverse(): void
     {
@@ -149,7 +139,6 @@ final class PermissionNormalizerRejectionTest extends TestCase
             chmod($this->compileDir, permissions: 0o700); // tearDown has to be able to remove it
         }
 
-        // Nothing inside was touched: no entry was ever reached
         static::assertSame(0o600, $this->mode($script));
     }
 

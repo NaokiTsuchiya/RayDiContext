@@ -11,9 +11,6 @@ use function strpos;
 /**
  * Scans one compiled script for baked path literals
  *
- * An occurrence inside a compile dir literal is allowed: the compile dir ships with the
- * scripts. Boundary matching is byte-wise and fail-close.
- *
  * @internal Used by BakedPathGuard
  */
 final class BakedPathScanner
@@ -102,9 +99,6 @@ final class BakedPathScanner
 
     /**
      * Returns whether the byte at $index continues a path segment
-     *
-     * @param int $index Byte offset; outside the script it bounds the match. Negative is
-     *                   checked explicitly — PHP would read it from the end of the string
      */
     private function isSegmentChar(int $index): bool
     {

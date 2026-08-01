@@ -100,11 +100,7 @@ final class BinCompileTest extends TestCase
         static::assertStringContainsString('must return', $stderr);
     }
 
-    /**
-     * The status has to be usable in CI and the message readable without a trace.
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function failsWithStatusOneOnBakedPath(): void
     {
@@ -137,12 +133,7 @@ final class BinCompileTest extends TestCase
         static::assertStringNotContainsString('Stack trace', $stderr);
     }
 
-    /**
-     * The CLI checks existence before compiling so the message points at the argument;
-     * shape is left to AppMeta::fromAppDir(), which never touches the filesystem.
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function distinguishesMissingFromRelativeAppDir(): void
     {

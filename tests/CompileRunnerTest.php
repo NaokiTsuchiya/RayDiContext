@@ -80,12 +80,7 @@ final class CompileRunnerTest extends TestCase
         static::assertNotSame([], glob("{$this->meta->compileDir}/*FakeCarInterface*.php"));
     }
 
-    /**
-     * This is the readOnlyRootFilesystem scenario: the compile dir is baked into the
-     * image and never written to at runtime.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function resolvesFromReadOnlyCompileDir(): void
     {
@@ -99,16 +94,10 @@ final class CompileRunnerTest extends TestCase
 
         static::assertInstanceOf(CompiledInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
-        // No file was created, changed, or removed in the compile dir at runtime
         static::assertSame($before, $this->snapshot($this->meta->compileDir));
     }
 
-    /**
-     * The tmp dir that existed when the image was built may be absent at runtime; the
-     * compiled context must still resolve.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function resolvesWithoutCompileTimeTmpDir(): void
     {
@@ -143,12 +132,9 @@ final class CompileRunnerTest extends TestCase
         foreach ($entries as $entry) {
             $pathname = $entry->getPathname();
             $mode = $this->mode($pathname);
-            // A directory additionally has to be traversable to reach what is inside
             $isDir = $entry->isDir();
             $required = $isDir ? 0o005 : 0o004;
             static::assertSame($required, $mode & $required, $pathname);
-            // Compiled scripts always arrive at 0600 from tempnam(), so they are always
-            // rewritten: their mode is exact, not merely readable.
             $isScript = $entry->getExtension() === 'php';
             if ($isScript) {
                 static::assertSame(0o644, $mode, $pathname);
@@ -171,17 +157,11 @@ final class CompileRunnerTest extends TestCase
             static::fail('BakedPathFound was not thrown');
         } catch (BakedPathFound $e) {
             static::assertStringContainsString($this->meta->appDir, $e->getMessage());
-            // Not just the scripts: nothing at all is left behind, _bindings.log included
             static::assertSame([], glob("{$this->meta->compileDir}/*"));
         }
     }
 
-    /**
-     * This is the APP_COMPILE_DIR typo the guard exists for: the run must abort with
-     * the app still on disk.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function runRejectsUnsafeCompileDirBeforeCleaning(): void
     {
@@ -192,15 +172,11 @@ final class CompileRunnerTest extends TestCase
             $this->runner->run($unsafeMeta);
             static::fail('UnsafeCompileDir was not thrown');
         } catch (UnsafeCompileDir) {
-            // The tmp dir set up under the app dir is still there: nothing was removed
             static::assertDirectoryExists($this->meta->tmpDir);
         }
     }
 
     /**
-     * Returns a content hash per file: mtime is second-granular, so a same-length rewrite
-     * inside one second would otherwise go unnoticed
-     *
      * @return array<string, string>
      * @throws ExceptionInterface
      */

@@ -106,7 +106,31 @@ that usually runs the suite — it takes a root run to observe. What survives is
 needs, and it stays true whatever the totals are: a root run skips the tests that assert a denial, a
 non-root run skips nothing.
 
+### Leaving `homepage` out of `composer.json` — [#26][26]
+
+There is no site to point at, and Packagist derives the canonical repository link from the VCS URL,
+so the key would only duplicate a link Packagist already shows. `support.issues` and `support.source`
+carry the two links that exist. `ray/di`, `ray/compiler` and `ray/aop` all leave it unset. The
+absence is the decision, not an omission waiting to be filled in.
+
+### Re-pointing a published tag — [#26][26]
+
+Packagist serves whatever the tag points at, so force-pushing one silently changes what every new
+install gets. Someone holding a `composer.lock` sees the dist reference SHA stop matching; a fresh
+install has nothing to compare against. A repository ruleset targeting tags restricts `update` and
+`deletion` across all of them, separately from the branch ruleset on `main`. A mistake in a
+published tag is fixed by the next patch version, never by moving the tag.
+
 ## Declined for cost
+
+### Release automation with release-drafter — [#26][26]
+
+Rejected on the trade, not on the tool. It wants a workflow, a config file, PR labels maintained by
+hand, and a standing `contents: write` grant, and what it produces is what `gh release create
+--generate-notes` already produces on demand. Releases here are a few a year.
+
+**Would change it:** a cadence that makes the manual step frequent, or generated notes that need
+hand-editing every time.
 
 ### `ext-posix` to detect root in tests
 
@@ -152,6 +176,7 @@ Detecting "previously", "used to" and similar, restricted to added lines of a di
 cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 
 [14]: https://github.com/NaokiTsuchiya/RayDiContext/issues/14
+[26]: https://github.com/NaokiTsuchiya/RayDiContext/issues/26
 [53]: https://github.com/NaokiTsuchiya/RayDiContext/issues/53
 [70]: https://github.com/NaokiTsuchiya/RayDiContext/issues/70
 [71]: https://github.com/NaokiTsuchiya/RayDiContext/pull/71

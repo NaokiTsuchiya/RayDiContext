@@ -6,14 +6,13 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use NaokiTsuchiya\RayDiContext\Fake\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function chmod;
 use function copy;
@@ -33,27 +32,19 @@ final class CleanerTest extends TestCase
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('cleaner_', more_entropy: true);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * A missing compile dir is created recursively
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function createsMissingCompileDir(): void
     {
@@ -65,11 +56,7 @@ final class CleanerTest extends TestCase
         static::assertSame(0, iterator_count(new FilesystemIterator($compileDir)));
     }
 
-    /**
-     * An existing compile dir is recreated empty, including nested contents
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function recreatesCompileDirAsEmpty(): void
     {
@@ -84,11 +71,7 @@ final class CleanerTest extends TestCase
         static::assertSame(0, iterator_count(new FilesystemIterator($compileDir)));
     }
 
-    /**
-     * The cleaner is safely invokable repeatedly on its own
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function invokableRepeatedly(): void
     {
@@ -104,11 +87,7 @@ final class CleanerTest extends TestCase
         static::assertSame(0, iterator_count(new FilesystemIterator($compileDir)));
     }
 
-    /**
-     * A symlink inside the compile dir is removed without following it
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function removesSymlinkWithoutFollowingIt(): void
     {
@@ -125,11 +104,7 @@ final class CleanerTest extends TestCase
         static::assertFileExists("{$target}/keep.php");
     }
 
-    /**
-     * A compile dir that is itself a symlink is emptied in place, keeping the link
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function emptiesSymlinkedCompileDirInPlace(): void
     {
@@ -147,12 +122,10 @@ final class CleanerTest extends TestCase
     }
 
     /**
-     * A compile dir that cannot be created raises a CompileDirNotWritable naming the path
-     *
      * A regular file blocking a path component is a portable way to make mkdir() fail
      * without relying on permissions, which root ignores.
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function throwsWhenCompileDirCannotBeCreated(): void
@@ -170,17 +143,14 @@ final class CleanerTest extends TestCase
 
     /**
      * A directory this process cannot list or traverse — the compile dir itself, or one
-     * nested below it — raises a RemoveFailed naming it, not a bare UnexpectedValueException,
-     * and nothing inside that directory is removed first
+     * nested below it — raises a RemoveFailed naming it, and nothing inside it is removed
+     * first
      *
-     * 0005 is the shape that gets past a naive mode check: the world bits it looks at are
-     * set, but POSIX resolves the owner class first, so the owner is denied and
-     * FilesystemIterator raises an SPL exception that would otherwise escape the declared
-     * contract. 0405 is the other half of that family: read is granted, so the listing
-     * opens and only the stat() of each entry would be denied — which, unchecked, leaks a
-     * PHP warning per entry instead of a single named exception.
+     * 0005 sets the world bits a naive mode check looks at, but POSIX resolves the owner
+     * class first, so the owner is denied. 0405 grants read, so the listing opens and only
+     * the per-entry stat() is denied.
      *
-     * @throws RuntimeException
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsAnUnreadableDirectory(): void
@@ -227,8 +197,7 @@ final class CleanerTest extends TestCase
      * Returns a meta whose app dir is unrelated to the given compile dir
      *
      * @param non-empty-string $compileDir
-     *
-     * @throws InvalidAppMeta
+     * @throws ExceptionInterface
      */
     private function meta(string $compileDir): AppMeta
     {

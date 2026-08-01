@@ -208,6 +208,14 @@ both, is wired into `composer fmt` for it.
 - `tests/*.php` mirror `src/*.php` one-to-one, each tagged `#[CoversClass(...)]`, using PHPUnit 11's
   `#[Test]` attribute (not `test`-prefixed method names — `mago`'s `prefer-test-attribute` rule
   requires this).
+- **A test's docblock carries `@throws ExceptionInterface` and nothing else unless it has something
+  to say.** The method name already states the case, so a summary line restating it is dropped and
+  the docblock collapses to a single line; a docblock keeps prose only for the *why* — an upstream
+  quirk, an OS behaviour, the failure mode the case pins down. `src/` keeps the precise `@throws`
+  enumeration (34f6a95); the collapse to the marker interface is a tests-only convention, since a
+  test that calls one method and lets everything escape gains nothing from ten of them. Genuine
+  non-package exceptions stay precise even in tests: `BinCompileTest` goes through `Fake\Cli`, which
+  throws a plain `RuntimeException` that `ExceptionInterface` does not cover.
 - `tests/Fake/` holds shared test doubles (`FakeCar`/`FakeCarInterface`/`FakeModule` for a minimal
   bindable DI graph, `FakeProdContext`/`FakeDevContext`/`FakeBakedContext` for context scenarios,
   `Fs` for recursive directory helpers used in setUp/tearDown).
@@ -267,6 +275,12 @@ single required status check — the matrix can grow/shrink without touching bra
     `realpath()` is the model: one line, names the issue, stops the change from being re-made.
   - Length follows from that: an inline comment is one line, a docblock is a summary plus at most
     two lines of prose. Needing more means it was written for the review.
+  - **A docblock that has nothing to add is one line.** `missing-docs` requires a docblock on every
+    class, property, constant and method, so ceremony is unavoidable — but `/** {@inheritDoc} */`
+    and `/** @throws ExceptionInterface */` satisfy it in one line each instead of five. Three
+    delimiter lines around one line of content is the same waste as prose written for the review.
+  - Say a thing once. The 0005/0405 owner-class-versus-other-class behaviour belongs in the
+    `openDir()` that reads around it, not repeated in each of the four tests that exercise it.
 
   Nothing enforces this. `mago`'s only comment rules are `no-empty-comment`, `no-hash-comment`,
   `valid-docblock` and `missing-docs`, none of which looks at length or audience, and a CI

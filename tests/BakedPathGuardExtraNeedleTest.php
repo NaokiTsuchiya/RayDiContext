@@ -6,7 +6,6 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,9 +19,8 @@ use function uniqid;
 /**
  * Literals an application adds to the two the guard knows about
  *
- * The README is explicit that only appDir and tmpDir are looked for, and that
- * `toInstance('s3cr3t')` writes the secret into a compiled script with nothing to stop it. An
- * application knows what its own secrets look like; these are how it says so.
+ * The guard itself only knows appDir and tmpDir, yet `toInstance('s3cr3t')` writes the secret
+ * into a compiled script all the same. These are how an application names its own.
  */
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardExtraNeedleTest extends TestCase
@@ -39,11 +37,7 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
     /** Meta whose tmp dir lives outside the app dir */
     private AppMeta $meta;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_needle_', more_entropy: true);
@@ -52,19 +46,13 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
         mkdir($this->meta->compileDir, permissions: 0o755, recursive: true);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * A configured literal in a compiled script is rejected, naming the script
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsAConfiguredLiteral(): void
     {
@@ -79,8 +67,6 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
     }
 
     /**
-     * The rejection does not repeat the literal it found
-     *
      * These are supplied precisely because they must not ship, so a message quoting one would
      * move it out of the image and into the CI log rather than keep it out of both.
      *
@@ -99,11 +85,7 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
         }
     }
 
-    /**
-     * Scripts free of the configured literals pass, as they did before any were configured
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function passesWhenNoConfiguredLiteralIsPresent(): void
     {

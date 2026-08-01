@@ -19,8 +19,7 @@ use function sprintf;
  * Argument handling and exit-status mapping for bin/ray-di-compile
  *
  * The exit status is this package's public contract; this class is not. It stays out of the bin
- * script, which a "*.php" source glob never discovers, so the analyzer and the coverage floor
- * reach it.
+ * script, which a "*.php" source glob never discovers, so the analyzer reaches it.
  *
  * @internal Build on the exit-status contract, not on this class
  */
@@ -124,9 +123,7 @@ final class Cli
         return 0;
     }
 
-    /**
-     * Reports arguments the CLI cannot act on
-     */
+    /** Reports arguments the CLI cannot act on */
     private function usageError(string $message): int
     {
         $this->write($message);
@@ -134,9 +131,7 @@ final class Cli
         return 2;
     }
 
-    /**
-     * Reports a compile that was attempted and failed
-     */
+    /** Reports a compile that was attempted and failed */
     private function runtimeError(string $message): int
     {
         $this->write($message);

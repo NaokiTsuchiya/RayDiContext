@@ -29,9 +29,7 @@ final class PermissionNormalizerTest extends TestCase
     /** @var non-empty-string Directory standing in for the compile dir */
     private string $compileDir;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('perm_', more_entropy: true);
@@ -40,17 +38,13 @@ final class PermissionNormalizerTest extends TestCase
         chmod($this->compileDir, permissions: 0o700); // mkdir() applies the umask, chmod() does not
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
     /**
-     * Owner-only scripts and directories become world-readable, nested ones included
-     *
      * This is what Ray.Compiler leaves behind: 0600 files from tempnam(), in a compile
      * dir whose own mode depends on the umask of the build.
      *
@@ -74,8 +68,6 @@ final class PermissionNormalizerTest extends TestCase
     }
 
     /**
-     * An entry that is already readable keeps the mode it has
-     *
      * A compile dir the compiling user does not own — a root-owned container volume,
      * say — cannot be chmod'ed by that user at all.
      *
@@ -96,8 +88,6 @@ final class PermissionNormalizerTest extends TestCase
     }
 
     /**
-     * A symlink inside the compile dir is neither chmod'ed nor followed
-     *
      * chmod() resolves the link, so following one would change the mode of a file
      * outside the compile dir.
      *
@@ -118,18 +108,14 @@ final class PermissionNormalizerTest extends TestCase
         static::assertSame(0o600, $this->mode("{$target}/script.php"));
     }
 
-    /**
-     * Copies the fixture script in and gives it a mode the umask cannot narrow
-     */
+    /** Copies the fixture script in and gives it a mode the umask cannot narrow */
     private function copyScript(string $path, int $mode): void
     {
         copy(self::SCRIPT, $path);
         chmod($path, $mode);
     }
 
-    /**
-     * Returns the permission bits of a path
-     */
+    /** Returns the permission bits of a path */
     private function mode(string $path): int
     {
         return (int) fileperms($path) & 0o777;

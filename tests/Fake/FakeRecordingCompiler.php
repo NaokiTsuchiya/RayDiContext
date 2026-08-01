@@ -10,9 +10,7 @@ use Ray\Di\AbstractModule;
 use function file_put_contents;
 use function glob;
 
-/**
- * Records what the compile dir held at the moment it was asked to compile
- */
+/** Records what the compile dir held at the moment it was asked to compile */
 final class FakeRecordingCompiler implements ScriptCompilerInterface
 {
     /** @var list<string> Entries present in the compile dir when compile() was entered */
@@ -21,9 +19,7 @@ final class FakeRecordingCompiler implements ScriptCompilerInterface
     /** Whether compile() was reached at all */
     public bool $called = false;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function compile(AbstractModule $module, string $compileDir): void
     {
         $this->called = true;

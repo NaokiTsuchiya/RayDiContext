@@ -6,14 +6,12 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use NaokiTsuchiya\RayDiContext\Fake\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function chmod;
 use function copy;
@@ -37,11 +35,7 @@ final class BakedPathGuardTest extends TestCase
     /** System under test */
     private BakedPathGuard $guard;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_', more_entropy: true);
@@ -52,20 +46,13 @@ final class BakedPathGuardTest extends TestCase
         $this->guard = new BakedPathGuard();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * Scripts free of runtime paths pass
-     *
-     * @throws BakedPathFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function passesOnCleanScripts(): void
     {
@@ -76,11 +63,7 @@ final class BakedPathGuardTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * An appDir literal in a compiled script is detected, naming the path and the file
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function detectsAppDirLiteral(): void
     {
@@ -95,12 +78,7 @@ final class BakedPathGuardTest extends TestCase
         }
     }
 
-    /**
-     * A tmpDir literal is detected even when the tmp dir is outside the app dir
-     *
-     * @throws BakedPathFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function detectsTmpDirLiteral(): void
     {
@@ -111,12 +89,7 @@ final class BakedPathGuardTest extends TestCase
         ($this->guard)($this->meta);
     }
 
-    /**
-     * A path inside a serialized instance is detected
-     *
-     * @throws BakedPathFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function detectsPathInSerializedInstance(): void
     {
@@ -128,12 +101,7 @@ final class BakedPathGuardTest extends TestCase
         ($this->guard)($this->meta);
     }
 
-    /**
-     * The compile dir itself is baked into the image, so its literal is allowed
-     *
-     * @throws BakedPathFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function allowsCompileDirLiteral(): void
     {
@@ -144,12 +112,7 @@ final class BakedPathGuardTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * Only PHP scripts are scanned; compile artifacts like _bindings.log are ignored
-     *
-     * @throws BakedPathFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function ignoresNonPhpFiles(): void
     {
@@ -161,9 +124,6 @@ final class BakedPathGuardTest extends TestCase
     }
 
     /**
-     * A script that is a regular file but cannot be read raises a ScriptNotReadable
-     * naming the path
-     *
      * is_file() only stats the entry, so it passes for a permission-denied file; the
      * failure has to come from file_get_contents() itself, which is what this exercises.
      * Root ignores the permission, so this only means something under a non-root process.

@@ -6,7 +6,6 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -36,11 +35,7 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
     /** System under test */
     private BakedPathGuard $guard;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_dir_', more_entropy: true);
@@ -50,21 +45,17 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
         $this->guard = new BakedPathGuard();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
     /**
-     * A symlink to a directory, named like a script, is rejected instead of silently
-     * skipped
+     * A symlink to a directory, named like a script, is rejected instead of silently skipped
      *
-     * RecursiveDirectoryIterator does not descend into symlinks by default, so a symlink
-     * named e.g. "cache.php" pointing at a directory is visited as a leaf, not recursed
-     * into.
+     * RecursiveDirectoryIterator does not descend into symlinks, so one named "cache.php"
+     * is visited as a leaf.
      *
      * @throws ExceptionInterface
      */

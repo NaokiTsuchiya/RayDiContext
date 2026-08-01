@@ -39,9 +39,8 @@ interface ContextInterface
     /**
      * Returns classes to instantiate once at process start under the real environment
      *
-     * These singletons are freshly instantiated, never unserialized, so they may hold
-     * runtime resources such as database connections. The singleton scope is per
-     * injector instance: they are shared only through the injector that created them.
+     * Freshly instantiated, never unserialized, so they may hold runtime resources such as
+     * database connections. The scope is per injector instance.
      *
      * @return list<class-string>
      */

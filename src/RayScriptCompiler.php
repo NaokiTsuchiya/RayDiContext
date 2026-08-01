@@ -14,9 +14,7 @@ use Ray\Di\AbstractModule;
  */
 final class RayScriptCompiler implements ScriptCompilerInterface
 {
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function compile(AbstractModule $module, string $compileDir): void
     {
         (new Compiler())->compile($module, $compileDir);

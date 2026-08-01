@@ -15,34 +15,26 @@ use function glob;
 use function mkdir;
 use function uniqid;
 
-/**
- * The bundled compiler writes where it is told
- */
+/** The bundled compiler writes where it is told */
 #[CoversClass(RayScriptCompiler::class)]
 final class RayScriptCompilerTest extends TestCase
 {
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('ray_compiler_', more_entropy: true);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * The module's bindings are compiled into the given directory
-     */
+    /** The module's bindings are compiled into the given directory */
     #[Test]
     public function compilesTheModuleIntoTheCompileDir(): void
     {

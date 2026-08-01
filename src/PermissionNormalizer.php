@@ -27,25 +27,21 @@ use function sprintf;
  * this package is built for: build the image as root, COPY the compile dir in, run the
  * container as a non-root user.
  *
- * Subdirectories are descended into: ray/compiler names a script after its dependency
- * index with only the namespace separators replaced, so a qualifier holding a "/" —
- * annotatedWith('a/b') — puts the script in a real directory of its own.
+ * Subdirectories are descended into: a qualifier holding a "/" — annotatedWith('a/b') —
+ * makes ray/compiler put the script in a directory of its own.
  *
  * @internal
  */
 final class PermissionNormalizer
 {
-    /** Compiled scripts: readable by everyone, writable by the owner */
+    /** Compiled scripts: world-readable */
     private const FILE_MODE = 0o644;
 
-    /** Directories holding compiled scripts: traversable by everyone */
+    /** Directories holding them: world-traversable */
     private const DIR_MODE = 0o755;
 
     /**
      * Normalizes the compile dir and everything below it
-     *
-     * The path is checked to be a directory before anything is changed: without that, a
-     * chmod lands on a non-directory and only the walk after it fails.
      *
      * @param non-empty-string $compileDir Directory holding the compiled scripts
      *
@@ -148,9 +144,8 @@ final class PermissionNormalizer
         }
 
         // @codeCoverageIgnoreStart
-        // chmod() asks for ownership or root, so an entry the process does not own reaches
-        // this. No such path carries the same owner and mode across every environment this
-        // package supports, so it cannot be reproduced portably — not that it cannot happen.
+        // Reachable — chmod() asks for ownership or root — but not portably: no path carries
+        // the same owner and mode across every environment this package supports.
         if (!$changed) {
             throw new ChmodFailed(sprintf('Failed to set mode %o on: %s', $mode, $path));
         }

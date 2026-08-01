@@ -28,12 +28,8 @@ use function sprintf;
  * path held by an object bound with toInstance(). Run this guard in CI to catch them
  * before a runtime-dependent path is baked into the image.
  *
- * The compile dir is baked into the image together with the scripts, so a literal that
- * is the compile dir itself — or a path inside it — is allowed. Anything else that
- * contains the appDir or tmpDir string is rejected, including a tmpDir nested under the
- * compile dir (a read-only compile dir can never host the writable tmp dir). The
- * comparison is a verbatim match against the meta strings; spelling variants such as
- * symlink-resolved paths are not recognized.
+ * The comparison is a verbatim match against the meta strings, so spelling variants such as
+ * symlink-resolved paths are not recognized. Which occurrences count is BakedPathScanner's.
  *
  * @api
  */
@@ -47,9 +43,7 @@ final class BakedPathGuard implements BakedPathGuardInterface
         private readonly array $extraNeedles = [],
     ) {}
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function __invoke(AppMeta $meta): void
     {
         $compileDir = $meta->compileDir;

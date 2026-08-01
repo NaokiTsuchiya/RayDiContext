@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeDevContext;
@@ -24,27 +24,19 @@ final class AbstractContextTest extends TestCase
     /** Per-test working directory */
     private string $baseDir;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('context_', more_entropy: true);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * Saved singletons default to none
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function getSavedSingletonDefaultsToEmpty(): void
     {
@@ -53,11 +45,7 @@ final class AbstractContextTest extends TestCase
         static::assertSame([], $context->getSavedSingleton());
     }
 
-    /**
-     * A context can declare its own saved singletons
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function getSavedSingletonOverride(): void
     {
@@ -66,11 +54,7 @@ final class AbstractContextTest extends TestCase
         static::assertSame([FakeCarInterface::class], $context->getSavedSingleton());
     }
 
-    /**
-     * A development context resolves instances with the runtime injector
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function devContextResolvesWithRuntimeInjector(): void
     {

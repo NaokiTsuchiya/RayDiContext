@@ -13,8 +13,6 @@ namespace NaokiTsuchiya\RayDiContext;
  */
 interface ContextProviderInterface
 {
-    /**
-     * Returns the context bound to $meta->context
-     */
+    /** Returns the context bound to $meta->context */
     public function get(AppMeta $meta): ContextInterface;
 }

@@ -15,9 +15,7 @@ use Ray\Di\AbstractModule;
  */
 final class FakeQualifiedModule extends AbstractModule
 {
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function configure(): void
     {
         $this->bind(FakeCarInterface::class)->annotatedWith('a/b')->to(FakeCar::class);

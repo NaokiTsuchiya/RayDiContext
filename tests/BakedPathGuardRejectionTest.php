@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
-use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use NaokiTsuchiya\RayDiContext\Fake\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -36,11 +34,7 @@ final class BakedPathGuardRejectionTest extends TestCase
     /** System under test */
     private BakedPathGuard $guard;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_reject_', more_entropy: true);
@@ -49,9 +43,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         $this->guard = new BakedPathGuard();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
@@ -61,9 +53,7 @@ final class BakedPathGuardRejectionTest extends TestCase
      * A compile dir that does not exist is rejected by name, instead of RecursiveDirectoryIterator's
      * bare UnexpectedValueException
      *
-     * @throws BakedPathFound
-     * @throws CompileDirNotReadable
-     * @throws ScriptNotReadable
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsAMissingCompileDir(): void
@@ -76,13 +66,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         }
     }
 
-    /**
-     * A compile dir path that is a regular file is rejected the same way
-     *
-     * @throws BakedPathFound
-     * @throws CompileDirNotReadable
-     * @throws ScriptNotReadable
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsACompileDirThatIsAFile(): void
     {
@@ -98,16 +82,10 @@ final class BakedPathGuardRejectionTest extends TestCase
     }
 
     /**
-     * A compile dir the process cannot list fails as a package exception
+     * 0005 sets the world bits a bare mode check looks at, but POSIX resolves the owner
+     * class first, so the owner is denied.
      *
-     * 0005 is the shape that gets past a bare mode check: the world bits are set, but
-     * POSIX resolves the owner class first, so the owner is denied and
-     * RecursiveDirectoryIterator raises an SPL exception that would otherwise escape the
-     * declared contract.
-     *
-     * @throws BakedPathFound
-     * @throws CompileDirNotFound
-     * @throws ScriptNotReadable
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsACompileDirItCannotList(): void
@@ -128,14 +106,9 @@ final class BakedPathGuardRejectionTest extends TestCase
     }
 
     /**
-     * A compile dir the process cannot traverse fails as a package exception
+     * 0405 grants read, so the listing opens and only the per-entry stat() is denied.
      *
-     * 0405 is the other half of that family: read is granted so listing opens, but every
-     * per-entry stat() the iterator performs while traversing is denied.
-     *
-     * @throws BakedPathFound
-     * @throws CompileDirNotFound
-     * @throws ScriptNotReadable
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsACompileDirItCannotTraverse(): void
@@ -156,14 +129,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         }
     }
 
-    /**
-     * An unlistable directory nested below a normal compile dir fails the same way, once
-     * RecursiveDirectoryIterator opens it mid-traversal
-     *
-     * @throws BakedPathFound
-     * @throws CompileDirNotFound
-     * @throws ScriptNotReadable
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsANestedDirectoryItCannotList(): void
     {

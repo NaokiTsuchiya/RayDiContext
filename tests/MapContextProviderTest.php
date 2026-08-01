@@ -6,7 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use Countable;
 use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeDevContext;
@@ -22,10 +22,7 @@ final class MapContextProviderTest extends TestCase
     /**
      * Returns the context mapped to $meta->context, constructed with the given meta
      *
-     * @throws UnknownContext
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
-     * @throws InvalidAppMeta
+     * @throws ExceptionInterface
      */
     #[Test]
     public function getReturnsMappedContext(): void
@@ -42,14 +39,7 @@ final class MapContextProviderTest extends TestCase
         static::assertSame($meta, $context->getMeta());
     }
 
-    /**
-     * An unmapped context is rejected with the known contexts listed
-     *
-     * @throws UnknownContext
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function getThrowsOnUnknownContext(): void
     {
@@ -61,12 +51,7 @@ final class MapContextProviderTest extends TestCase
         $provider->get(new AppMeta('/app', 'prod', '/app/var/di/prod', '/app/var/tmp/prod'));
     }
 
-    /**
-     * A mapped class that does not exist is reported naming both the class and the context
-     *
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function constructorThrowsOnMissingContextClass(): void
     {
@@ -80,13 +65,10 @@ final class MapContextProviderTest extends TestCase
     }
 
     /**
-     * A mapped class unrelated to AbstractContext is rejected by the constructor
-     *
      * Without the check, `new $class($meta)` inside get() reaches PHP's own TypeError,
      * which leaks past this package's exception hierarchy.
      *
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
+     * @throws ExceptionInterface
      */
     #[Test]
     public function constructorThrowsOnClassNotExtendingAbstractContext(): void
@@ -102,13 +84,10 @@ final class MapContextProviderTest extends TestCase
     }
 
     /**
-     * A mapped abstract class is rejected by the constructor
-     *
      * Without the check, `new $class($meta)` inside get() reaches PHP's own Error,
      * which leaks past this package's exception hierarchy.
      *
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
+     * @throws ExceptionInterface
      */
     #[Test]
     public function constructorThrowsOnAbstractContextClass(): void
@@ -127,13 +106,10 @@ final class MapContextProviderTest extends TestCase
     }
 
     /**
-     * A mapped interface is reported as an interface rather than "does not exist"
-     *
      * class_exists() alone returns false for an interface name, which would make this
      * indistinguishable from a genuine typo.
      *
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
+     * @throws ExceptionInterface
      */
     #[Test]
     public function constructorThrowsOnInterfaceContextClass(): void

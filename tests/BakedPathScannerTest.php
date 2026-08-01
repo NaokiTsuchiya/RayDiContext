@@ -13,8 +13,7 @@ use PHPUnit\Framework\TestCase;
  * Boundary matrix for the scanner, driven straight by (script, compileDir, needle) triples
  *
  * BakedPathGuard covers the same class through the filesystem, where one more boundary case
- * costs a directory and a file. These cases are the boundary itself, so they are spelled out
- * here as data instead.
+ * costs a directory and a file.
  */
 #[CoversClass(BakedPathScanner::class)]
 final class BakedPathScannerTest extends TestCase
@@ -25,9 +24,8 @@ final class BakedPathScannerTest extends TestCase
     /**
      * A needle spanning whole path segments outside every compile dir literal is baked
      *
-     * @param string           $script     Contents of one compiled script
-     * @param non-empty-string $compileDir The baked, read-only compile dir
-     * @param non-empty-string $needle     The runtime path that must not be baked
+     * @param non-empty-string $compileDir
+     * @param non-empty-string $needle
      */
     #[DataProvider('bakedCases')]
     #[Test]
@@ -41,9 +39,8 @@ final class BakedPathScannerTest extends TestCase
     /**
      * Anything else is a different path, or the compile dir baked in with the scripts
      *
-     * @param string           $script     Contents of one compiled script
-     * @param non-empty-string $compileDir The baked, read-only compile dir
-     * @param non-empty-string $needle     The runtime path that must not be baked
+     * @param non-empty-string $compileDir
+     * @param non-empty-string $needle
      */
     #[DataProvider('allowedCases')]
     #[Test]
@@ -72,29 +69,22 @@ final class BakedPathScannerTest extends TestCase
             '/app',
         ];
 
-        // A multi-byte character is not in the ASCII segment class, so it reads as a boundary
-        // and the occurrence is reported. Fail-close, like the guard around it.
         yield 'multi-byte character after the needle' => ["<?php return '/appの/var';", self::COMPILE_DIR, '/app'];
 
-        // A tmp dir under the read-only compile dir extends past the literal, so it stays
-        // detected: the compile dir can never host it.
         yield 'tmp dir nested under the compile dir' => [
             "<?php return '/app/var/di/prod/tmp/cache';",
             self::COMPILE_DIR,
             '/app/var/di/prod/tmp',
         ];
 
-        // A sibling merely prefixed by the compile dir string is no compile dir literal, so
-        // the appDir inside it is not covered by an allowed range.
         yield 'path with the compile dir as a string prefix' => [
             "<?php return '/app/var/di/production_logs/app.log';",
             self::COMPILE_DIR,
             '/app',
         ];
 
-        // ...and neither is a path that merely ends with it. Only a relative compile dir can
-        // reach this: under an absolute one, every needle position other than its own start
-        // is preceded by a segment character and is dropped on the needle side already.
+        // Only a relative compile dir reaches this: under an absolute one every needle position
+        // but its own start is preceded by a segment character and dropped on the needle side.
         yield 'path with the compile dir as a string suffix' => [
             "<?php return '/srv/predeploy/app/var/di/prod/x.php';",
             'deploy/app/var/di/prod',
@@ -103,8 +93,7 @@ final class BakedPathScannerTest extends TestCase
     }
 
     /**
-     * A segment character on either side runs the match into a longer segment, which is a
-     * different path — or the match lies inside the compile dir, baked in with the scripts
+     * The match runs into a longer segment, or lies inside the compile dir
      *
      * @return iterable<string, array{string, non-empty-string, non-empty-string}>
      */
@@ -123,13 +112,8 @@ final class BakedPathScannerTest extends TestCase
         ];
         yield 'letter before the needle' => ["<?php return '/var/backup/app/config';", self::COMPILE_DIR, '/app'];
 
-        // Case-sensitive, like the verbatim comparison the scanner is part of. A case-folding
-        // filesystem can reach the same directory through both spellings, but the compiled
-        // literal is only ever the one the meta carries.
         yield 'needle differing in case' => ["<?php return '/App/src/Index.php';", self::COMPILE_DIR, '/app'];
 
-        // The compile dir is baked into the image with the scripts, so it and anything under
-        // it is allowed.
         yield 'path inside the compile dir' => [
             "<?php return '/app/var/di/prod/scripts/x.php';",
             self::COMPILE_DIR,
@@ -137,15 +121,13 @@ final class BakedPathScannerTest extends TestCase
         ];
         yield 'the compile dir itself' => ["<?php return '/app/var/di/prod';", self::COMPILE_DIR, '/app'];
 
-        // The half-open [start, end) range has to include a needle that fills it exactly:
-        // an explicit compileDir override may be the appDir itself.
+        // The half-open [start, end) range has to include a needle that fills it exactly.
         yield 'needle equal to the compile dir' => [
             "<?php return '/app/var/di/prod';",
             self::COMPILE_DIR,
             self::COMPILE_DIR,
         ];
 
-        // Every compile dir literal is collected, not just the first.
         yield 'two compile dir literals' => [
             "<?php return ['/app/var/di/prod/a.php', '/app/var/di/prod/b.php'];",
             self::COMPILE_DIR,

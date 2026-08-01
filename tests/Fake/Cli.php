@@ -14,18 +14,14 @@ use function stream_get_contents;
 
 use const PHP_BINARY;
 
-/**
- * Runs a PHP CLI script in a subprocess for end-to-end tests
- */
+/** Runs a PHP CLI script in a subprocess for end-to-end tests */
 final class Cli
 {
     /**
      * Runs the script with the given arguments, returning its exit status and stderr
      *
      * @param list<string> $args
-     *
      * @return array{int, string}
-     *
      * @throws RuntimeException When the subprocess or its pipes cannot be opened.
      */
     public static function run(string $script, array $args): array

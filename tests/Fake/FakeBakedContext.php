@@ -9,22 +9,16 @@ use Ray\Compiler\CompiledInjector;
 use Ray\Di\AbstractModule;
 use Ray\Di\InjectorInterface;
 
-/**
- * Fake context whose module bakes runtime paths into the compiled scripts
- */
+/** Fake context whose module bakes runtime paths into the compiled scripts */
 final class FakeBakedContext extends AbstractContext
 {
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function __invoke(): AbstractModule
     {
         return new FakeBakedModule($this->meta);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function getInjectorInstance(): InjectorInterface
     {
         return new CompiledInjector($this->meta->compileDir);

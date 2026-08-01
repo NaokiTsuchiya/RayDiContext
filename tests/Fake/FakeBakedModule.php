@@ -15,18 +15,14 @@ use Ray\Di\AbstractModule;
  */
 final class FakeBakedModule extends AbstractModule
 {
-    /**
-     * @param AppMeta $meta Meta whose paths get baked by toInstance()
-     */
+    /** @param AppMeta $meta Meta whose paths get baked by toInstance() */
     public function __construct(
         private readonly AppMeta $meta,
     ) {
         parent::__construct();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function configure(): void
     {
         $this->bind(FakeCarInterface::class)->to(FakeCar::class);

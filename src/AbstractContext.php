@@ -22,9 +22,7 @@ abstract class AbstractContext implements ContextInterface
         protected readonly AppMeta $meta,
     ) {}
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function getSavedSingleton(): array
     {
         return [];

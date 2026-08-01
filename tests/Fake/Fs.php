@@ -14,14 +14,10 @@ use function is_readable;
 use function rmdir;
 use function unlink;
 
-/**
- * Test working-directory helper
- */
+/** Test working-directory helper */
 final class Fs
 {
-    /**
-     * Removes a directory recursively, restoring permissions along the way
-     */
+    /** Removes a directory recursively, restoring permissions along the way */
     public static function removeDir(string $dir): void
     {
         $exists = is_dir($dir);

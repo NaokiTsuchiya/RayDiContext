@@ -10,30 +10,22 @@ use Ray\Di\AbstractModule;
 use Ray\Di\Injector;
 use Ray\Di\InjectorInterface;
 
-/**
- * Fake development context using the runtime injector
- */
+/** Fake development context using the runtime injector */
 final class FakeDevContext extends AbstractContext
 {
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function __invoke(): AbstractModule
     {
         return new FakeModule();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function getInjectorInstance(): InjectorInterface
     {
         return new Injector($this(), $this->meta->tmpDir);
     }
 
-    /**
-     * Exposes the injected meta for assertions
-     */
+    /** Exposes the injected meta for assertions */
     public function getMeta(): AppMeta
     {
         return $this->meta;

@@ -61,9 +61,7 @@ final class CompileDirGuard implements CompileDirGuardInterface
         }
     }
 
-    /**
-     * Resolves a path, falling back to the path itself when it does not exist
-     */
+    /** Resolves a path, falling back to the path itself when it does not exist */
     private function canonicalize(string $dir): string
     {
         $resolved = realpath($dir);

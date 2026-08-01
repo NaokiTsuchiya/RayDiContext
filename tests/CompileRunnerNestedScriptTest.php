@@ -20,9 +20,7 @@ use function fileperms;
 use function mkdir;
 use function uniqid;
 
-/**
- * A compile whose output is not flat is normalized all the way down
- */
+/** A compile whose output is not flat is normalized all the way down */
 #[CoversClass(CompileRunner::class)]
 final class CompileRunnerNestedScriptTest extends TestCase
 {
@@ -32,11 +30,7 @@ final class CompileRunnerNestedScriptTest extends TestCase
     /** Meta with conventional paths under the app dir */
     private AppMeta $meta;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('runner_nested_', more_entropy: true);
@@ -45,17 +39,13 @@ final class CompileRunnerNestedScriptTest extends TestCase
         $this->meta = AppMeta::fromAppDir($appDir, 'prod');
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
     /**
-     * A script Ray.Compiler wrote into a subdirectory is made readable too
-     *
      * A qualifier holding a "/" — annotatedWith('a/b') — lands the script in a directory
      * of its own, which is what a non-recursive normalizer would leave behind at 0600.
      *

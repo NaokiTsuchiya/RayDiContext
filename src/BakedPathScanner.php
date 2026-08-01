@@ -16,10 +16,9 @@ use function strpos;
  * itself — and any path inside it — is allowed. A tmp dir nested under the compile dir
  * extends beyond the literal, so it is still detected.
  *
- * Boundaries are decided byte-wise against the ASCII segment class, so a multi-byte
- * character beside a match counts as a boundary and the occurrence is reported: fail-close,
- * matching the guard. Matching is case-sensitive, like the verbatim comparison it is part
- * of, so "/App/src" does not match a needle of "/app".
+ * Boundaries are byte-wise against the ASCII segment class, so a multi-byte character beside
+ * a match counts as one and the occurrence is reported: fail-close, matching the guard.
+ * Matching is case-sensitive, like the verbatim comparison it is part of.
  *
  * @internal Used by BakedPathGuard
  */
@@ -115,8 +114,8 @@ final class BakedPathScanner
     /**
      * Returns whether the byte at $index continues a path segment
      *
-     * An index outside the script does not: it bounds the match. The negative index is
-     * spelled out because PHP reads one as an offset from the end of the string.
+     * An index outside the script does not: it bounds the match. The negative case is spelled
+     * out because PHP reads a negative offset from the end of the string.
      */
     private function isSegmentChar(int $index): bool
     {
@@ -129,9 +128,7 @@ final class BakedPathScanner
         return preg_match(self::SEGMENT_CHAR, $char) === 1;
     }
 
-    /**
-     * Returns whether [start, end) lies fully inside an allowed range
-     */
+    /** Returns whether [start, end) lies fully inside an allowed range */
     private function isContained(int $start, int $end): bool
     {
         foreach ($this->allowedRanges as [$rangeStart, $rangeEnd]) {

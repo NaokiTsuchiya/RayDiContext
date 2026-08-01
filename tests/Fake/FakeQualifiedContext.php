@@ -10,22 +10,16 @@ use Ray\Compiler\DiCompileModule;
 use Ray\Di\AbstractModule;
 use Ray\Di\InjectorInterface;
 
-/**
- * Fake context that compiles a binding into a subdirectory of the compile dir
- */
+/** Fake context that compiles a binding into a subdirectory of the compile dir */
 final class FakeQualifiedContext extends AbstractContext
 {
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function __invoke(): AbstractModule
     {
         return new DiCompileModule(true, new FakeQualifiedModule());
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function getInjectorInstance(): InjectorInterface
     {
         return new CompiledInjector($this->meta->compileDir);

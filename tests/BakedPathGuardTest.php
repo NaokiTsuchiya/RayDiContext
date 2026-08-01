@@ -138,7 +138,7 @@ final class BakedPathGuardTest extends TestCase
         } catch (ScriptNotReadable $e) {
             static::assertStringContainsString($unreadable, $e->getMessage());
         } finally {
-            chmod($unreadable, permissions: 0o644); // tearDown has to be able to remove it
+            chmod($unreadable, permissions: 0o644);
         }
     }
 }

@@ -19,7 +19,7 @@ use function mkdir;
 use function uniqid;
 
 /**
- * The guard refuses a compile dir it cannot open, as a package exception rather than a
+ * The guard refuses a compile dir it cannot open, as a package exception rather than a bare SPL one
  */
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardRejectionTest extends TestCase
@@ -90,7 +90,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         } catch (CompileDirNotReadable $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
         } finally {
-            chmod($this->meta->compileDir, permissions: 0o700); // tearDown has to be able to remove it
+            chmod($this->meta->compileDir, permissions: 0o700);
         }
     }
 
@@ -110,7 +110,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         } catch (CompileDirNotReadable $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
         } finally {
-            chmod($this->meta->compileDir, permissions: 0o700); // tearDown has to be able to remove it
+            chmod($this->meta->compileDir, permissions: 0o700);
         }
     }
 

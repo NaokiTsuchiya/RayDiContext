@@ -18,7 +18,7 @@ use function symlink;
 use function uniqid;
 
 /**
- * A compileDir entry whose name ends in ".php" is not necessarily a script: it can be a
+ * A compileDir entry whose name ends in ".php" can be a directory, or a symlink to one, not a script
  */
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardDirectoryEntryTest extends TestCase

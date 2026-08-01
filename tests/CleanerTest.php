@@ -154,7 +154,7 @@ final class CleanerTest extends TestCase
             } catch (RemoveFailed $e) {
                 static::assertStringContainsString($compileDir, $e->getMessage());
             } finally {
-                chmod($compileDir, permissions: 0o700); // tearDown has to be able to remove it
+                chmod($compileDir, permissions: 0o700);
             }
 
             static::assertFileExists("{$compileDir}/stale.php");
@@ -172,7 +172,7 @@ final class CleanerTest extends TestCase
         } catch (RemoveFailed $e) {
             static::assertStringContainsString($nested, $e->getMessage());
         } finally {
-            chmod($nested, permissions: 0o700); // tearDown has to be able to remove it
+            chmod($nested, permissions: 0o700);
         }
 
         static::assertFileExists("{$nested}/stale.php");

@@ -10,6 +10,7 @@ use SplFileInfo;
 use function chmod;
 use function copy;
 use function dirname;
+use function fileperms;
 use function is_dir;
 use function is_executable;
 use function is_readable;
@@ -20,6 +21,12 @@ use function unlink;
 /** Test working-directory helper */
 final class Fs
 {
+    /** Returns the permission bits of a path */
+    public static function mode(string $path): int
+    {
+        return (int) fileperms($path) & 0o777;
+    }
+
     /** Removes a directory recursively, restoring permissions along the way */
     public static function removeDir(string $dir): void
     {

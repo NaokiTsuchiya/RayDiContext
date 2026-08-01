@@ -26,7 +26,7 @@ Run `composer cs && composer sa` before calling a change to `src/` done.
 
 **Run the suite as a non-root user.** Nine tests set a directory unreadable and assert the package
 reports it; root ignores permission bits, so they `markTestSkipped()` via `Fake\PermissionBits`,
-which measures the capability rather than reading the uid (#14). Root gives
+which measures the capability rather than reading the uid. Root gives
 `143 tests, 9 skipped`; non-root gives `143 tests, 0 skipped`. CI is non-root on purpose — don't
 move the `test` job into a `container:`.
 

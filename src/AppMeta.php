@@ -14,11 +14,6 @@ use function str_starts_with;
 /**
  * Application metadata with separated compile-time and runtime directories
  *
- * The compileDir holds DI scripts compiled ahead of time. It is baked into the
- * container image and stays read-only at runtime. The tmpDir is a runtime-writable
- * area such as /tmp and must never be baked into the image; resolve it at runtime
- * through a provider, never with toInstance().
- *
  * @api
  */
 final readonly class AppMeta
@@ -36,25 +31,15 @@ final readonly class AppMeta
     public string $tmpDir;
 
     /**
-     * Characters fromAppDir() accepts in $context: it becomes a single path segment of
-     * the default compileDir/tmpDir, so this is a whitelist rather than a blacklist of
-     * specific dangerous spellings (".", "..", "/", leading/trailing separators, ...) —
-     * every one of those is excluded by construction instead of being named individually.
-     * "\" is included so a namespaced class-string context (e.g. "App\ProdContext") can
-     * be passed through verbatim: unlike "/" and ".", the OS does not resolve "\"
-     * specially in a path segment, so it carries none of the collapse risk that excludes
-     * "/" and "." here — it is just an ordinary filename character on the POSIX
-     * filesystems this package targets.
+     * Characters fromAppDir() accepts in $context, which becomes one path segment of the
+     * default compileDir/tmpDir
      */
     private const CONTEXT_PATTERN = '/\A[A-Za-z0-9_\\\\-]+\z/';
 
     /**
-     * @param string $appDir     Application root directory; must be absolute — enforced
-     *                           here rather than only in fromAppDir(), since
-     *                           BakedPathGuard/CompileDirGuard read it verbatim regardless
-     *                           of which entry point produced it
-     * @param string $context    Env/context name (e.g. "prod", "dev"); only a lookup key
-     *                           here (e.g. for MapContextProvider), not a path fragment —
+     * @param string $appDir     Application root directory; must be absolute — the guards read
+     *                           it verbatim whichever entry point produced it
+     * @param string $context    Env/context name; only a lookup key here, not a path fragment —
      *                           fromAppDir() validates it as a safe path segment instead
      * @param string $compileDir Read-only DI script directory baked into the image
      * @param string $tmpDir     Runtime-writable directory, never baked
@@ -87,8 +72,6 @@ final readonly class AppMeta
         $normalizedCompileDir = self::trimSlash($compileDir);
         $normalizedTmpDir = self::trimSlash($tmpDir);
 
-        // The one shape BakedPathGuard cannot see: every tmpDir occurrence is also a compileDir
-        // occurrence, so its check passes on the scripts it exists to reject.
         if ($normalizedCompileDir === $normalizedTmpDir) {
             throw new InvalidAppMeta(sprintf(
                 'AppMeta::$compileDir and AppMeta::$tmpDir must be different directories, both are: "%s". '
@@ -120,15 +103,11 @@ final readonly class AppMeta
     /**
      * Creates a meta whose directories default to conventional paths under the app dir
      *
-     * @param string      $appDir     Application root directory; must be absolute, as
-     *                                enforced by the constructor (see __construct())
-     * @param string      $context    Env/context name; must match CONTEXT_PATTERN (see
-     *                                that constant's doc) since it becomes a path segment
-     *                                of the defaults below
-     * @param string|null $compileDir Read-only DI script directory baked into the image;
-     *                                defaults to "{appDir}/var/di/{context}"
-     * @param string|null $tmpDir     Runtime-writable directory, never baked; defaults to
-     *                                "{appDir}/var/tmp/{context}"
+     * @param string      $appDir     Application root directory; must be absolute
+     * @param string      $context    Env/context name; must match CONTEXT_PATTERN, since it
+     *                                becomes a path segment of the defaults below
+     * @param string|null $compileDir Defaults to "{appDir}/var/di/{context}"
+     * @param string|null $tmpDir     Defaults to "{appDir}/var/tmp/{context}"
      *
      * @throws InvalidAppMeta When appDir is not absolute or empty, or context does not
      *                        match CONTEXT_PATTERN (letters, digits, "_", "-", "\" only).
@@ -147,15 +126,10 @@ final readonly class AppMeta
             ));
         }
 
-        // Checked here, ahead of trimSlash(), because trimSlash() folds an empty string
-        // to "/" — which would pass the constructor's absolute-path check before it ever
-        // saw $appDir was empty.
         if ($appDir === '') {
             throw new InvalidAppMeta('AppMeta::fromAppDir(): $appDir must not be empty');
         }
 
-        // Trimmed ahead of interpolation below so a trailing slash on $appDir does not
-        // leave a doubled slash in the default compileDir/tmpDir.
         $appDir = self::trimSlash($appDir);
 
         return new self(

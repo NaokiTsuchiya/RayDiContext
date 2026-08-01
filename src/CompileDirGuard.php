@@ -12,16 +12,6 @@ use function str_starts_with;
 /**
  * Rejects a compile dir whose contents must never be emptied
  *
- * The compile dir is emptied on every compile. It is typically supplied to the bundled
- * CLI as an APP_COMPILE_DIR-sourced argument, so a one-character mistake there, such as
- * APP_COMPILE_DIR=/app instead of /app/var/di/prod, would otherwise wipe the whole
- * application. This guard rejects the two shapes that can only ever be a mistake: the
- * filesystem root, and a directory that holds the app dir.
- *
- * Paths are compared after realpath() so a symlink or a `.` segment cannot slip a
- * rejected directory past a literal comparison. A path that does not exist yet is
- * compared verbatim: nothing can be removed from it anyway.
- *
  * @api
  */
 final class CompileDirGuard implements CompileDirGuardInterface
@@ -62,9 +52,7 @@ final class CompileDirGuard implements CompileDirGuardInterface
         }
     }
 
-    /**
-     * Resolves a path, falling back to the path itself when it does not exist
-     */
+    /** Resolves a path, falling back to the path itself when it does not exist */
     private function canonicalize(string $dir): string
     {
         $resolved = realpath($dir);

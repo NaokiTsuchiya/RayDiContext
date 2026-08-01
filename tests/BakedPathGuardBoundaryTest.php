@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function file_put_contents;
 use function mkdir;
@@ -29,11 +28,7 @@ final class BakedPathGuardBoundaryTest extends TestCase
     /** System under test */
     private BakedPathGuard $guard;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_boundary_', more_entropy: true);
@@ -43,20 +38,13 @@ final class BakedPathGuardBoundaryTest extends TestCase
         $this->guard = new BakedPathGuard();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * A path inside the compile dir is allowed: it is baked into the image with the scripts
-     *
-     * @throws BakedPathFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function allowsPathInsideCompileDir(): void
     {
@@ -70,13 +58,7 @@ final class BakedPathGuardBoundaryTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
-    /**
-     * A tmpDir nested under the compile dir is still detected
-     *
-     * A read-only compile dir can never host the writable tmp dir, so this literal must fail CI.
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function detectsTmpDirNestedUnderCompileDir(): void
     {
@@ -93,15 +75,10 @@ final class BakedPathGuardBoundaryTest extends TestCase
         ($this->guard)($meta);
     }
 
-    /**
-     * A sibling path sharing the compile dir as a string prefix is detected
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function detectsPathWithCompileDirStringPrefix(): void
     {
-        // compileDir is …/var/di/prod; this is …/var/di/production_logs/app.log
         file_put_contents(
             "{$this->meta->compileDir}/baked.php",
             data: "<?php return '{$this->meta->compileDir}uction_logs/app.log';",

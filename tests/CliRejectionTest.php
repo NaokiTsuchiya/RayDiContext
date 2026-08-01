@@ -11,9 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 use function glob;
 
-/**
- * Arguments the CLI refuses before compiling anything, all of them exit status 2
- */
+/** Arguments the CLI refuses before compiling anything, all of them exit status 2 */
 #[CoversClass(Cli::class)]
 final class CliRejectionTest extends TestCase
 {
@@ -23,26 +21,20 @@ final class CliRejectionTest extends TestCase
     /** System under test */
     private Cli $cli;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->fixture = new CliFixture();
         $this->cli = new Cli($this->fixture->errorFile);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         $this->fixture->remove();
     }
 
-    /**
-     * Too few arguments is a usage error naming the usage
-     */
+    /** Too few arguments is a usage error naming the usage */
     #[Test]
     public function rejectsMissingArguments(): void
     {
@@ -52,9 +44,7 @@ final class CliRejectionTest extends TestCase
         static::assertStringContainsString('Usage:', $this->fixture->stderr());
     }
 
-    /**
-     * More arguments than the CLI accepts is a usage error, and nothing is compiled
-     */
+    /** More arguments than the CLI accepts is a usage error, and nothing is compiled */
     #[Test]
     public function rejectsTooManyArguments(): void
     {
@@ -66,9 +56,7 @@ final class CliRejectionTest extends TestCase
         static::assertSame([], glob("{$this->fixture->appDir}/var/di/prod/*.php"));
     }
 
-    /**
-     * A bootstrap path that is not a file is a usage error naming the path
-     */
+    /** A bootstrap path that is not a file is a usage error naming the path */
     #[Test]
     public function rejectsMissingBootstrap(): void
     {
@@ -81,9 +69,7 @@ final class CliRejectionTest extends TestCase
         static::assertStringContainsString($missing, $this->fixture->stderr());
     }
 
-    /**
-     * A bootstrap returning something else is a usage error naming the required type
-     */
+    /** A bootstrap returning something else is a usage error naming the required type */
     #[Test]
     public function rejectsBootstrapReturningWrongType(): void
     {
@@ -93,9 +79,7 @@ final class CliRejectionTest extends TestCase
         static::assertStringContainsString('must return', $this->fixture->stderr());
     }
 
-    /**
-     * A missing appDir is a usage error
-     */
+    /** A missing appDir is a usage error */
     #[Test]
     public function rejectsMissingAppDir(): void
     {

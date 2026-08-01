@@ -12,8 +12,7 @@ use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 /**
  * Decides whether what was just compiled may be shipped
  *
- * The bundled guard only knows appDir and tmpDir. An application knows its own secrets and host
- * names, and a value bound with toInstance() is frozen into the compiled script either way.
+ * The bundled guard only knows appDir and tmpDir; an application knows its own secrets.
  *
  * @api
  */

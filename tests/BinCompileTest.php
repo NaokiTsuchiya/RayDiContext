@@ -14,9 +14,7 @@ use function glob;
 use function mkdir;
 use function uniqid;
 
-/**
- * End-to-end test for the bin/ray-di-compile CLI
- */
+/** End-to-end test for the bin/ray-di-compile CLI */
 final class BinCompileTest extends TestCase
 {
     /** Path to the compile CLI under test */
@@ -28,28 +26,20 @@ final class BinCompileTest extends TestCase
     /** Per-test working directory */
     private string $baseDir;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('bin_', more_entropy: true);
         mkdir("{$this->baseDir}/app/var/tmp/prod", permissions: 0o755, recursive: true);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * The CLI compiles the mapped context and exits with status 0
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function compilesMappedContext(): void
     {
@@ -65,11 +55,7 @@ final class BinCompileTest extends TestCase
         static::assertNotSame([], glob("{$appDir}/var/di/prod/*FakeCarInterface*.php"));
     }
 
-    /**
-     * Explicit compileDir/tmpDir CLI arguments override the conventional defaults
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function compilesToExplicitOverride(): void
     {
@@ -90,11 +76,7 @@ final class BinCompileTest extends TestCase
         static::assertSame([], glob("{$appDir}/var/di/prod/*.php"));
     }
 
-    /**
-     * The CLI reports a usage error when arguments are missing
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function failsWithUsageWhenArgumentsMissing(): void
     {
@@ -104,11 +86,7 @@ final class BinCompileTest extends TestCase
         static::assertStringContainsString('Usage:', $stderr);
     }
 
-    /**
-     * The CLI rejects a bootstrap that does not return a provider
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function failsWhenBootstrapReturnsWrongType(): void
     {
@@ -122,14 +100,7 @@ final class BinCompileTest extends TestCase
         static::assertStringContainsString('must return', $stderr);
     }
 
-    /**
-     * A baked path fails the compile with status 1 and a readable one-line message
-     *
-     * This is the CI guard the package exists for: the status has to be usable, and the
-     * message has to be the first thing in the log rather than buried under a trace.
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function failsWithStatusOneOnBakedPath(): void
     {
@@ -147,11 +118,7 @@ final class BinCompileTest extends TestCase
         static::assertStringNotContainsString('Stack trace', $stderr);
     }
 
-    /**
-     * An unknown context fails with status 1, listing the contexts the bootstrap maps
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function failsWithStatusOneOnUnknownContext(): void
     {
@@ -166,17 +133,7 @@ final class BinCompileTest extends TestCase
         static::assertStringNotContainsString('Stack trace', $stderr);
     }
 
-    /**
-     * A missing appDir is a usage error (status 2); a relative one fails the compile
-     * itself (status 1)
-     *
-     * Existence is checked here, before anything is compiled, so the message points at
-     * the argument rather than at a baked path or a mkdir failure downstream. Shape is
-     * checked inside AppMeta::fromAppDir() instead: it never touches the filesystem, so
-     * a relative appDir surfaces the same way a baked path or an unknown context does.
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function distinguishesMissingFromRelativeAppDir(): void
     {
@@ -204,11 +161,7 @@ final class BinCompileTest extends TestCase
         static::assertStringNotContainsString('Stack trace', $stderr);
     }
 
-    /**
-     * Surplus arguments are a usage error, not a silently successful compile
-     *
-     * @throws RuntimeException
-     */
+    /** @throws RuntimeException */
     #[Test]
     public function failsWithUsageWhenTooManyArguments(): void
     {

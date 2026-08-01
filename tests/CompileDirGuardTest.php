@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -16,9 +15,7 @@ use function mkdir;
 use function symlink;
 use function uniqid;
 
-/**
- * The guard never removes anything, so the rejected paths are safe to exercise here
- */
+/** The guard never removes anything, so the rejected paths are safe to exercise here */
 #[CoversClass(CompileDirGuard::class)]
 final class CompileDirGuardTest extends TestCase
 {
@@ -31,9 +28,7 @@ final class CompileDirGuardTest extends TestCase
     /** System under test */
     private CompileDirGuard $guard;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_', more_entropy: true);
@@ -42,20 +37,13 @@ final class CompileDirGuardTest extends TestCase
         $this->guard = new CompileDirGuard();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * The filesystem root is rejected
-     *
-     * @throws UnsafeCompileDir
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsFilesystemRoot(): void
     {
@@ -65,15 +53,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(new AppMeta('/app', 'prod', '/', '/tmp'));
     }
 
-    /**
-     * A path resolving to the root is rejected, not only the literal slash
-     *
-     * APP_COMPILE_DIR=/ falls back to the default because AppMeta trims trailing
-     * slashes, but APP_COMPILE_DIR=/. reaches the compile dir verbatim.
-     *
-     * @throws UnsafeCompileDir
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsRootReachedThroughDotSegment(): void
     {
@@ -82,12 +62,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(new AppMeta('/app', 'prod', '/.', '/tmp'));
     }
 
-    /**
-     * A compile dir equal to the app dir is rejected
-     *
-     * @throws UnsafeCompileDir
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsCompileDirEqualToAppDir(): void
     {
@@ -96,14 +71,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(new AppMeta($this->appDir, 'prod', $this->appDir, "{$this->appDir}/var/tmp"));
     }
 
-    /**
-     * A compile dir holding the app dir is rejected
-     *
-     * This is the APP_COMPILE_DIR=/app typo when the app lives in /app/src.
-     *
-     * @throws UnsafeCompileDir
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsCompileDirHoldingAppDir(): void
     {
@@ -112,15 +80,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(new AppMeta($this->appDir, 'prod', $this->baseDir, "{$this->appDir}/var/tmp"));
     }
 
-    /**
-     * A symlinked compile dir holding the app dir is rejected
-     *
-     * A literal comparison would let the link through: the link and the app dir share
-     * no prefix until both are resolved.
-     *
-     * @throws UnsafeCompileDir
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsSymlinkedCompileDirHoldingAppDir(): void
     {
@@ -134,12 +94,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(new AppMeta($appDir, 'prod', $link, "{$appDir}/var/tmp"));
     }
 
-    /**
-     * The rejection is catchable as a package exception
-     *
-     * @throws UnsafeCompileDir
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectionImplementsPackageExceptionInterface(): void
     {
@@ -151,12 +106,7 @@ final class CompileDirGuardTest extends TestCase
         }
     }
 
-    /**
-     * The conventional compile dir under the app dir is allowed
-     *
-     * @throws UnsafeCompileDir
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function allowsCompileDirUnderAppDir(): void
     {
@@ -165,15 +115,7 @@ final class CompileDirGuardTest extends TestCase
         ($this->guard)(AppMeta::fromAppDir($this->appDir, 'prod'));
     }
 
-    /**
-     * A compile dir sharing a name prefix with the app dir is allowed
-     *
-     * /app is not an ancestor of /appdata, so matching on the prefix alone would
-     * reject a legitimate compile dir.
-     *
-     * @throws UnsafeCompileDir
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function allowsCompileDirSharingNamePrefixWithAppDir(): void
     {

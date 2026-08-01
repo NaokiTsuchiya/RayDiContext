@@ -51,13 +51,10 @@ final class CompileRunner
      */
     public function run(AppMeta $meta): void
     {
-        // Resolved before the cleaner runs, so an unknown context leaves the compile dir intact.
         $context = $this->contextProvider->get($meta);
         $cleaner = new Cleaner($this->compileDirGuard);
         $cleaner($meta);
 
-        // A flag and finally rather than catch-and-rethrow: a rethrow types as the marker
-        // interface and would widen the precise @throws list above.
         $guarded = false;
         try {
             $this->compiler->compile($context(), $meta->compileDir);

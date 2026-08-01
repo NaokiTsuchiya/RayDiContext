@@ -6,7 +6,6 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -20,9 +19,6 @@ use function uniqid;
 
 /**
  * A compileDir entry whose name ends in ".php" is not necessarily a script: it can be a
- * directory, or a symlink to one. The guard must not rely on file_get_contents() to tell
- * the difference, since a directory path fed to it returns false on Linux but an empty
- * string on macOS — the exact inconsistency this class guards against.
  */
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardDirectoryEntryTest extends TestCase
@@ -36,11 +32,7 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
     /** System under test */
     private BakedPathGuard $guard;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_dir_', more_entropy: true);
@@ -50,24 +42,13 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
         $this->guard = new BakedPathGuard();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * A symlink to a directory, named like a script, is rejected instead of silently
-     * skipped
-     *
-     * RecursiveDirectoryIterator does not descend into symlinks by default, so a symlink
-     * named e.g. "cache.php" pointing at a directory is visited as a leaf, not recursed
-     * into.
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function throwsOnSymlinkToDirectoryNamedLikeAScript(): void
     {
@@ -82,12 +63,7 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
         ($this->guard)($this->meta);
     }
 
-    /**
-     * A real directory named like a script is traversed as a directory; scripts inside
-     * it are still scanned normally
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function scansScriptsInsideADirectoryNamedLikeAScript(): void
     {

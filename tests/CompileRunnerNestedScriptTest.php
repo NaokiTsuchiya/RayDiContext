@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use FilesystemIterator;
-use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
-use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeQualifiedContext;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -16,7 +13,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use RuntimeException;
 use SplFileInfo;
 
 use function dirname;
@@ -24,9 +20,7 @@ use function fileperms;
 use function mkdir;
 use function uniqid;
 
-/**
- * A compile whose output is not flat is normalized all the way down
- */
+/** A compile whose output is not flat is normalized all the way down */
 #[CoversClass(CompileRunner::class)]
 final class CompileRunnerNestedScriptTest extends TestCase
 {
@@ -36,11 +30,7 @@ final class CompileRunnerNestedScriptTest extends TestCase
     /** Meta with conventional paths under the app dir */
     private AppMeta $meta;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('runner_nested_', more_entropy: true);
@@ -49,27 +39,13 @@ final class CompileRunnerNestedScriptTest extends TestCase
         $this->meta = AppMeta::fromAppDir($appDir, 'prod');
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * A script Ray.Compiler wrote into a subdirectory is made readable too
-     *
-     * Ray.Compiler replaces the namespace separators of a dependency index and nothing
-     * else, so a qualifier holding a "/" — annotatedWith('a/b') — lands the script in a
-     * directory of its own. Those scripts are written 0600 like any other, and are the
-     * ones a non-recursive normalizer would leave behind.
-     *
-     * @throws BakedPathFound
-     * @throws RuntimeException
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function normalizesAScriptCompiledIntoASubdirectory(): void
     {
@@ -84,7 +60,6 @@ final class CompileRunnerNestedScriptTest extends TestCase
             $pathname = $entry->getPathname();
             $mode = (int) fileperms($pathname) & 0o777;
             $isDir = $entry->isDir();
-            // A directory additionally has to be traversable to reach what is inside
             $required = $isDir ? 0o005 : 0o004;
             static::assertSame($required, $mode & $required, $pathname);
             $isScript = $entry->getExtension() === 'php';
@@ -101,7 +76,6 @@ final class CompileRunnerNestedScriptTest extends TestCase
             $nested[] = $pathname;
         }
 
-        // Guards the premise: without a script below the top level this proves nothing
         static::assertNotSame([], $nested);
     }
 }

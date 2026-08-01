@@ -4,21 +4,19 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRejectingGuard;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function copy;
 use function mkdir;
 use function uniqid;
 
-/**
- * The cleaner asks its guard before removing anything
- */
+/** The cleaner asks its guard before removing anything */
 #[CoversClass(Cleaner::class)]
 final class CleanerGuardTest extends TestCase
 {
@@ -34,9 +32,7 @@ final class CleanerGuardTest extends TestCase
     /** @var non-empty-string Conventional compile dir under the app dir, holding one stale script */
     private string $compileDir;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('cleaner_guard_', more_entropy: true);
@@ -47,19 +43,13 @@ final class CleanerGuardTest extends TestCase
         copy(self::SCRIPT, "{$this->compileDir}/stale.php");
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * The default guard rejects a compile dir holding the app dir, removing nothing
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsCompileDirHoldingAppDirWithoutRemovingAnything(): void
     {
@@ -73,14 +63,7 @@ final class CleanerGuardTest extends TestCase
         }
     }
 
-    /**
-     * An application guard rejecting a compile dir the default one allows is honoured
-     *
-     * The compile dir here is the conventional one, which the default guard allows, so
-     * only the application guard can be what stopped the removal.
-     *
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function honoursApplicationSuppliedGuard(): void
     {

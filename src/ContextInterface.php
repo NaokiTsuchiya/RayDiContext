@@ -10,8 +10,6 @@ use Ray\Di\InjectorInterface;
 /**
  * Application context
  *
- * A context maps an environment to a module, an injector, and process-start singletons.
- *
  * @api
  */
 interface ContextInterface
@@ -30,20 +28,17 @@ interface ContextInterface
      * A production context returns CompiledInjector($meta->compileDir); a development
      * context returns Ray\Di\Injector.
      *
-     * Whether repeated calls return the same instance or a fresh one each time is not
-     * part of this contract — a concrete context may do either. Call it once per
-     * process and reuse the result, particularly around getSavedSingleton(): warming
-     * up singletons against one instance and then serving requests from another
-     * defeats the warmup.
+     * Whether repeated calls return the same instance is not part of this contract. Call
+     * it once per process and reuse the result: warming up getSavedSingleton() against one
+     * instance and then serving requests from another defeats the warmup.
      */
     public function getInjectorInstance(): InjectorInterface;
 
     /**
      * Returns classes to instantiate once at process start under the real environment
      *
-     * These singletons are freshly instantiated, never unserialized, so they may hold
-     * runtime resources such as database connections. The singleton scope is per
-     * injector instance: they are shared only through the injector that created them.
+     * Freshly instantiated, never unserialized, so they may hold runtime resources such as
+     * database connections. The scope is per injector instance.
      *
      * @return list<class-string>
      */

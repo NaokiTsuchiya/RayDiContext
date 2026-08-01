@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use NaokiTsuchiya\RayDiContext\Fake\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function chmod;
 use function copy;
@@ -20,9 +19,7 @@ use function fileperms;
 use function mkdir;
 use function uniqid;
 
-/**
- * The normalizer refuses a path it cannot normalize, without changing anything
- */
+/** The normalizer refuses a path it cannot normalize, without changing anything */
 #[CoversClass(PermissionNormalizer::class)]
 final class PermissionNormalizerRejectionTest extends TestCase
 {
@@ -35,9 +32,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
     /** @var non-empty-string Directory standing in for the compile dir */
     private string $compileDir;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('perm_reject_', more_entropy: true);
@@ -46,25 +41,13 @@ final class PermissionNormalizerRejectionTest extends TestCase
         chmod($this->compileDir, permissions: 0o700); // mkdir() applies the umask, chmod() does not
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * A path that is a file rather than a directory is rejected, changing nothing
-     *
-     * Without the check the file is chmod'ed to 0755 and only then fails, so a call that
-     * did not succeed leaves a side effect behind — and it fails as an SPL exception from
-     * FilesystemIterator rather than as an exception of this package.
-     *
-     * @throws ChmodFailed
-     * @throws CompileDirNotReadable
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsAPathThatIsNotADirectory(): void
     {
@@ -77,19 +60,12 @@ final class PermissionNormalizerRejectionTest extends TestCase
             static::fail('CompileDirNotFound was not thrown');
         } catch (CompileDirNotFound $e) {
             static::assertStringContainsString($script, $e->getMessage());
-            // Nothing was chmod'ed: the rejected path still has the mode it had
             static::assertSame(0o600, $this->mode($script));
             static::assertSame(0o700, $this->mode($this->compileDir));
         }
     }
 
-    /**
-     * A path that does not exist is rejected by name
-     *
-     * @throws ChmodFailed
-     * @throws CompileDirNotReadable
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsAMissingPath(): void
     {
@@ -105,18 +81,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
         }
     }
 
-    /**
-     * A compile dir the process cannot list fails as a package exception
-     *
-     * 0005 is the shape that gets past the mode check: the world bits it looks at are
-     * set, but POSIX resolves the owner class first, so the owner is denied and
-     * FilesystemIterator raises an SPL exception that would otherwise escape the
-     * declared contract.
-     *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsACompileDirItCannotList(): void
     {
@@ -134,13 +99,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
         }
     }
 
-    /**
-     * An unlistable directory nested in a normal compile dir fails the same way
-     *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsANestedDirectoryItCannotList(): void
     {
@@ -160,17 +119,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
         }
     }
 
-    /**
-     * A compile dir the process cannot traverse fails as a package exception
-     *
-     * 0405 is the other half of that family: read is granted, so the listing opens and
-     * only the stat() of each entry is denied — which leaked a PHP warning per entry
-     * from fileperms() and chmod() before anything failed.
-     *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsACompileDirItCannotTraverse(): void
     {
@@ -190,17 +139,10 @@ final class PermissionNormalizerRejectionTest extends TestCase
             chmod($this->compileDir, permissions: 0o700); // tearDown has to be able to remove it
         }
 
-        // Nothing inside was touched: no entry was ever reached
         static::assertSame(0o600, $this->mode($script));
     }
 
-    /**
-     * An untraversable directory nested in a normal compile dir fails the same way
-     *
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function rejectsANestedDirectoryItCannotTraverse(): void
     {
@@ -226,9 +168,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
         static::assertSame(0o600, $this->mode($inner));
     }
 
-    /**
-     * Returns the permission bits of a path
-     */
+    /** Returns the permission bits of a path */
     private function mode(string $path): int
     {
         return (int) fileperms($path) & 0o777;

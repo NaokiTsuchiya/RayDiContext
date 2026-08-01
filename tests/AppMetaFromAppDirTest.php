@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
@@ -12,7 +13,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 use function file_put_contents;
 use function mkdir;
@@ -21,9 +21,6 @@ use function uniqid;
 
 /**
  * Covers the fromAppDir() factory; AppMetaTest covers the public constructor
- *
- * The factory no longer touches the filesystem: it validates appDir's shape (absolute or
- * not) but not its existence, so an app dir need not exist on disk for most cases here.
  */
 #[CoversClass(AppMeta::class)]
 final class AppMetaFromAppDirTest extends TestCase
@@ -34,9 +31,7 @@ final class AppMetaFromAppDirTest extends TestCase
     /** @var non-empty-string Existing app dir to resolve */
     private string $appDir;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('meta_', more_entropy: true);
@@ -44,24 +39,13 @@ final class AppMetaFromAppDirTest extends TestCase
         mkdir($this->appDir, permissions: 0o755, recursive: true);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * Falls back to conventional paths under the app dir
-     *
-     * A namespaced class-string context (e.g. "App\ProdContext") is accepted verbatim:
-     * unlike "/" and ".", "\" carries none of the OS-resolution risk that excludes those
-     * two from CONTEXT_PATTERN, so a caller can pass a ::class-shaped context straight
-     * through without folding it into a different alphabet first.
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function defaults(): void
     {
@@ -74,18 +58,7 @@ final class AppMetaFromAppDirTest extends TestCase
         static::assertSame("{$this->appDir}/var/tmp/{$context}", $meta->tmpDir);
     }
 
-    /**
-     * A context outside CONTEXT_PATTERN's alphabet (letters, digits, "_", "-", "\") is
-     * rejected outright, as a whitelist rather than as a list of specific dangerous
-     * spellings: "/" and "." (whether alone, doubled, or leading/trailing) would
-     * otherwise collapse the interpolated compileDir/tmpDir back to "{appDir}/var/di"
-     * itself — the parent shared by every context, so Cleaner emptying it would delete
-     * every other context's compiled scripts too. A "/"-nested class-string
-     * ("App/ProdContext") is rejected the same way — only "\" is accepted as a
-     * namespace separator, not "/".
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[TestWith([''])]
     #[TestWith(['../prod'])]
     #[TestWith(['pro..d'])]
@@ -108,17 +81,7 @@ final class AppMetaFromAppDirTest extends TestCase
         AppMeta::fromAppDir($this->appDir, $context);
     }
 
-    /**
-     * Explicit compileDir/tmpDir override the conventional defaults independently
-     *
-     * fromAppDir() no longer reads the environment itself; a caller such as
-     * bin/ray-di-compile passes the result in. appDir is only shape-checked, never
-     * resolved, so an override still reaches AppMeta verbatim — compile-time and runtime
-     * have to agree on the literal, and resolving it here would silently change it under
-     * a symlink.
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function override(): void
     {
@@ -128,11 +91,7 @@ final class AppMetaFromAppDirTest extends TestCase
         static::assertSame('/tmp/rw', $meta->tmpDir);
     }
 
-    /**
-     * Overriding only the compile dir leaves the tmp dir at its default
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function partialOverride(): void
     {
@@ -142,11 +101,7 @@ final class AppMetaFromAppDirTest extends TestCase
         static::assertSame("{$this->appDir}/var/tmp/prod", $meta->tmpDir);
     }
 
-    /**
-     * Trailing slashes are trimmed on both the conventional default and an override
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function trimsTrailingSlashes(): void
     {
@@ -157,17 +112,7 @@ final class AppMetaFromAppDirTest extends TestCase
         static::assertSame('/tmp/rw', $meta->tmpDir);
     }
 
-    /**
-     * A relative or empty appDir is rejected outright rather than resolved
-     *
-     * A relative appDir is never resolved against the working directory: left as-is it
-     * would reach BakedPathGuard as a needle that matches nearly every literal — "."
-     * matches all of them — and fail the compile with a message that reads as a baked
-     * path rather than as a bad argument. Unlike the earlier realpath()-based check,
-     * this one never touches the filesystem, so no cwd juggling is needed to exercise it.
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[TestWith(['.', 'must be an absolute path'])]
     #[TestWith(['app', 'must be an absolute path'])]
     #[TestWith(['./app', 'must be an absolute path'])]
@@ -181,11 +126,7 @@ final class AppMetaFromAppDirTest extends TestCase
         AppMeta::fromAppDir($appDir, 'prod');
     }
 
-    /**
-     * appDir need not exist on disk — existence is a caller concern, not this factory's
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function doesNotRequireAppDirToExist(): void
     {
@@ -196,19 +137,7 @@ final class AppMetaFromAppDirTest extends TestCase
         static::assertSame($appDir, $meta->appDir);
     }
 
-    /**
-     * An appDir reached through a symlink keeps the caller's spelling instead of
-     * resolving to the symlink's target
-     *
-     * This is the guarantee BakedPathGuard depends on: compile time and runtime must
-     * bind the exact same string for the guard's verbatim comparison to catch a leaked
-     * path. Resolving the symlink here would make the guard fail open under a
-     * Capistrano-style "current -> release" deployment layout.
-     *
-     * @throws BakedPathFound
-     * @throws InvalidAppMeta
-     * @throws RuntimeException
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function preservesSymlinkSpellingAgainstBakedPathGuard(): void
     {

@@ -11,9 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 use function glob;
 
-/**
- * What the CLI does once the arguments are usable; CliRejectionTest covers the ones that are not
- */
+/** What the CLI does once the arguments are usable; CliRejectionTest covers the ones that are not */
 #[CoversClass(Cli::class)]
 final class CliTest extends TestCase
 {
@@ -23,26 +21,20 @@ final class CliTest extends TestCase
     /** System under test */
     private Cli $cli;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function setUp(): void
     {
         $this->fixture = new CliFixture();
         $this->cli = new Cli($this->fixture->errorFile);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         $this->fixture->remove();
     }
 
-    /**
-     * A mapped context compiles and reports success
-     */
+    /** A mapped context compiles and reports success */
     #[Test]
     public function compilesMappedContext(): void
     {
@@ -52,12 +44,7 @@ final class CliTest extends TestCase
         static::assertNotSame([], glob("{$this->fixture->appDir}/var/di/prod/*FakeCarInterface*.php"));
     }
 
-    /**
-     * An empty override reads as "not given", so the conventional path is still used
-     *
-     * The documented invocation forwards "$APP_COMPILE_DIR" through the shell, so an unset
-     * variable arrives as an empty argument rather than as no argument at all.
-     */
+    /** Asserts through the CLI's exit status */
     #[Test]
     public function treatsEmptyOverrideAsAbsent(): void
     {
@@ -67,9 +54,7 @@ final class CliTest extends TestCase
         static::assertNotSame([], glob("{$this->fixture->appDir}/var/di/prod/*FakeCarInterface*.php"));
     }
 
-    /**
-     * An explicit override compiles somewhere other than the conventional path
-     */
+    /** An explicit override compiles somewhere other than the conventional path */
     #[Test]
     public function honoursExplicitOverrides(): void
     {
@@ -89,9 +74,7 @@ final class CliTest extends TestCase
         static::assertSame([], glob("{$this->fixture->appDir}/var/di/prod/*.php"));
     }
 
-    /**
-     * A package exception is reported as one line, without its class name or a trace
-     */
+    /** A package exception is reported as one line, without its class name or a trace */
     #[Test]
     public function reportsPackageExceptionAsRuntimeFailure(): void
     {
@@ -102,13 +85,7 @@ final class CliTest extends TestCase
         static::assertStringNotContainsString('Stack trace', $this->fixture->stderr());
     }
 
-    /**
-     * A failure that is not this package's own is reported as one line naming its class
-     *
-     * Requiring the bootstrap and compiling the module run application code and Ray.Di, so the
-     * most ordinary compile failure — a missing binding — arrives as a foreign exception. Left
-     * uncaught it escaped as a fatal with a stack trace and exit 255, outside the contract.
-     */
+    /** Asserts through the CLI's exit status */
     #[Test]
     public function reportsForeignThrowableAsRuntimeFailure(): void
     {

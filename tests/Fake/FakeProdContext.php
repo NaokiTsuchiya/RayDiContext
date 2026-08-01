@@ -10,30 +10,22 @@ use Ray\Compiler\DiCompileModule;
 use Ray\Di\AbstractModule;
 use Ray\Di\InjectorInterface;
 
-/**
- * Fake production context compiled ahead of time
- */
+/** Fake production context compiled ahead of time */
 final class FakeProdContext extends AbstractContext
 {
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function __invoke(): AbstractModule
     {
         return new DiCompileModule(true, new FakeModule());
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function getInjectorInstance(): InjectorInterface
     {
         return new CompiledInjector($this->meta->compileDir);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function getSavedSingleton(): array
     {
         return [FakeCarInterface::class];

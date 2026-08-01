@@ -4,27 +4,18 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Covers the public constructor; AppMetaFromAppDirTest covers the fromAppDir() factory
- */
+/** Covers the public constructor; AppMetaFromAppDirTest covers the fromAppDir() factory */
 #[CoversClass(AppMeta::class)]
 final class AppMetaTest extends TestCase
 {
-    /**
-     * Keeps constructor arguments as-is
-     *
-     * The constructor has no character restriction on context beyond non-empty: it is
-     * only a lookup key here (e.g. for MapContextProvider), not necessarily a path
-     * fragment, so "prod:staging" — not a safe path segment — is still accepted.
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function construct(): void
     {
@@ -36,11 +27,7 @@ final class AppMetaTest extends TestCase
         static::assertSame('/tmp/rw', $meta->tmpDir);
     }
 
-    /**
-     * Trailing slashes on appDir/compileDir/tmpDir are trimmed by the public constructor too
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function constructTrimsTrailingSlashes(): void
     {
@@ -51,11 +38,7 @@ final class AppMetaTest extends TestCase
         static::assertSame('/tmp/rw', $meta->tmpDir);
     }
 
-    /**
-     * Every field must be non-empty
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[TestWith(['', 'prod', '/opt/di', '/tmp/rw'])]
     #[TestWith(['/path/to/app', '', '/opt/di', '/tmp/rw'])]
     #[TestWith(['/path/to/app', 'prod', '', '/tmp/rw'])]
@@ -68,15 +51,7 @@ final class AppMetaTest extends TestCase
         new AppMeta($appDir, $context, $compileDir, $tmpDir);
     }
 
-    /**
-     * appDir must be absolute through the public constructor too, not just fromAppDir()
-     *
-     * BakedPathGuard and CompileDirGuard both read $meta->appDir verbatim regardless of
-     * which entry point produced it, so a relative appDir is just as unsafe here as it is
-     * through fromAppDir() — the invariant belongs to the type, not to one factory.
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[TestWith(['app'])]
     #[TestWith(['./app'])]
     #[TestWith(['.'])]
@@ -89,11 +64,7 @@ final class AppMetaTest extends TestCase
         new AppMeta($appDir, 'prod', '/opt/di', '/tmp/rw');
     }
 
-    /**
-     * compileDir and tmpDir must be different directories, trailing slashes aside
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[TestWith(['/opt/di', '/opt/di'])]
     #[TestWith(['/opt/di/', '/opt/di'])]
     #[TestWith(['/opt/di', '/opt/di///'])]
@@ -106,11 +77,7 @@ final class AppMetaTest extends TestCase
         new AppMeta('/path/to/app', 'prod', $compileDir, $tmpDir);
     }
 
-    /**
-     * A tmp dir merely nested under the compile dir is left to BakedPathGuard
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function allowsTmpDirNestedUnderCompileDir(): void
     {

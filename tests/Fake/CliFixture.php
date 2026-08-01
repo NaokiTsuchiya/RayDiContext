@@ -11,8 +11,6 @@ use function uniqid;
 /**
  * Working directory and error stream shared by the CLI test classes
  *
- * The Cli is left to the test to construct: it is the system under test, not part of the fixture.
- *
  * @internal
  */
 final class CliFixture
@@ -35,9 +33,7 @@ final class CliFixture
     /** @var non-empty-string File the CLI is pointed at instead of STDERR */
     public readonly string $errorFile;
 
-    /**
-     * Creates the working directory the CLI compiles into
-     */
+    /** Creates the working directory the CLI compiles into */
     public function __construct()
     {
         $this->baseDir = __DIR__ . '/../tmp/' . uniqid('cli_', more_entropy: true);
@@ -46,9 +42,7 @@ final class CliFixture
         $this->errorFile = "{$this->baseDir}/stderr.txt";
     }
 
-    /**
-     * Returns what the CLI wrote to its error stream
-     */
+    /** Returns what the CLI wrote to its error stream */
     public function stderr(): string
     {
         $written = file_get_contents($this->errorFile);
@@ -56,9 +50,7 @@ final class CliFixture
         return $written === false ? '' : $written;
     }
 
-    /**
-     * Removes the working directory
-     */
+    /** Removes the working directory */
     public function remove(): void
     {
         Fs::removeDir($this->baseDir);

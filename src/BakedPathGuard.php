@@ -24,17 +24,6 @@ use function sprintf;
 /**
  * Detects appDir and tmpDir literals baked into compiled scripts
  *
- * Paths bound with toInstance() are frozen into the compiled scripts, including every
- * path held by an object bound with toInstance(). Run this guard in CI to catch them
- * before a runtime-dependent path is baked into the image.
- *
- * The compile dir is baked into the image together with the scripts, so a literal that
- * is the compile dir itself — or a path inside it — is allowed. Anything else that
- * contains the appDir or tmpDir string is rejected, including a tmpDir nested under the
- * compile dir (a read-only compile dir can never host the writable tmp dir). The
- * comparison is a verbatim match against the meta strings; spelling variants such as
- * symlink-resolved paths are not recognized.
- *
  * @api
  */
 final class BakedPathGuard implements BakedPathGuardInterface
@@ -47,9 +36,7 @@ final class BakedPathGuard implements BakedPathGuardInterface
         private readonly array $extraNeedles = [],
     ) {}
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     public function __invoke(AppMeta $meta): void
     {
         $compileDir = $meta->compileDir;
@@ -126,7 +113,6 @@ final class BakedPathGuard implements BakedPathGuardInterface
         foreach ($this->extraNeedles as $needle) {
             $hasNeedle = $scanner->hasBakedPath($needle);
             if ($hasNeedle) {
-                // Named by position, never by value: printing one moves it into the CI log.
                 throw new BakedPathFound(sprintf(
                     'A configured literal was found in %s. '
                     . 'Bind runtime values through a provider instead of toInstance().',

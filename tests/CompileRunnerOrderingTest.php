@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingCompiler;
@@ -20,10 +19,6 @@ use function uniqid;
 
 /**
  * The order of the pipeline's steps, which is a guarantee in its own right
- *
- * Swapping the first two lines of run(), or wrapping the clean in a try/finally, leaves every
- * other test green while turning a mistyped context name into an emptied compile dir with
- * nothing written back into it. These cases pin the order down directly.
  */
 #[CoversClass(CompileRunner::class)]
 final class CompileRunnerOrderingTest extends TestCase
@@ -40,11 +35,7 @@ final class CompileRunnerOrderingTest extends TestCase
     /** Stands in for ray/compiler so the compile dir can be observed mid-run */
     private FakeRecordingCompiler $compiler;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws InvalidAppMeta
-     */
+    /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->baseDir = __DIR__ . '/tmp/' . uniqid('runner_order_', more_entropy: true);
@@ -56,19 +47,13 @@ final class CompileRunnerOrderingTest extends TestCase
         copy(self::SCRIPT, "{$this->meta->compileDir}/stale.php");
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     protected function tearDown(): void
     {
         Fs::removeDir($this->baseDir);
     }
 
-    /**
-     * An unknown context aborts with the compile dir untouched
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function resolvesTheContextBeforeEmptyingTheCompileDir(): void
     {
@@ -86,11 +71,7 @@ final class CompileRunnerOrderingTest extends TestCase
         }
     }
 
-    /**
-     * The compile dir is empty by the time the compiler is asked to write into it
-     *
-     * @throws ExceptionInterface
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function emptiesTheCompileDirBeforeCompiling(): void
     {

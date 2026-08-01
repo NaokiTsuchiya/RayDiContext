@@ -296,6 +296,15 @@ scripts `BakedPathGuard` scans, either.
 
 PHP 8.2 – 8.5, ray/di ^2.19, ray/compiler ^1.14
 
+## Development
+
+`phpunit.xml.dist` sets `failOnDeprecation="true"`. Combined with the PHP 8.5
+job in the CI matrix, a deprecation raised by `ray/di` or `ray/aop` under a
+newer PHP version can turn CI red with zero changes in this repository — if a
+Renovate PR or a new PHP minor suddenly fails for no apparent reason, check
+here first. If it happens, either add `#[WithoutErrorHandler]` to the
+affected test or relax `failOnDeprecation` for that PHP version only.
+
 ## Versioning
 
 While on 0.x, minor releases may include backwards-incompatible changes.

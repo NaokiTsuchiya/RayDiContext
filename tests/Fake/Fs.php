@@ -8,9 +8,11 @@ use FilesystemIterator;
 use SplFileInfo;
 
 use function chmod;
+use function copy;
 use function is_dir;
 use function is_executable;
 use function is_readable;
+use function mkdir;
 use function rmdir;
 use function unlink;
 
@@ -44,5 +46,23 @@ final class Fs
         }
 
         rmdir($dir);
+    }
+
+    /** Copies a directory recursively to a new absolute path, as an image build's COPY would */
+    public static function copyDir(string $source, string $destination): void
+    {
+        mkdir($destination, permissions: 0o755, recursive: true);
+
+        /** @var SplFileInfo $entry */
+        foreach (new FilesystemIterator($source, FilesystemIterator::SKIP_DOTS) as $entry) {
+            $target = "{$destination}/{$entry->getFilename()}";
+            $isDir = $entry->isDir();
+            if ($isDir) {
+                self::copyDir($entry->getPathname(), $target);
+                continue;
+            }
+
+            copy($entry->getPathname(), $target);
+        }
     }
 }

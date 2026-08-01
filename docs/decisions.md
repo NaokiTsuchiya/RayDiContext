@@ -70,7 +70,8 @@ tests/ProbeRoot.php:8:16: error[must-be-final]: Structural flaw in `NaokiTsuchiy
 The same probe under `NaokiTsuchiya\RayDiContext\Support` is not reported — `on =
 'NaokiTsuchiya\RayDiContext\*'` matches one namespace segment, not a subtree. That is a way past the
 rule, not a licence to use it. Shared setup goes through the final helpers in `tests/Support/`:
-static utilities (`Fs`, `PermissionBits`, `PhpProcess`) and per-test objects (`CliFixture`).
+static utilities (`Fs`, `PermissionBits`, `PhpProcess`) and per-test objects (`CliFixture`,
+`AppDirFixture`).
 
 **Would change it:** a second `not-on` entry naming a base class, worth adding only for a case that
 earns its place beside `AbstractContext`.

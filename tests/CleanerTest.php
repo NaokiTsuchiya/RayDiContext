@@ -9,6 +9,7 @@ use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
+use NaokiTsuchiya\RayDiContext\Fake\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -184,6 +185,8 @@ final class CleanerTest extends TestCase
     #[Test]
     public function rejectsAnUnreadableDirectory(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         foreach ([0o005, 0o405] as $mode) {
             $compileDir = "{$this->baseDir}/di_root_{$mode}";
             mkdir($compileDir, permissions: 0o700, recursive: true);

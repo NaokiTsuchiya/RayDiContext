@@ -79,7 +79,7 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
         $this->expectException(ScriptNotReadable::class);
         $this->expectExceptionMessage($link);
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
     }
 
     /**
@@ -97,6 +97,6 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
 
         $this->expectException(BakedPathFound::class);
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
     }
 }

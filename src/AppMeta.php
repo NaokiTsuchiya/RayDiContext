@@ -59,8 +59,8 @@ final readonly class AppMeta
      * @param string $compileDir Read-only DI script directory baked into the image
      * @param string $tmpDir     Runtime-writable directory, never baked
      *
-     * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, or appDir is
-     *                        not an absolute path.
+     * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, appDir is not an
+     *                        absolute path, or compileDir and tmpDir are the same directory.
      */
     public function __construct(string $appDir, string $context, string $compileDir, string $tmpDir)
     {
@@ -84,10 +84,23 @@ final readonly class AppMeta
             throw new InvalidAppMeta('AppMeta::$tmpDir must not be empty');
         }
 
+        $normalizedCompileDir = self::trimSlash($compileDir);
+        $normalizedTmpDir = self::trimSlash($tmpDir);
+
+        // The one shape BakedPathGuard cannot see: every tmpDir occurrence is also a compileDir
+        // occurrence, so its check passes on the scripts it exists to reject.
+        if ($normalizedCompileDir === $normalizedTmpDir) {
+            throw new InvalidAppMeta(sprintf(
+                'AppMeta::$compileDir and AppMeta::$tmpDir must be different directories, both are: "%s". '
+                . 'The compile dir is read-only at runtime and cannot host the writable tmp dir.',
+                $normalizedCompileDir,
+            ));
+        }
+
         $this->appDir = self::trimSlash($appDir);
         $this->context = $context;
-        $this->compileDir = self::trimSlash($compileDir);
-        $this->tmpDir = self::trimSlash($tmpDir);
+        $this->compileDir = $normalizedCompileDir;
+        $this->tmpDir = $normalizedTmpDir;
     }
 
     /**

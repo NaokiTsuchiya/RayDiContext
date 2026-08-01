@@ -9,106 +9,34 @@ declare(strict_types=1);
  * Usage:
  *   php bin/ray-di-compile <bootstrap> <appDir> <context> [compileDir] [tmpDir]
  *
- * appDir must be an absolute path to an existing directory. AppMeta::fromAppDir() rejects
- * a relative path such as "." outright rather than resolving it, so this CLI checks
- * existence itself as a usage error before compiling.
+ * Everything but the autoloader lookup lives in NaokiTsuchiya\RayDiContext\Cli; the lookup
+ * cannot move there, since it is what makes that class loadable.
  *
- * compileDir/tmpDir default to the conventional "{appDir}/var/di|tmp/{context}" paths
- * when omitted (or passed as ""). This CLI does not read the environment itself; pass
- * env values in explicitly if you want them, e.g.:
- *
- *   php bin/ray-di-compile bootstrap.php "$(pwd)" prod "$APP_COMPILE_DIR" "$APP_TMP_DIR"
- *
- * The bootstrap file is a PHP script that returns a ContextProviderInterface,
- * for example:
- *
- *   <?php
- *   use NaokiTsuchiya\RayDiContext\MapContextProvider;
- *
- *   return new MapContextProvider([
- *       'prod' => App\ProdContext::class,
- *       'dev'  => App\DevContext::class,
- *   ]);
- *
- * Exit status:
- *   0  the context compiled successfully
- *   1  the compile failed; the exception message is written to STDERR without a stack
- *      trace
- *   2  usage error: wrong number of arguments, appDir is not an absolute existing
- *      directory, bootstrap file not found, or a bootstrap that does not return a
- *      ContextProviderInterface
+ * The bootstrap file is a PHP script that returns a ContextProviderInterface. See the README
+ * for the argument and exit-status contract (0 compiled, 1 the compile failed, 2 usage error).
  */
 
-use NaokiTsuchiya\RayDiContext\AppMeta;
-use NaokiTsuchiya\RayDiContext\CompileRunner;
-use NaokiTsuchiya\RayDiContext\ContextProviderInterface;
-use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
+use NaokiTsuchiya\RayDiContext\Cli;
 
-exit((static function (array $argv): int {
+(static function (): void {
     foreach ([
-        __DIR__ . '/../vendor/autoload.php',        // installed as the root package
-        __DIR__ . '/../../../autoload.php',          // installed as a dependency (vendor/bin)
+        $GLOBALS['_composer_autoload_path'] ?? null, // set by Composer's bin proxy
+        __DIR__ . '/../vendor/autoload.php', // installed as the root package
+        __DIR__ . '/../../../autoload.php', // installed as a dependency (vendor/bin)
     ] as $autoload) {
-        if (is_file($autoload)) {
+        if (is_string($autoload) && is_file($autoload)) {
             require $autoload;
 
-            break;
+            return;
         }
     }
+})();
 
-    if (! class_exists(CompileRunner::class)) {
-        fwrite(STDERR, "Could not locate the Composer autoloader. Run 'composer install' first.\n");
+if (!class_exists(Cli::class)) {
+    fwrite(STDERR, "Could not locate the Composer autoloader. Run 'composer install' first.\n");
 
-        return 1;
-    }
+    exit(1);
+}
 
-    $usage = "Usage: php bin/ray-di-compile <bootstrap> <appDir> <context> [compileDir] [tmpDir]\n";
-
-    [, $bootstrap, $appDir, $context, $compileDir, $tmpDir] = $argv + [null, null, null, null, null, null];
-    if ($bootstrap === null || $appDir === null || $context === null) {
-        fwrite(STDERR, $usage);
-
-        return 2;
-    }
-
-    $argumentCount = count($argv) - 1;
-    if ($argumentCount > 5) {
-        fwrite(STDERR, sprintf("Too many arguments: at most 5 are accepted, got %d.\n%s", $argumentCount, $usage));
-
-        return 2;
-    }
-
-    if (! is_file($bootstrap)) {
-        fwrite(STDERR, sprintf("Bootstrap file not found: %s\n", $bootstrap));
-
-        return 2;
-    }
-
-    if (! is_dir($appDir)) {
-        fwrite(STDERR, sprintf("appDir does not exist or is not a directory: %s\n", $appDir));
-
-        return 2;
-    }
-
-    $provider = require $bootstrap;
-    if (! $provider instanceof ContextProviderInterface) {
-        fwrite(STDERR, sprintf(
-            "Bootstrap file %s must return a %s instance.\n",
-            $bootstrap,
-            ContextProviderInterface::class,
-        ));
-
-        return 2;
-    }
-
-    try {
-        $meta = AppMeta::fromAppDir($appDir, $context, $compileDir ?: null, $tmpDir ?: null);
-        (new CompileRunner($provider))->run($meta);
-    } catch (ExceptionInterface $e) {
-        fwrite(STDERR, $e->getMessage() . "\n");
-
-        return 1;
-    }
-
-    return 0;
-})($argv));
+/** @var list<string> $argv */
+exit((new Cli())($argv));

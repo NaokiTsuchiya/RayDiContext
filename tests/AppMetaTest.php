@@ -88,4 +88,35 @@ final class AppMetaTest extends TestCase
 
         new AppMeta($appDir, 'prod', '/opt/di', '/tmp/rw');
     }
+
+    /**
+     * compileDir and tmpDir must be different directories, trailing slashes aside
+     *
+     * @throws InvalidAppMeta
+     */
+    #[TestWith(['/opt/di', '/opt/di'])]
+    #[TestWith(['/opt/di/', '/opt/di'])]
+    #[TestWith(['/opt/di', '/opt/di///'])]
+    #[Test]
+    public function rejectsCompileDirEqualToTmpDir(string $compileDir, string $tmpDir): void
+    {
+        $this->expectException(InvalidAppMeta::class);
+        $this->expectExceptionMessage('must be different directories');
+
+        new AppMeta('/path/to/app', 'prod', $compileDir, $tmpDir);
+    }
+
+    /**
+     * A tmp dir merely nested under the compile dir is left to BakedPathGuard
+     *
+     * @throws InvalidAppMeta
+     */
+    #[Test]
+    public function allowsTmpDirNestedUnderCompileDir(): void
+    {
+        $meta = new AppMeta('/path/to/app', 'prod', '/opt/di', '/opt/di/tmp');
+
+        static::assertSame('/opt/di', $meta->compileDir);
+        static::assertSame('/opt/di/tmp', $meta->tmpDir);
+    }
 }

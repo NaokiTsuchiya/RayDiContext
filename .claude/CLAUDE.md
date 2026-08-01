@@ -59,46 +59,61 @@ bootstrap.php  →  ContextProviderInterface
                          │
 AppMeta::fromAppDir(appDir, context, compileDir?, tmpDir?)
                          │
-                    CompileRunner::run($meta)
+              Cli → CompileRunner::run($meta)
                          │
         ┌────────────────┼─────────────────────────────┐
         │                │                              │
-  provider->get($meta)  Cleaner($meta)         Ray\Compiler\Compiler
-  → ContextInterface    (guarded, empties/     ->compile($context(), compileDir)
-                         creates compileDir)            │
-                                                  BakedPathGuard($compileDir, $meta)
-                                                  (scans every *.php via BakedPathScanner)
+  provider->get($meta)  Cleaner($meta)         ScriptCompilerInterface
+  → ContextInterface    (guarded, empties/     (default RayScriptCompiler
+                         creates compileDir)    → Ray\Compiler\Compiler)
+                                                         │
+                                                  BakedPathGuardInterface($meta)
+                                                  (default BakedPathGuard: scans
+                                                   every *.php via BakedPathScanner)
                                                          │
                                                   PermissionNormalizer($compileDir)
                                                   (0600 → 0644 files / 0755 dirs)
 ```
 
-`CompileRunner::run()` (`src/CompileRunner.php`) is the whole pipeline in five lines — read it first
-when tracing behavior. Each step's guard runs *before* its destructive/expensive work, in this order:
+`CompileRunner::run()` (`src/CompileRunner.php`) is the whole pipeline — read it first when tracing
+behavior. Each step's guard runs *before* its destructive/expensive work, in this order:
 
 1. **`Cleaner`** (`src/Cleaner.php`) empties `compileDir` (or creates it) before every compile, so
    stale scripts from renamed/removed classes never survive a recompile. It asks a
    `CompileDirGuardInterface` (default `CompileDirGuard`) first — this is what stops an
    `APP_COMPILE_DIR` typo from recursively deleting the app directory or the filesystem root.
    An app that knows more about its own layout can inject a stricter guard.
-2. **`Ray\Compiler\Compiler`** (external, from `ray/compiler`) does the actual compilation of the
-   context's module into `compileDir`.
-3. **`BakedPathGuard`** (`src/BakedPathGuard.php`, using `src/BakedPathScanner.php`) scans every
-   compiled `*.php` script for a literal occurrence of `$meta->appDir` or `$meta->tmpDir`. This is
-   the guard against the one real footgun in Ray.Di: **binding `AppMeta` (or anything holding one of
-   these paths) with `toInstance()` freezes that value into the compiled script.** A path baked in at
-   build time silently diverges from the path that exists at runtime. The scanner matches on
-   path-segment boundaries (so `/app` doesn't false-positive inside `/appdata`) and exempts
-   occurrences that lie entirely inside a `compileDir` literal (which *is* meant to be baked in).
+2. **`ScriptCompilerInterface`** (`src/ScriptCompilerInterface.php`, default `RayScriptCompiler`)
+   does the actual compilation of the context's module into `compileDir`. `RayScriptCompiler` is a
+   one-line delegate to `ray/compiler`; the seam exists so the pipeline's *ordering* can be asserted
+   directly (see `tests/CompileRunnerOrderingTest.php`) instead of inferred from a real compile.
+3. **`BakedPathGuardInterface`** (`src/BakedPathGuardInterface.php`, default `BakedPathGuard`, using
+   `src/BakedPathScanner.php`) scans every compiled `*.php` script for a literal occurrence of
+   `$meta->appDir` or `$meta->tmpDir`. This is the guard against the one real footgun in Ray.Di:
+   **binding `AppMeta` (or anything holding one of these paths) with `toInstance()` freezes that
+   value into the compiled script.** A path baked in at build time silently diverges from the path
+   that exists at runtime. The scanner matches on path-segment boundaries (so `/app` doesn't
+   false-positive inside `/appdata`) and exempts occurrences that lie entirely inside a `compileDir`
+   literal (which *is* meant to be baked in). Only those two paths are known here — an app passes
+   `$extraNeedles` (or its own implementation) for anything else that must not ship, e.g. a secret.
+   A rejection never echoes an extra needle's value, only the script it was found in.
 4. **`PermissionNormalizer`** (`src/PermissionNormalizer.php`, `@internal`) fixes a `ray/compiler`
    quirk: it writes every script via `tempnam()`, which is always `0600` regardless of umask. That
    leaves the whole compile dir owner-only, which breaks the build-as-root/run-as-non-root pattern.
    This step normalizes files to `0644` and directories to `0755`, skipping symlinks and anything
    that already grants the needed world-bit (so it doesn't fight a pre-configured volume). Only runs
-   after the `BakedPathGuard` passes — a rejected compile leaves scripts exactly as `ray/compiler` wrote them.
+   after the guard passes.
 
-Only `Cleaner`'s guard runs *before* compilation; `BakedPathGuard` and `PermissionNormalizer`
+Only `Cleaner`'s guard runs *before* compilation; the baked-path guard and `PermissionNormalizer`
 necessarily run *after*, since they inspect what was just compiled.
+
+**A failed compile leaves `compileDir` empty.** Steps 2–3 run inside a `try`/`finally` that re-runs
+the `Cleaner` unless the guard passed, so scripts the guard refused never survive for the next
+`COPY` to bake into an image. (Before this, the only thing making them unusable was that step 4
+hadn't run, leaving them `0600` — a property of how `ray/compiler` happens to write, and the very
+dependency `PermissionNormalizer` exists to shed.) The cleanup is done with a flag and `finally`
+rather than `catch`/rethrow, because a rethrown `$e` types as `ExceptionInterface` and would widen
+`run()`'s precise `@throws` list back to "anything this package throws".
 
 ### Runtime resolution (no compile step)
 
@@ -124,17 +139,35 @@ README's exit-status/environment-variable discussion if you're touching anything
 - **`CompileDirGuardInterface`** (`src/CompileDirGuardInterface.php`) — only needed if the bundled
   `CompileDirGuard`'s two checks (filesystem root, compile dir containing the app dir) aren't
   strict enough for an app's layout.
+- **`BakedPathGuardInterface`** (`src/BakedPathGuardInterface.php`) — the same idea on the
+  verification side. The bundled guard only knows `appDir`/`tmpDir`; an app knows its own secrets
+  and host names. For the common case pass `new BakedPathGuard([...$needles])` rather than
+  reimplementing; replace the whole thing only if the scanning strategy itself needs to change.
+- **`ScriptCompilerInterface`** (`src/ScriptCompilerInterface.php`) — rarely implemented by an app.
+  It exists mainly so tests can substitute a fake and observe the pipeline mid-run
+  (`tests/Fake/FakeRecordingCompiler.php`).
 
 ### `AppMeta` (`src/AppMeta.php`)
 
 `final readonly class` — the value object threaded through everything above. Two constructors:
 
-- The public constructor takes all four fields verbatim (only non-empty is enforced) — `$context` has
-  no path-safety restriction here since it's just a lookup key.
-- `AppMeta::fromAppDir()` is the real entry point: resolves `$appDir` with `realpath()` (so a relative
-  path never gets baked as a literal and matched everywhere by `BakedPathScanner`), rejects `..` in
-  `$context` (which *does* get interpolated into a path here), and defaults `compileDir`/`tmpDir` to
-  `{appDir}/var/di/{context}` / `{appDir}/var/tmp/{context}` when not given explicitly.
+- The public constructor enforces every invariant that holds regardless of entry point: all four
+  fields non-empty, `$appDir` absolute, trailing slashes trimmed, and **`compileDir` != `tmpDir`**.
+  `$context` has no path-safety restriction here since it's just a lookup key.
+- `AppMeta::fromAppDir()` adds only what it needs for the paths it builds: it rejects a `$context`
+  that isn't a safe path segment (it *does* get interpolated into a path here) and defaults
+  `compileDir`/`tmpDir` to `{appDir}/var/di/{context}` / `{appDir}/var/tmp/{context}`.
+
+**`fromAppDir()` does not call `realpath()`** — it rejects a relative `$appDir` outright instead.
+That's deliberate (#53): `BakedPathScanner` compares strings verbatim, so resolving symlinks here
+would let the guard fail open when the resolved spelling differs from the one the running app binds.
+Don't "fix" this by resolving the path.
+
+`compileDir === tmpDir` is refused because it's the one shape `BakedPathGuard` cannot see: the guard
+allows a needle occurrence inside a `compileDir` literal, so when the two strings are equal, every
+`tmpDir` hit is also a `compileDir` hit and the check silently passes. A `tmpDir` merely *nested*
+under `compileDir` extends past the allowed literal and is still caught, so that one is left to the
+guard rather than refused here.
 
 **Neither this package nor `bin/ray-di-compile` reads environment variables.** If a deployment sets
 `APP_COMPILE_DIR`/`APP_TMP_DIR`, the caller (Dockerfile, bootstrap script) must read them and pass
@@ -158,8 +191,17 @@ This is a public contract (README says "gate your CI on it") — preserve it if 
 | Code | Meaning |
 |---|---|
 | `0` | Compiled successfully |
-| `1` | Compile failed, or `appDir` doesn't exist — every package exception's message goes to STDERR as one line, no stack trace |
-| `2` | Usage error — wrong arg count, missing bootstrap file, or a bootstrap that doesn't return a `ContextProviderInterface` |
+| `1` | Compile failed — **anything** thrown while requiring the bootstrap or compiling, not just this package's exceptions. A missing binding surfaces as `Ray\Di\Exception\Unbound`; a foreign throwable is prefixed with its class name. One line to STDERR, never a stack trace. Also covers "autoloader not found" |
+| `2` | Usage error — wrong arg count, missing bootstrap file, `appDir` doesn't exist, or a bootstrap that doesn't return a `ContextProviderInterface` |
+
+The logic lives in **`src/Cli.php`** (`@internal`), not in the bin script. That's not cosmetic: a
+bin script has no `.php` extension, so mago's source glob never discovers it — **adding `bin` to
+`[source] paths` does nothing**. Pointed at the file explicitly, the old script reported 26 analyzer
+and 6 lint issues. `bin/ray-di-compile` now holds only the autoloader lookup, which can't move
+(it has to run before `Cli` is loadable). Two rules make that remainder permanently unfixable rather
+than merely unfixed — `no-inline` fires on the shebang every executable PHP script needs, and
+`no-global` on the `$GLOBALS['_composer_autoload_path']` lookup — so only `mago fmt`, which handles
+both, is wired into `composer fmt` for it.
 
 ## Tests
 
@@ -181,6 +223,20 @@ This is a public contract (README says "gate your CI on it") — preserve it if 
 - Coverage is effectively required at 100%: uncoverable lines (unreachable except by a race, or by a
   filesystem permission state that can't be reproduced portably) are marked
   `// @codeCoverageIgnoreStart/End` with a comment explaining *why*, not just that it's excluded.
+  **A new `src/` class needs its own test tagged `#[CoversClass(...)]` even if existing tests already
+  execute every line of it** — PHPUnit attributes coverage only to the classes a test declares, so
+  otherwise those lines count for nothing and the floor breaks.
+- **Run the suite as a non-root user.** Nine tests set a directory unreadable and assert the package
+  reports it; root ignores permission bits (`CAP_DAC_OVERRIDE`), so they can't hold. They now
+  `markTestSkipped()` when a probe finds the bits aren't enforced — `tests/Fake/PermissionBits.php`,
+  which measures the capability rather than reading the uid (that would need `ext-posix`, declined in
+  #14, and would still miss a non-root process holding the capability). As root you get
+  `143 tests, 9 skipped, OK`; as a non-root user, `143 tests, 0 skipped`. CI is non-root on purpose —
+  don't move the `test` job into a `container:`.
+- `CompileRunnerTest::resolvesFromReadOnlyCompileDir` is the *opposite* case and deliberately does
+  **not** skip: its real assertion is a per-file `sha256` snapshot that never depended on the mode.
+  The `chmod 0555` is belt over braces. (It used to snapshot size + mtime, which missed a same-length
+  rewrite inside one second, since mtime is second-granular.)
 
 ## CI (`.github/workflows/ci.yml`)
 
@@ -197,8 +253,24 @@ single required status check — the matrix can grow/shrink without touching bra
   are `final` and one-per-file as described above.
 - Every builtin function used is explicitly `use function`-imported (no fully-qualified `\strlen(...)`
   calls) — `mago`'s `no-fully-qualified-global-function` rule enforces this.
-- Doc comments explain the *why* (a rejected shape, a workaround for an upstream quirk, a security
-  boundary) rather than restating the method name — follow that tone rather than writing
-  what-it-does comments.
-- `@api` marks the public surface (everything under `src/` except `PermissionNormalizer`, which is
-  `@internal` — a workaround for a `ray/compiler` quirk, not something to build on).
+- **Write comments for the file, not for the review.** This is the failure mode here, and it is
+  specifically an AI-authored one: comment aimed at whoever is reading the diff *right now* —
+  justifying the change, narrating what the code used to do, answering an objection before it is
+  raised. It reads as thorough at review time and as noise a month later. PR #69 collected
+  seventeen "不要"/"削除" on exactly that. **Before keeping a comment, ask whether it still earns
+  its place for a reader with no diff, no PR and no memory of the change.**
+  - **Out**: "previously…", "used to…", "left uncaught it escaped…", "kept to one line so that…",
+    and anything the signature, the type or the next line already says. It goes in the commit
+    message, which is where someone looking for the history will be.
+  - **In**: a constraint not visible from the code — an upstream quirk, an OS behaviour, a security
+    boundary — and a shape a future maintainer would otherwise "fix" back. `fromAppDir()`'s absent
+    `realpath()` is the model: one line, names the issue, stops the change from being re-made.
+  - Length follows from that: an inline comment is one line, a docblock is a summary plus at most
+    two lines of prose. Needing more means it was written for the review.
+
+  Nothing enforces this. `mago`'s only comment rules are `no-empty-comment`, `no-hash-comment`,
+  `valid-docblock` and `missing-docs`, none of which looks at length or audience, and a CI
+  line-count would fail on blocks already on `main`. It is a write-time and review-time check.
+- `@api` marks the public surface — everything under `src/` except two. `PermissionNormalizer` is
+  `@internal` (a workaround for a `ray/compiler` quirk, not something to build on) and so is `Cli`
+  (the *exit-status contract* is public; the class carrying it is not, so it stays free to change).

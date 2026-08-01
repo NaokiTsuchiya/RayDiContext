@@ -27,10 +27,9 @@ use SplFileInfo;
 
 use function chmod;
 use function file_put_contents;
-use function filemtime;
 use function fileperms;
-use function filesize;
 use function glob;
+use function hash_file;
 use function is_dir;
 use function ksort;
 use function mkdir;
@@ -200,12 +199,12 @@ final class CompileRunnerTest extends TestCase
     }
 
     /**
-     * The guard runs after compilation and rejects baked runtime paths
+     * A rejected compile names the baked path and leaves the compile dir empty
      *
      * @throws RuntimeException
      */
     #[Test]
-    public function runGuardsBakedPathAfterCompile(): void
+    public function runEmptiesTheCompileDirWhenTheGuardRejects(): void
     {
         $bakedMeta = new AppMeta($this->meta->appDir, 'baked', $this->meta->compileDir, $this->meta->tmpDir);
 
@@ -214,8 +213,8 @@ final class CompileRunnerTest extends TestCase
             static::fail('BakedPathFound was not thrown');
         } catch (BakedPathFound $e) {
             static::assertStringContainsString($this->meta->appDir, $e->getMessage());
-            // The compiled scripts exist: compilation preceded the guard
-            static::assertNotSame([], glob("{$this->meta->compileDir}/*.php"));
+            // Not just the scripts: nothing at all is left behind, _bindings.log included
+            static::assertSame([], glob("{$this->meta->compileDir}/*"));
         }
     }
 
@@ -244,9 +243,10 @@ final class CompileRunnerTest extends TestCase
     }
 
     /**
-     * Returns file names with size and mtime for change detection
+     * Returns a content hash per file: mtime is second-granular, so a same-length rewrite
+     * inside one second would otherwise go unnoticed
      *
-     * @return array<string, list{int, int}>
+     * @return array<string, string>
      *
      * @throws RuntimeException
      */
@@ -256,7 +256,8 @@ final class CompileRunnerTest extends TestCase
         /** @var SplFileInfo $entry */
         foreach (new FilesystemIterator($dir) as $entry) {
             $pathname = $entry->getPathname();
-            $files[$pathname] = [(int) filesize($pathname), (int) filemtime($pathname)];
+            $hash = hash_file('sha256', $pathname);
+            $files[$pathname] = $hash === false ? '' : $hash;
         }
 
         ksort($files);

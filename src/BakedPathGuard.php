@@ -37,19 +37,22 @@ use function sprintf;
  *
  * @api
  */
-final class BakedPathGuard
+final class BakedPathGuard implements BakedPathGuardInterface
 {
     /**
-     * @param non-empty-string $compileDir
-     *
-     * @throws CompileDirNotFound When the compile dir is not an existing directory.
-     * @throws CompileDirNotReadable When the compile dir, or a directory below it, cannot be
-     *                                listed or traversed.
-     * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
-     * @throws ScriptNotReadable When a compiled script cannot be read.
+     * @param list<non-empty-string> $extraNeedles Literals this application knows must not ship, a
+     *                                            secret or a host name. Never echoed in a rejection
      */
-    public function __invoke(string $compileDir, AppMeta $meta): void
+    public function __construct(
+        private readonly array $extraNeedles = [],
+    ) {}
+
+    /**
+     * {@inheritDoc}
+     */
+    public function __invoke(AppMeta $meta): void
     {
+        $compileDir = $meta->compileDir;
         $isDir = is_dir($compileDir);
         if (!$isDir) {
             throw new CompileDirNotFound(sprintf('Compile dir is not an existing directory: "%s"', $compileDir));
@@ -115,6 +118,18 @@ final class BakedPathGuard
                 throw new BakedPathFound(sprintf(
                     'Baked path "%s" found in %s. Bind runtime paths through a provider instead of toInstance().',
                     $bakedPath,
+                    $path,
+                ));
+            }
+        }
+
+        foreach ($this->extraNeedles as $needle) {
+            $hasNeedle = $scanner->hasBakedPath($needle);
+            if ($hasNeedle) {
+                // Named by position, never by value: printing one moves it into the CI log.
+                throw new BakedPathFound(sprintf(
+                    'A configured literal was found in %s. '
+                    . 'Bind runtime values through a provider instead of toInstance().',
                     $path,
                 ));
             }

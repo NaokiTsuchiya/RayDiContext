@@ -10,6 +10,7 @@ use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
+use NaokiTsuchiya\RayDiContext\Fake\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -68,7 +69,7 @@ final class BakedPathGuardRejectionTest extends TestCase
     public function rejectsAMissingCompileDir(): void
     {
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotFound was not thrown');
         } catch (CompileDirNotFound $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
@@ -89,7 +90,7 @@ final class BakedPathGuardRejectionTest extends TestCase
         file_put_contents($this->meta->compileDir, data: '');
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotFound was not thrown');
         } catch (CompileDirNotFound $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
@@ -111,11 +112,13 @@ final class BakedPathGuardRejectionTest extends TestCase
     #[Test]
     public function rejectsACompileDirItCannotList(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         mkdir($this->meta->compileDir, permissions: 0o700, recursive: true);
         chmod($this->meta->compileDir, permissions: 0o005);
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotReadable was not thrown');
         } catch (CompileDirNotReadable $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
@@ -137,12 +140,14 @@ final class BakedPathGuardRejectionTest extends TestCase
     #[Test]
     public function rejectsACompileDirItCannotTraverse(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         mkdir($this->meta->compileDir, permissions: 0o700, recursive: true);
         file_put_contents("{$this->meta->compileDir}/a.php", data: '<?php return new stdClass();');
         chmod($this->meta->compileDir, permissions: 0o405);
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotReadable was not thrown');
         } catch (CompileDirNotReadable $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());
@@ -162,12 +167,14 @@ final class BakedPathGuardRejectionTest extends TestCase
     #[Test]
     public function rejectsANestedDirectoryItCannotList(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         $nested = "{$this->meta->compileDir}/nested";
         mkdir($nested, permissions: 0o700, recursive: true);
         chmod($nested, permissions: 0o005);
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('CompileDirNotReadable was not thrown');
         } catch (CompileDirNotReadable $e) {
             static::assertStringContainsString($this->meta->compileDir, $e->getMessage());

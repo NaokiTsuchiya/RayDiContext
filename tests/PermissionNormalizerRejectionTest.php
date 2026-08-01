@@ -8,6 +8,7 @@ use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
+use NaokiTsuchiya\RayDiContext\Fake\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -119,6 +120,8 @@ final class PermissionNormalizerRejectionTest extends TestCase
     #[Test]
     public function rejectsACompileDirItCannotList(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         chmod($this->compileDir, permissions: 0o005);
 
         try {
@@ -141,6 +144,8 @@ final class PermissionNormalizerRejectionTest extends TestCase
     #[Test]
     public function rejectsANestedDirectoryItCannotList(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         $nested = "{$this->compileDir}/nested";
         mkdir($nested, permissions: 0o700);
         chmod($nested, permissions: 0o005);
@@ -169,6 +174,8 @@ final class PermissionNormalizerRejectionTest extends TestCase
     #[Test]
     public function rejectsACompileDirItCannotTraverse(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         $script = "{$this->compileDir}/script.php";
         copy(self::SCRIPT, $script);
         chmod($script, permissions: 0o600);
@@ -197,6 +204,8 @@ final class PermissionNormalizerRejectionTest extends TestCase
     #[Test]
     public function rejectsANestedDirectoryItCannotTraverse(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         $nested = "{$this->compileDir}/nested";
         mkdir($nested, permissions: 0o700);
         $inner = "{$nested}/inner.php";

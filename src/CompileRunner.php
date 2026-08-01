@@ -12,7 +12,6 @@ use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
 use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
-use Ray\Compiler\Compiler;
 
 /**
  * Compiles the context of an env into the compile dir
@@ -23,23 +22,23 @@ final class CompileRunner
 {
     /**
      * @param ContextProviderInterface $contextProvider Application env-to-context mapping
-     * @param Cleaner                  $cleaner         Recreates the compile dir before compiling
-     * @param BakedPathGuard           $guard           Verifies the compiled scripts afterwards
+     * @param CompileDirGuardInterface $compileDirGuard Rejects a compile dir that must not be emptied
+     * @param BakedPathGuardInterface  $bakedPathGuard  Verifies the compiled scripts afterwards
+     * @param ScriptCompilerInterface  $compiler        Writes the scripts
      */
     public function __construct(
         private readonly ContextProviderInterface $contextProvider,
-        private readonly Cleaner $cleaner = new Cleaner(),
-        private readonly BakedPathGuard $guard = new BakedPathGuard(),
+        private readonly CompileDirGuardInterface $compileDirGuard = new CompileDirGuard(),
+        private readonly BakedPathGuardInterface $bakedPathGuard = new BakedPathGuard(),
+        private readonly ScriptCompilerInterface $compiler = new RayScriptCompiler(),
     ) {}
 
     /**
      * Cleans the compile dir, compiles the context module, guards against baked paths,
      * then normalizes the permissions of what was written
      *
-     * Only a compile that passed the guard is normalized: a rejected one leaves nothing
-     * to run, so its scripts stay as Ray.Compiler wrote them. The normalizer is built
-     * here rather than injected: it is a fix for how Ray.Compiler writes, not a policy
-     * an application chooses.
+     * A rejected compile leaves the compile dir empty, so scripts the guard refused cannot be
+     * baked into an image by a later COPY.
      *
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
@@ -52,10 +51,24 @@ final class CompileRunner
      */
     public function run(AppMeta $meta): void
     {
+        // Resolved before the cleaner runs, so an unknown context leaves the compile dir intact.
         $context = $this->contextProvider->get($meta);
-        ($this->cleaner)($meta);
-        (new Compiler())->compile($context(), $meta->compileDir);
-        ($this->guard)($meta->compileDir, $meta);
+        $cleaner = new Cleaner($this->compileDirGuard);
+        $cleaner($meta);
+
+        // A flag and finally rather than catch-and-rethrow: a rethrow types as the marker
+        // interface and would widen the precise @throws list above.
+        $guarded = false;
+        try {
+            $this->compiler->compile($context(), $meta->compileDir);
+            ($this->bakedPathGuard)($meta);
+            $guarded = true;
+        } finally {
+            if (!$guarded) {
+                $cleaner($meta);
+            }
+        }
+
         (new PermissionNormalizer())($meta->compileDir);
     }
 }

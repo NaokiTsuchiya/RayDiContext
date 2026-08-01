@@ -223,6 +223,6 @@ final class AppMetaFromAppDirTest extends TestCase
 
         $this->expectException(BakedPathFound::class);
 
-        (new BakedPathGuard())($meta->compileDir, $meta);
+        (new BakedPathGuard())($meta);
     }
 }

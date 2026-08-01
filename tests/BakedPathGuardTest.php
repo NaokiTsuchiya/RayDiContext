@@ -9,6 +9,7 @@ use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
+use NaokiTsuchiya\RayDiContext\Fake\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -27,7 +28,7 @@ final class BakedPathGuardTest extends TestCase
     /** Stands in for a compiled script whose content is irrelevant to the test */
     private const SCRIPT = __DIR__ . '/Fixture/script.php';
 
-    /** Per-test working directory */
+    /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
     /** Meta whose tmp dir lives outside the app dir */
@@ -70,7 +71,7 @@ final class BakedPathGuardTest extends TestCase
     {
         file_put_contents("{$this->meta->compileDir}/clean.php", data: '<?php return new stdClass();');
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
 
         $this->expectNotToPerformAssertions();
     }
@@ -86,7 +87,7 @@ final class BakedPathGuardTest extends TestCase
         file_put_contents("{$this->meta->compileDir}/baked.php", "<?php return '{$this->meta->appDir}/src/Index.php';");
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('BakedPathFound was not thrown');
         } catch (BakedPathFound $e) {
             static::assertStringContainsString($this->meta->appDir, $e->getMessage());
@@ -107,7 +108,7 @@ final class BakedPathGuardTest extends TestCase
 
         $this->expectException(BakedPathFound::class);
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
     }
 
     /**
@@ -124,7 +125,7 @@ final class BakedPathGuardTest extends TestCase
 
         $this->expectException(BakedPathFound::class);
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
     }
 
     /**
@@ -138,7 +139,7 @@ final class BakedPathGuardTest extends TestCase
     {
         file_put_contents("{$this->meta->compileDir}/script-dir.php", "<?php return '{$this->meta->compileDir}';");
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
 
         $this->expectNotToPerformAssertions();
     }
@@ -154,7 +155,7 @@ final class BakedPathGuardTest extends TestCase
     {
         file_put_contents("{$this->meta->compileDir}/_bindings.log", "toInstance('{$this->meta->appDir}')");
 
-        ($this->guard)($this->meta->compileDir, $this->meta);
+        ($this->guard)($this->meta);
 
         $this->expectNotToPerformAssertions();
     }
@@ -172,12 +173,14 @@ final class BakedPathGuardTest extends TestCase
     #[Test]
     public function throwsWhenScriptCannotBeRead(): void
     {
+        PermissionBits::skipUnlessEnforced($this->baseDir);
+
         $unreadable = "{$this->meta->compileDir}/unreadable.php";
         copy(self::SCRIPT, $unreadable);
         chmod($unreadable, permissions: 0o000);
 
         try {
-            ($this->guard)($this->meta->compileDir, $this->meta);
+            ($this->guard)($this->meta);
             static::fail('ScriptNotReadable was not thrown');
         } catch (ScriptNotReadable $e) {
             static::assertStringContainsString($unreadable, $e->getMessage());

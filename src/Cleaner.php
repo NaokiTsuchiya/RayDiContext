@@ -32,7 +32,7 @@ use function unlink;
  * by a CompileDirGuardInterface first: the whole meta is taken rather than a bare path
  * so the guard can compare the compile dir against the app dir.
  *
- * @api
+ * @internal Built by CompileRunner; an application's knob is CompileDirGuardInterface
  */
 final class Cleaner
 {

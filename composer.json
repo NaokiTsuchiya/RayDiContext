@@ -40,7 +40,7 @@
         "lint": "mago lint --minimum-fail-level note",
         "analyze": "mago analyze",
         "guard": "mago guard",
-        "fmt": "mago fmt --check",
+        "fmt": ["mago fmt --check", "mago fmt --check bin/ray-di-compile"],
         "cs": ["@lint", "@fmt"],
         "sa": ["@analyze", "@guard"],
         "tests": ["@cs", "@sa", "@test", "@dist"]

@@ -92,28 +92,3 @@ compile time and runtime is the main way to misuse this package.
   the scanning strategy itself must change.
 - **`ScriptCompilerInterface`** — rarely implemented by an app. It exists mainly so tests can
   substitute a fake and observe the pipeline mid-run (`tests/Fake/FakeRecordingCompiler.php`).
-
-## Test layout
-
-- `tests/Fake/` holds shared doubles: `FakeCar`/`FakeCarInterface`/`FakeModule` for a minimal
-  bindable graph, `FakeProdContext`/`FakeDevContext`/`FakeBakedContext` for context scenarios, `Fs`
-  for recursive directory helpers, `PermissionBits` for the non-root probe (it measures the
-  capability rather than reading the uid, which would need `ext-posix` — declined in #14 — and would
-  still miss a non-root process holding `CAP_DAC_OVERRIDE`).
-- `tests/Fixture/consumer/` is a *complete separate Composer project* used only by
-  `tests/dist-check.sh` (`composer dist`): it copies `src`/`bin`/`composer.json` into a scratch dir,
-  `composer install`s the fixture against it, and runs the real `vendor/bin/ray-di-compile`. This is
-  the only test exercising the package the way a consumer would, so a change to `composer.json`'s
-  `bin`/`autoload` section must be checked here, not just against the unit suite.
-- `phpunit.xml.dist` forces `APP_COMPILE_DIR`/`APP_TMP_DIR` empty and fails on
-  risky/warning/deprecation/notice, so tests cannot rely on ambient env vars.
-- `CompileRunnerTest::resolvesFromReadOnlyCompileDir` deliberately does **not** skip under root: its
-  real assertion is a per-file `sha256` snapshot that never depended on the mode. The `chmod 0555`
-  is belt over braces.
-
-## CI (`.github/workflows/ci.yml`)
-
-`lint` (mago, single PHP version — its target is fixed in `mago.toml`, not the matrix), `test`
-(PHP 8.2–8.5, deliberately non-root), `lowest` (`--prefer-lowest` on `ray/di`/`ray/compiler` only,
-at the two PHP-version corners), `dist`. A final `ci` job fans in on all four and is the single
-required status check, so the matrix can grow or shrink without touching branch protection.

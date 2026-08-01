@@ -22,9 +22,18 @@ vendor/bin/mago fmt   # auto-fix; CI only checks
 Run `composer cs && composer sa` before calling a change to `src/` done.
 
 **Run the suite as a non-root user.** Nine tests set a directory unreadable and assert the package
-reports it; root ignores permission bits, so they `markTestSkipped()`. Root gives
+reports it; root ignores permission bits, so they `markTestSkipped()` via `Fake\PermissionBits`,
+which measures the capability instead of reading the uid (that would need `ext-posix`, declined in
+#14, and would still miss a non-root process holding `CAP_DAC_OVERRIDE`). Root gives
 `143 tests, 9 skipped`; non-root gives `143 tests, 0 skipped`. CI is non-root on purpose — don't
 move the `test` job into a `container:`.
+
+`CompileRunnerTest::resolvesFromReadOnlyCompileDir` is the opposite case and must **not** skip: its
+assertion is a per-file `sha256` snapshot that never depended on the mode.
+
+`composer dist` is the only test that exercises the package as a consumer does, through Composer's
+autoloader and bin-linking. A change to `composer.json`'s `bin`/`autoload` has to be checked there,
+not just against the unit suite.
 
 ## Decisions that look like bugs
 
@@ -37,6 +46,9 @@ move the `test` job into a `container:`.
   literal and is still caught, so that one is left to the guard.
 - **`CONTEXT_PATTERN` includes `\`** so a `::class`-shaped context (`App\ProdContext`) passes
   through. Unlike `/` and `.`, the OS does not resolve a backslash inside a path segment.
+- **`AbstractContext::__construct()` is `final`** so `MapContextProvider`'s `new $class($meta)` stays
+  valid for every subclass. Nothing catches a subclass widening it: `mago guard`'s `target` takes
+  only class-like kinds, so `must-be-final` cannot reach a constructor.
 - **Neither this package nor `bin/ray-di-compile` reads environment variables.** A deployment that
   sets `APP_COMPILE_DIR`/`APP_TMP_DIR` must pass them through as arguments; compile time and runtime
   have to resolve to the same values.

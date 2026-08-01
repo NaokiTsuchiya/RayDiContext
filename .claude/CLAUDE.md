@@ -4,11 +4,11 @@
 into a container image, keeping it separate from a runtime-writable `tmpDir`. Build as root, `COPY`
 the scripts in, run as non-root on a read-only root filesystem. No framework, no HTTP, no database.
 
-Two skills carry what does not belong here: `architecture` for the compile pipeline, the extension
-points and why a step sits where it does, and `decisions` for approaches already tried and rejected
-— read that one before proposing a mago or CI rule, adding a dependency, or asking "why doesn't this
-just do X", and add to it whenever a change is abandoned for a reason worth not rediscovering. This
-file is only what you would get wrong without them.
+What does not belong here lives in two places. The `architecture` skill has the compile pipeline,
+the extension points, and why a step sits where it does. `docs/decisions.md` has the approaches
+already tried and rejected, with the evidence — read it before proposing a mago or CI rule, adding a
+dependency, or asking "why doesn't this just do X", and add to it whenever a change is abandoned for
+a reason worth not rediscovering. This file is only what you would get wrong without them.
 
 ## Commands
 

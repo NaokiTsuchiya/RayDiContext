@@ -28,8 +28,7 @@ AppMeta::fromAppDir(appDir, context, compileDir?, tmpDir?)
                                                   (0600 → 0644 files / 0755 dirs)
 ```
 
-`CompileRunner::run()` is the whole pipeline — read it first when tracing behavior. Each step's
-guard runs *before* its destructive or expensive work:
+`CompileRunner::run()` is the whole pipeline — read it first when tracing behavior.
 
 1. **`Cleaner`** empties `compileDir` (or creates it) before every compile, so stale scripts from
    renamed or removed classes never survive a recompile. It asks a `CompileDirGuardInterface`
@@ -69,26 +68,21 @@ execute it opens fine and every per-entry `stat()` fails instead, leaking one wa
 At runtime the application never touches `Cleaner`, `BakedPathGuard` or the compiler. It builds an
 `AppMeta` with the *same* `compileDir`/`tmpDir` used at compile time, looks up the `ContextInterface`
 through its own `ContextProviderInterface`, and calls `getInjectorInstance()`. A production context
-returns `Ray\Compiler\CompiledInjector($meta->compileDir)` (reads only); a dev context returns a
-plain `Ray\Di\Injector($module, $meta->tmpDir)`. Getting the two directories out of sync between
-compile time and runtime is the main way to misuse this package.
+returns `Ray\Compiler\CompiledInjector($meta->compileDir)`, which only reads. Getting the two
+directories out of sync between compile time and runtime is the main way to misuse this package.
 
 ## Extension points applications implement
 
 - **`ContextInterface`** — one per environment. Extend `AbstractContext`, whose constructor is
-  `final` (it takes only `AppMeta`) so `MapContextProvider`'s `new $class($meta)` stays valid for
-  every subclass; nothing in `mago guard` can pin that, since `target` takes only class-like kinds.
-  `getSavedSingleton()` defaults to `[]` — override it to name classes instantiated once at process
-  start. Those are freshly constructed, never unserialized, so they may hold live resources such as
-  DB connections; the singleton scope is per injector instance.
+  `final` so `MapContextProvider`'s `new $class($meta)` stays valid for every subclass. See the
+  interface's docblocks for the injector and `getSavedSingleton()` contracts.
 - **`ContextProviderInterface`** — maps an `AppMeta` to a `ContextInterface`. `MapContextProvider`
-  is the bundled name→class-string implementation, and a bootstrap file returns one of these. It
-  validates the whole map in its constructor rather than lazily in `get()`, so a typo for a context
-  nobody has requested yet fails when the map is wired up.
+  is the bundled name→class-string implementation, and a bootstrap file returns one of these; it
+  validates the whole map at construction (see its docblock).
 - **`CompileDirGuardInterface`** — only needed when the bundled guard's two checks (filesystem root,
   compile dir containing the app dir) are not strict enough for an app's layout.
 - **`BakedPathGuardInterface`** — the same idea on the verification side. For the common case pass
   `new BakedPathGuard([...$needles])` rather than reimplementing; replace the whole thing only if
   the scanning strategy itself must change.
-- **`ScriptCompilerInterface`** — rarely implemented by an app. It exists mainly so tests can
-  substitute a fake and observe the pipeline mid-run (`tests/Fake/FakeRecordingCompiler.php`).
+- **`ScriptCompilerInterface`** — rarely implemented by an app; see step 2 above for why the seam
+  exists.

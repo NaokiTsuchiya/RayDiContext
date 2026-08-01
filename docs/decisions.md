@@ -43,6 +43,9 @@ unfixable rather than merely unfixed: `no-inline` fires on the shebang every exe
 needs, and `no-global` on the `$GLOBALS['_composer_autoload_path']` lookup. Only `mago fmt`, which
 handles both, is wired into `composer fmt` for it.
 
+**Would change it:** mago's source discovery growing a way to name a file without a `.php`
+extension, which would let the script be linted where it sits.
+
 ### Collapse `BinCompileTest`'s `@throws RuntimeException` to `ExceptionInterface` — [#71][71]
 
 `ExceptionInterface` does not cover a plain `RuntimeException`, and `BinCompileTest` never calls
@@ -71,9 +74,10 @@ enumeration.
 
 ### Running the `test` CI job in a `container:`
 
-Rejected. Containers run as root, root ignores permission bits, and nine tests exist to assert the
-package reports a directory it cannot read. They would skip silently and the coverage would be
-theatre.
+Rejected without trying it, on an outcome already observed locally: running the suite as root gives
+`143 tests, 9 skipped` against `143 tests, 0 skipped` as an ordinary user. Containers run as root,
+`Fake\PermissionBits` finds the bits unenforced, and the nine tests that exist to assert the package
+reports a directory it cannot read skip silently. A green matrix would mean less than it appears.
 
 ## Declined for cost
 

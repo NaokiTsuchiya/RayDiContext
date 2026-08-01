@@ -54,24 +54,17 @@ not just against the unit suite.
 - **Neither this package nor `bin/ray-di-compile` reads environment variables.** A deployment that
   sets `APP_COMPILE_DIR`/`APP_TMP_DIR` must pass them through as arguments; compile time and runtime
   have to resolve to the same values.
-- **The CLI logic lives in `src/Cli.php`, not the bin script.** A bin script has no `.php`
-  extension, so mago's source glob never finds it — adding `bin` to `[source] paths` does nothing.
-- **`PermissionNormalizer` exists for one upstream quirk**: `ray/compiler` writes every script via
-  `tempnam()`, always `0600` regardless of umask, which breaks build-as-root/run-as-non-root.
+- **The CLI logic lives in `src/Cli.php`, not the bin script** — mago cannot see an extension-less
+  file. **`PermissionNormalizer` exists for one `ray/compiler` quirk**: `tempnam()` writes `0600`.
+  `docs/decisions.md` and `docs/architecture.md` have both in full.
 
 The footgun this package exists to catch: **binding `AppMeta`, or anything holding `appDir`/`tmpDir`,
 with `toInstance()` freezes that path into the compiled script**, where it silently diverges from the
 path that exists at runtime.
 
-## `bin/ray-di-compile` exit-status contract
-
-Public — the README says to gate CI on it. Preserve it if you touch the CLI.
-
-| Code | Meaning |
-|---|---|
-| `0` | Compiled successfully |
-| `1` | Compile failed — **anything** thrown while requiring the bootstrap or compiling, not just this package's exceptions. One line to STDERR, never a stack trace. Also covers "autoloader not found" |
-| `2` | Usage error — wrong arg count, missing bootstrap, `appDir` doesn't exist, or a bootstrap not returning a `ContextProviderInterface` |
+`bin/ray-di-compile`'s exit statuses are a public contract — the README documents them and says to
+gate CI on it, and `BinCompileTest` pins every code. Read the README's *Exit status* table before
+touching `src/Cli.php`.
 
 ## Comments
 

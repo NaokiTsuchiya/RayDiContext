@@ -20,9 +20,6 @@ use function uniqid;
 #[CoversClass(Cleaner::class)]
 final class CleanerGuardTest extends TestCase
 {
-    /** Content the tests put on disk and assert survives */
-    private const SCRIPT = __DIR__ . '/Fixture/script.php';
-
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
@@ -39,8 +36,8 @@ final class CleanerGuardTest extends TestCase
         $this->appDir = "{$this->baseDir}/app";
         $this->compileDir = "{$this->appDir}/var/di/prod";
         mkdir($this->compileDir, permissions: 0o755, recursive: true);
-        copy(self::SCRIPT, "{$this->appDir}/keep.php");
-        copy(self::SCRIPT, "{$this->compileDir}/stale.php");
+        copy(Fs::SCRIPT, "{$this->appDir}/keep.php");
+        copy(Fs::SCRIPT, "{$this->compileDir}/stale.php");
     }
 
     /** {@inheritDoc} */

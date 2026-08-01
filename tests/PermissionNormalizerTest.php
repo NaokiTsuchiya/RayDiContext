@@ -19,9 +19,6 @@ use function symlink;
 #[CoversClass(PermissionNormalizer::class)]
 final class PermissionNormalizerTest extends TestCase
 {
-    /** Stands in for a compiled script the tests assert the mode of */
-    private const SCRIPT = __DIR__ . '/Fixture/script.php';
-
     /** Working directory holding the compile dir these tests start from */
     private CompileDirFixture $fixture;
 
@@ -93,7 +90,7 @@ final class PermissionNormalizerTest extends TestCase
     /** Copies the fixture script in and gives it a mode the umask cannot narrow */
     private function copyScript(string $path, int $mode): void
     {
-        copy(self::SCRIPT, $path);
+        copy(Fs::SCRIPT, $path);
         chmod($path, $mode);
     }
 }

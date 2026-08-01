@@ -22,9 +22,6 @@ use function mkdir;
 #[CoversClass(PermissionNormalizer::class)]
 final class PermissionNormalizerRejectionTest extends TestCase
 {
-    /** Stands in for a compiled script the tests assert the mode of */
-    private const SCRIPT = __DIR__ . '/Fixture/script.php';
-
     /** Working directory holding the compile dir these tests start from */
     private CompileDirFixture $fixture;
 
@@ -49,7 +46,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
     public function rejectsAPathThatIsNotADirectory(): void
     {
         $script = "{$this->compileDir}/script.php";
-        copy(self::SCRIPT, $script);
+        copy(Fs::SCRIPT, $script);
         chmod($script, permissions: 0o600);
 
         try {
@@ -123,7 +120,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
         PermissionBits::skipUnlessEnforced($this->fixture->baseDir);
 
         $script = "{$this->compileDir}/script.php";
-        copy(self::SCRIPT, $script);
+        copy(Fs::SCRIPT, $script);
         chmod($script, permissions: 0o600);
         chmod($this->compileDir, permissions: 0o405);
 
@@ -149,7 +146,7 @@ final class PermissionNormalizerRejectionTest extends TestCase
         mkdir($nested, permissions: 0o700);
         chmod($nested, permissions: 0o700);
         $inner = "{$nested}/inner.php";
-        copy(self::SCRIPT, $inner);
+        copy(Fs::SCRIPT, $inner);
         chmod($inner, permissions: 0o600);
         chmod($nested, permissions: 0o405);
 

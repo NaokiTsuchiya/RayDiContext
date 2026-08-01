@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Support\Fs;
+use NaokiTsuchiya\RayDiContext\Support\CliFixture;
 use NaokiTsuchiya\RayDiContext\Support\PhpProcess;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 use function glob;
-use function mkdir;
-use function uniqid;
 
 /** Arguments bin/ray-di-compile refuses before compiling anything, all of them exit status 2 */
 final class BinCompileRejectionTest extends TestCase
@@ -20,23 +18,19 @@ final class BinCompileRejectionTest extends TestCase
     /** Path to the compile CLI under test */
     private const SCRIPT = __DIR__ . '/../bin/ray-di-compile';
 
-    /** Directory holding the prepared bootstrap stub files */
-    private const FIXTURE_DIR = __DIR__ . '/Fixture';
-
-    /** Per-test working directory */
-    private string $baseDir;
+    /** Working directory and error stream */
+    private CliFixture $fixture;
 
     /** {@inheritDoc} */
     protected function setUp(): void
     {
-        $this->baseDir = __DIR__ . '/tmp/' . uniqid('bin_reject_', more_entropy: true);
-        mkdir("{$this->baseDir}/app/var/tmp/prod", permissions: 0o755, recursive: true);
+        $this->fixture = new CliFixture();
     }
 
     /** {@inheritDoc} */
     protected function tearDown(): void
     {
-        Fs::removeDir($this->baseDir);
+        $this->fixture->remove();
     }
 
     /** @throws RuntimeException */
@@ -54,8 +48,8 @@ final class BinCompileRejectionTest extends TestCase
     public function failsWhenBootstrapReturnsWrongType(): void
     {
         [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_invalid.php',
-            "{$this->baseDir}/app",
+            CliFixture::INVALID,
+            $this->fixture->appDir,
             'prod',
         ]);
 
@@ -67,10 +61,10 @@ final class BinCompileRejectionTest extends TestCase
     #[Test]
     public function failsWithUsageWhenAppDirDoesNotExist(): void
     {
-        $appDir = "{$this->baseDir}/nosuch";
+        $appDir = "{$this->fixture->baseDir}/nosuch";
 
         [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            CliFixture::VALID,
             $appDir,
             'prod',
         ]);
@@ -85,10 +79,10 @@ final class BinCompileRejectionTest extends TestCase
     #[Test]
     public function failsWithUsageWhenTooManyArguments(): void
     {
-        $appDir = "{$this->baseDir}/app";
+        $appDir = $this->fixture->appDir;
 
         [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            CliFixture::VALID,
             $appDir,
             'prod',
             '',

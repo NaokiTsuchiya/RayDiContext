@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Support\Fs;
+use NaokiTsuchiya\RayDiContext\Support\CliFixture;
 use NaokiTsuchiya\RayDiContext\Support\PhpProcess;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 use function glob;
-use function mkdir;
-use function uniqid;
 
 /** End-to-end test for the bin/ray-di-compile CLI; BinCompileRejectionTest covers its usage errors */
 final class BinCompileTest extends TestCase
@@ -20,33 +18,29 @@ final class BinCompileTest extends TestCase
     /** Path to the compile CLI under test */
     private const SCRIPT = __DIR__ . '/../bin/ray-di-compile';
 
-    /** Directory holding the prepared bootstrap stub files */
-    private const FIXTURE_DIR = __DIR__ . '/Fixture';
-
-    /** Per-test working directory */
-    private string $baseDir;
+    /** Working directory and error stream */
+    private CliFixture $fixture;
 
     /** {@inheritDoc} */
     protected function setUp(): void
     {
-        $this->baseDir = __DIR__ . '/tmp/' . uniqid('bin_', more_entropy: true);
-        mkdir("{$this->baseDir}/app/var/tmp/prod", permissions: 0o755, recursive: true);
+        $this->fixture = new CliFixture();
     }
 
     /** {@inheritDoc} */
     protected function tearDown(): void
     {
-        Fs::removeDir($this->baseDir);
+        $this->fixture->remove();
     }
 
     /** @throws RuntimeException */
     #[Test]
     public function compilesMappedContext(): void
     {
-        $appDir = "{$this->baseDir}/app";
+        $appDir = $this->fixture->appDir;
 
         [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            CliFixture::VALID,
             $appDir,
             'prod',
         ]);
@@ -59,12 +53,12 @@ final class BinCompileTest extends TestCase
     #[Test]
     public function compilesToExplicitOverride(): void
     {
-        $appDir = "{$this->baseDir}/app";
-        $compileDir = "{$this->baseDir}/custom-di";
-        $tmpDir = "{$this->baseDir}/app/var/tmp/prod";
+        $appDir = $this->fixture->appDir;
+        $compileDir = "{$this->fixture->baseDir}/custom-di";
+        $tmpDir = "{$appDir}/var/tmp/prod";
 
         [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            CliFixture::VALID,
             $appDir,
             'prod',
             $compileDir,
@@ -80,10 +74,10 @@ final class BinCompileTest extends TestCase
     #[Test]
     public function failsWithStatusOneOnBakedPath(): void
     {
-        $appDir = "{$this->baseDir}/app";
+        $appDir = $this->fixture->appDir;
 
         [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            CliFixture::VALID,
             $appDir,
             'baked',
         ]);
@@ -99,8 +93,8 @@ final class BinCompileTest extends TestCase
     public function failsWithStatusOneOnUnknownContext(): void
     {
         [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_valid.php',
-            "{$this->baseDir}/app",
+            CliFixture::VALID,
+            $this->fixture->appDir,
             'nosuch',
         ]);
 
@@ -114,7 +108,7 @@ final class BinCompileTest extends TestCase
     public function failsWithStatusOneOnRelativeAppDir(): void
     {
         [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
-            self::FIXTURE_DIR . '/bootstrap_valid.php',
+            CliFixture::VALID,
             '.',
             'prod',
         ]);

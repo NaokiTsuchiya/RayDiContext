@@ -24,9 +24,6 @@ use function uniqid;
 #[CoversClass(Cleaner::class)]
 final class CleanerRejectionTest extends TestCase
 {
-    /** Stands in for a compiled script the tests assert the survival of */
-    private const SCRIPT = __DIR__ . '/Fixture/script.php';
-
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
@@ -67,7 +64,7 @@ final class CleanerRejectionTest extends TestCase
 
         $compileDir = "{$this->baseDir}/di";
         mkdir($compileDir, permissions: 0o700, recursive: true);
-        copy(self::SCRIPT, "{$compileDir}/stale.php");
+        copy(Fs::SCRIPT, "{$compileDir}/stale.php");
         chmod($compileDir, permissions: $mode);
 
         try {
@@ -93,7 +90,7 @@ final class CleanerRejectionTest extends TestCase
         $compileDir = "{$this->baseDir}/di";
         $nested = "{$compileDir}/nested";
         mkdir($nested, permissions: 0o700, recursive: true);
-        copy(self::SCRIPT, "{$nested}/stale.php");
+        copy(Fs::SCRIPT, "{$nested}/stale.php");
         chmod($nested, permissions: $mode);
 
         try {

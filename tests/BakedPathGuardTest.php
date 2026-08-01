@@ -7,6 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
+use NaokiTsuchiya\RayDiContext\Support\Fs;
 use NaokiTsuchiya\RayDiContext\Support\PermissionBits;
 use NaokiTsuchiya\RayDiContext\Support\SeparatedDirFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -22,9 +23,6 @@ use function sprintf;
 #[CoversClass(BakedPathGuard::class)]
 final class BakedPathGuardTest extends TestCase
 {
-    /** Stands in for a compiled script whose content is irrelevant to the test */
-    private const SCRIPT = __DIR__ . '/Fixture/script.php';
-
     /** Working directory and meta shared by the guard test classes */
     private SeparatedDirFixture $fixture;
 
@@ -130,7 +128,7 @@ final class BakedPathGuardTest extends TestCase
         PermissionBits::skipUnlessEnforced($this->fixture->baseDir);
 
         $unreadable = "{$this->meta->compileDir}/unreadable.php";
-        copy(self::SCRIPT, $unreadable);
+        copy(Fs::SCRIPT, $unreadable);
         chmod($unreadable, permissions: 0o000);
 
         try {

@@ -21,6 +21,9 @@ use function unlink;
 /** Test working-directory helper */
 final class Fs
 {
+    /** Stands in for a compiled script whose content is irrelevant to the caller */
+    public const SCRIPT = __DIR__ . '/../Fixture/script.php';
+
     /** Returns the permission bits of a path */
     public static function mode(string $path): int
     {

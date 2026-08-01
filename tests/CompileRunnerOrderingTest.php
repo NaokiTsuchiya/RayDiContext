@@ -20,9 +20,6 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(CompileRunner::class)]
 final class CompileRunnerOrderingTest extends TestCase
 {
-    /** Stands in for a script from a previous compile */
-    private const SCRIPT = __DIR__ . '/Fixture/script.php';
-
     /** Working directory and meta shared by the compile test classes */
     private AppDirFixture $fixture;
 
@@ -38,7 +35,7 @@ final class CompileRunnerOrderingTest extends TestCase
         $this->fixture = new AppDirFixture('runner_order_');
         $this->meta = $this->fixture->meta;
         $this->compiler = new FakeRecordingCompiler();
-        Fs::copyFile(self::SCRIPT, "{$this->meta->compileDir}/stale.php");
+        Fs::copyFile(Fs::SCRIPT, "{$this->meta->compileDir}/stale.php");
     }
 
     /** {@inheritDoc} */

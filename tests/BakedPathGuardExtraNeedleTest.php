@@ -6,6 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
+use NaokiTsuchiya\RayDiContext\Support\Fs;
 use NaokiTsuchiya\RayDiContext\Support\SeparatedDirFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -22,9 +23,6 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
 {
     /** Stands in for whatever an application knows must not reach a shipped script */
     private const CONFIGURED = 'zqx-must-not-ship-4f1c';
-
-    /** A compiled script holding nothing an application configured */
-    private const CLEAN_SCRIPT = __DIR__ . '/Fixture/script.php';
 
     /** Working directory and meta shared by the guard test classes */
     private SeparatedDirFixture $fixture;
@@ -77,7 +75,7 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
     #[Test]
     public function passesWhenNoConfiguredLiteralIsPresent(): void
     {
-        copy(self::CLEAN_SCRIPT, "{$this->meta->compileDir}/clean.php");
+        copy(Fs::SCRIPT, "{$this->meta->compileDir}/clean.php");
 
         $this->expectNotToPerformAssertions();
 

@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/NaokiTsuchiya/RayDiContext/graph/badge.svg)](https://codecov.io/gh/NaokiTsuchiya/RayDiContext)
 [![PHP Version](https://img.shields.io/badge/php-8.2%20--%208.5-777BB4)](composer.json)
 [![License](https://img.shields.io/github/license/NaokiTsuchiya/RayDiContext)](LICENSE)
-<!-- Packagist version badge: add once v0.1.0 is tagged and registered, see issue #26 -->
+[![Packagist Version](https://img.shields.io/packagist/v/naoki-tsuchiya/ray-di-context)](https://packagist.org/packages/naoki-tsuchiya/ray-di-context)
 
 Context, meta, and compile management for [Ray.Di](https://github.com/ray-di/Ray.Di) applications.
 

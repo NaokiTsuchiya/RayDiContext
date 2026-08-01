@@ -8,14 +8,11 @@ use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingCompiler;
+use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-
-use function copy;
-use function mkdir;
-use function uniqid;
 
 /**
  * The order of the pipeline's steps, which is a guarantee in its own right
@@ -26,8 +23,8 @@ final class CompileRunnerOrderingTest extends TestCase
     /** Stands in for a script from a previous compile */
     private const SCRIPT = __DIR__ . '/Fixture/script.php';
 
-    /** @var non-empty-string Per-test working directory */
-    private string $baseDir;
+    /** Working directory and meta shared by the compile test classes */
+    private AppDirFixture $fixture;
 
     /** Meta with conventional paths under the app dir */
     private AppMeta $meta;
@@ -38,19 +35,16 @@ final class CompileRunnerOrderingTest extends TestCase
     /** @throws ExceptionInterface */
     protected function setUp(): void
     {
-        $this->baseDir = __DIR__ . '/tmp/' . uniqid('runner_order_', more_entropy: true);
-        $appDir = "{$this->baseDir}/app";
-        mkdir("{$appDir}/var/tmp/prod", permissions: 0o755, recursive: true);
-        $this->meta = AppMeta::fromAppDir($appDir, 'prod');
+        $this->fixture = new AppDirFixture('runner_order_');
+        $this->meta = $this->fixture->meta;
         $this->compiler = new FakeRecordingCompiler();
-        mkdir($this->meta->compileDir, permissions: 0o755, recursive: true);
-        copy(self::SCRIPT, "{$this->meta->compileDir}/stale.php");
+        Fs::copyFile(self::SCRIPT, "{$this->meta->compileDir}/stale.php");
     }
 
     /** {@inheritDoc} */
     protected function tearDown(): void
     {
-        Fs::removeDir($this->baseDir);
+        $this->fixture->remove();
     }
 
     /** @throws ExceptionInterface */

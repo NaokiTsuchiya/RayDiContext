@@ -12,6 +12,7 @@ use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
+use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -22,6 +23,7 @@ use RecursiveIteratorIterator;
 use SplFileInfo;
 
 use function chmod;
+use function dirname;
 use function file_put_contents;
 use function fileperms;
 use function glob;
@@ -29,13 +31,12 @@ use function hash_file;
 use function is_dir;
 use function ksort;
 use function mkdir;
-use function uniqid;
 
 #[CoversClass(CompileRunner::class)]
 final class CompileRunnerTest extends TestCase
 {
-    /** Per-test working directory */
-    private string $baseDir;
+    /** Working directory and meta shared by the compile test classes */
+    private AppDirFixture $fixture;
 
     /** Meta with conventional paths under the app dir */
     private AppMeta $meta;
@@ -46,10 +47,8 @@ final class CompileRunnerTest extends TestCase
     /** @throws ExceptionInterface */
     protected function setUp(): void
     {
-        $this->baseDir = __DIR__ . '/tmp/' . uniqid('runner_', more_entropy: true);
-        $appDir = "{$this->baseDir}/app";
-        mkdir("{$appDir}/var/tmp/prod", permissions: 0o755, recursive: true);
-        $this->meta = AppMeta::fromAppDir($appDir, 'prod');
+        $this->fixture = new AppDirFixture('runner_');
+        $this->meta = $this->fixture->meta;
         $this->runner = new CompileRunner(new MapContextProvider([
             'prod' => FakeProdContext::class,
             'baked' => FakeBakedContext::class,
@@ -64,7 +63,7 @@ final class CompileRunnerTest extends TestCase
             chmod($this->meta->compileDir, permissions: 0o755);
         }
 
-        Fs::removeDir($this->baseDir);
+        $this->fixture->remove();
     }
 
     /** @throws ExceptionInterface */
@@ -102,12 +101,12 @@ final class CompileRunnerTest extends TestCase
     public function resolvesWithoutCompileTimeTmpDir(): void
     {
         $this->runner->run($this->meta);
-        Fs::removeDir("{$this->baseDir}/app/var/tmp");
+        Fs::removeDir(dirname($this->meta->tmpDir));
         $runtimeMeta = new AppMeta(
-            "{$this->baseDir}/app",
+            $this->meta->appDir,
             'prod',
             $this->meta->compileDir,
-            "{$this->baseDir}/absent-tmp",
+            "{$this->fixture->baseDir}/absent-tmp",
         );
 
         $injector = (new MapContextProvider(['prod' => FakeProdContext::class]))->get(
@@ -165,7 +164,7 @@ final class CompileRunnerTest extends TestCase
     #[Test]
     public function runRejectsUnsafeCompileDirBeforeCleaning(): void
     {
-        $appDir = "{$this->baseDir}/app";
+        $appDir = $this->meta->appDir;
         $unsafeMeta = new AppMeta($appDir, 'prod', $appDir, $this->meta->tmpDir);
 
         try {

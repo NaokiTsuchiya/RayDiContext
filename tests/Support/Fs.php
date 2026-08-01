@@ -9,6 +9,7 @@ use SplFileInfo;
 
 use function chmod;
 use function copy;
+use function dirname;
 use function is_dir;
 use function is_executable;
 use function is_readable;
@@ -46,6 +47,18 @@ final class Fs
         }
 
         rmdir($dir);
+    }
+
+    /** Copies a file to a path whose parent directory may not exist yet */
+    public static function copyFile(string $source, string $destination): void
+    {
+        $parent = dirname($destination);
+        $exists = is_dir($parent);
+        if (!$exists) {
+            mkdir($parent, permissions: 0o755, recursive: true);
+        }
+
+        copy($source, $destination);
     }
 
     /** Copies a directory recursively to a new absolute path, as an image build's COPY would */

@@ -7,7 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeQualifiedContext;
-use NaokiTsuchiya\RayDiContext\Support\Fs;
+use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -17,15 +17,13 @@ use SplFileInfo;
 
 use function dirname;
 use function fileperms;
-use function mkdir;
-use function uniqid;
 
 /** A compile whose output is not flat is normalized all the way down */
 #[CoversClass(CompileRunner::class)]
 final class CompileRunnerNestedScriptTest extends TestCase
 {
-    /** Per-test working directory */
-    private string $baseDir;
+    /** Working directory and meta shared by the compile test classes */
+    private AppDirFixture $fixture;
 
     /** Meta with conventional paths under the app dir */
     private AppMeta $meta;
@@ -33,16 +31,14 @@ final class CompileRunnerNestedScriptTest extends TestCase
     /** @throws ExceptionInterface */
     protected function setUp(): void
     {
-        $this->baseDir = __DIR__ . '/tmp/' . uniqid('runner_nested_', more_entropy: true);
-        $appDir = "{$this->baseDir}/app";
-        mkdir("{$appDir}/var/tmp/prod", permissions: 0o755, recursive: true);
-        $this->meta = AppMeta::fromAppDir($appDir, 'prod');
+        $this->fixture = new AppDirFixture('runner_nested_');
+        $this->meta = $this->fixture->meta;
     }
 
     /** {@inheritDoc} */
     protected function tearDown(): void
     {
-        Fs::removeDir($this->baseDir);
+        $this->fixture->remove();
     }
 
     /** @throws ExceptionInterface */

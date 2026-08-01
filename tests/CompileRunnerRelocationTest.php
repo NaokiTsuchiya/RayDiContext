@@ -8,7 +8,7 @@ use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
-use NaokiTsuchiya\RayDiContext\Fake\Fs;
+use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;

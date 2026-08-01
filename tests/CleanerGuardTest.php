@@ -7,7 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRejectingGuard;
-use NaokiTsuchiya\RayDiContext\Fake\Fs;
+use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;

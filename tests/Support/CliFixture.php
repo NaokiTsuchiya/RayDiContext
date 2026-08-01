@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NaokiTsuchiya\RayDiContext\Fake;
+namespace NaokiTsuchiya\RayDiContext\Support;
 
 use function file_get_contents;
 use function mkdir;

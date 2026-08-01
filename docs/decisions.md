@@ -49,12 +49,31 @@ extension, which would let the script be linted where it sits.
 ### Collapse `BinCompileTest`'s `@throws RuntimeException` to `ExceptionInterface` — [#71][71]
 
 `ExceptionInterface` does not cover a plain `RuntimeException`, and `BinCompileTest` never calls
-package code in-process: it goes through `Fake\Cli::run()`, which throws a bare `RuntimeException`
-when `proc_open()` fails. Swapping the tag produces 8 `unhandled-thrown-type` errors from
-`mago analyze`. The eight tags stay, for the same reason the one in `Fake\Cli` does.
+package code in-process: it goes through `Support\PhpProcess::run()`, which throws a bare
+`RuntimeException` when `proc_open()` fails. Swapping the tag produces 8 `unhandled-thrown-type`
+errors from `mago analyze`. The eight tags stay, for the same reason the one in
+`Support\PhpProcess` does.
 
-**Would change it:** `Fake\Cli` throwing a package exception instead, which would mean giving a test
-double a dependency on the hierarchy it exists to stay outside of.
+**Would change it:** `Support\PhpProcess` throwing a package exception instead, which would mean
+giving a test helper a dependency on the hierarchy it exists to stay outside of.
+
+### An abstract base `TestCase` to share test setup — [#79][79]
+
+Test classes live in the root namespace, which is exactly what `mago.toml`'s `must-be-final` rule
+covers, and its `not-on` names `AbstractContext` alone. An abstract class placed there fails:
+
+```
+tests/ProbeRoot.php:8:16: error[must-be-final]: Structural flaw in `NaokiTsuchiya\RayDiContext\AbstractProbeRoot`
+ = Every concrete class in the root namespace is final except AbstractContext, which exists to be extended
+```
+
+The same probe under `NaokiTsuchiya\RayDiContext\Support` is not reported — `on =
+'NaokiTsuchiya\RayDiContext\*'` matches one namespace segment, not a subtree. That is a way past the
+rule, not a licence to use it. Shared setup goes through the final helpers in `tests/Support/`:
+static utilities (`Fs`, `PermissionBits`, `PhpProcess`) and per-test objects (`CliFixture`).
+
+**Would change it:** a second `not-on` entry naming a base class, worth adding only for a case that
+earns its place beside `AbstractContext`.
 
 ## Deliberate direction — do not reverse
 
@@ -74,9 +93,9 @@ enumeration.
 
 ### Running the `test` CI job in a `container:`
 
-Rejected without trying it, on an outcome already observed locally: running the suite as root gives
-`143 tests, 9 skipped` against `143 tests, 0 skipped` as an ordinary user. Containers run as root,
-`Fake\PermissionBits` finds the bits unenforced, and the nine tests that exist to assert the package
+Rejected without trying it, on an outcome already observed locally: running the suite as root skips
+tests that an ordinary user runs, with the same total either way. Containers run as root,
+`Support\PermissionBits` finds the bits unenforced, and the tests that exist to assert the package
 reports a directory it cannot read skip silently. A green matrix would mean less than it appears.
 
 ## Declined for cost
@@ -84,8 +103,8 @@ reports a directory it cannot read skip silently. A green matrix would mean less
 ### `ext-posix` to detect root in tests
 
 Rejected on its own merits: a uid check answers the wrong question. A non-root process holding
-`CAP_DAC_OVERRIDE` also ignores permission bits, so `posix_geteuid() !== 0` would let the nine
-permission tests run and fail. `Fake\PermissionBits` measures the capability instead — it creates a
+`CAP_DAC_OVERRIDE` also ignores permission bits, so `posix_geteuid() !== 0` would let the permission
+tests run and fail. `Support\PermissionBits` measures the capability instead — it creates a
 directory, makes it unreadable, and checks whether this process is actually denied.
 
 The cost is real too. Unlike `ext-pcre` and `ext-SPL`, `ext-posix` is optional in a PHP build, so
@@ -128,4 +147,5 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [53]: https://github.com/NaokiTsuchiya/RayDiContext/issues/53
 [70]: https://github.com/NaokiTsuchiya/RayDiContext/issues/70
 [71]: https://github.com/NaokiTsuchiya/RayDiContext/pull/71
+[79]: https://github.com/NaokiTsuchiya/RayDiContext/issues/79
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

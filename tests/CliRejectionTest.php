@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Fake\CliFixture;
+use NaokiTsuchiya\RayDiContext\Support\CliFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;

@@ -13,6 +13,7 @@ use PHPUnit\Framework\TestCase;
 
 use function file_put_contents;
 use function mkdir;
+use function sprintf;
 use function uniqid;
 
 #[CoversClass(BakedPathGuard::class)]
@@ -68,9 +69,11 @@ final class BakedPathGuardBoundaryTest extends TestCase
             $this->meta->compileDir,
             "{$this->meta->compileDir}/tmp",
         );
-        file_put_contents("{$this->meta->compileDir}/baked.php", data: "<?php return '{$meta->tmpDir}/cache';");
+        $baked = "{$this->meta->compileDir}/baked.php";
+        file_put_contents($baked, data: "<?php return '{$meta->tmpDir}/cache';");
 
         $this->expectException(BakedPathFound::class);
+        $this->expectExceptionMessage(sprintf('Baked path "%s" found in %s.', $meta->tmpDir, $baked));
 
         ($this->guard)($meta);
     }
@@ -79,12 +82,11 @@ final class BakedPathGuardBoundaryTest extends TestCase
     #[Test]
     public function detectsPathWithCompileDirStringPrefix(): void
     {
-        file_put_contents(
-            "{$this->meta->compileDir}/baked.php",
-            data: "<?php return '{$this->meta->compileDir}uction_logs/app.log';",
-        );
+        $baked = "{$this->meta->compileDir}/baked.php";
+        file_put_contents($baked, data: "<?php return '{$this->meta->compileDir}uction_logs/app.log';");
 
         $this->expectException(BakedPathFound::class);
+        $this->expectExceptionMessage(sprintf('Baked path "%s" found in %s.', $this->meta->appDir, $baked));
 
         ($this->guard)($this->meta);
     }

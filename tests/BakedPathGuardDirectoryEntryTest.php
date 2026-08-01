@@ -14,6 +14,7 @@ use PHPUnit\Framework\TestCase;
 
 use function file_put_contents;
 use function mkdir;
+use function sprintf;
 use function symlink;
 use function uniqid;
 
@@ -69,9 +70,11 @@ final class BakedPathGuardDirectoryEntryTest extends TestCase
     {
         $nestedDir = "{$this->meta->compileDir}/cache.php";
         mkdir($nestedDir, permissions: 0o755, recursive: true);
-        file_put_contents("{$nestedDir}/nested.php", "<?php return '{$this->meta->appDir}/src/Index.php';");
+        $nestedScript = "{$nestedDir}/nested.php";
+        file_put_contents($nestedScript, "<?php return '{$this->meta->appDir}/src/Index.php';");
 
         $this->expectException(BakedPathFound::class);
+        $this->expectExceptionMessage(sprintf('Baked path "%s" found in %s.', $this->meta->appDir, $nestedScript));
 
         ($this->guard)($this->meta);
     }

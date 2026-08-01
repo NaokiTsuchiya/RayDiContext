@@ -1,4 +1,39 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(composer cs)",
+      "Bash(composer cs *)",
+      "Bash(composer sa)",
+      "Bash(composer sa *)",
+      "Bash(composer test)",
+      "Bash(composer test *)",
+      "Bash(composer tests)",
+      "Bash(composer tests *)",
+      "Bash(composer dist)",
+      "Bash(composer dist *)",
+      "Bash(composer validate)",
+      "Bash(composer validate *)",
+      "Bash(composer show)",
+      "Bash(composer show *)",
+      "Bash(vendor/bin/mago lint)",
+      "Bash(vendor/bin/mago lint *)",
+      "Bash(vendor/bin/mago analyze)",
+      "Bash(vendor/bin/mago analyze *)",
+      "Bash(vendor/bin/mago guard)",
+      "Bash(vendor/bin/mago guard *)",
+      "Bash(vendor/bin/mago fmt)",
+      "Bash(vendor/bin/mago fmt *)",
+      "Bash(vendor/bin/mago config)",
+      "Bash(vendor/bin/mago config *)",
+      "Bash(vendor/bin/phpunit)",
+      "Bash(vendor/bin/phpunit *)",
+      "Bash(./vendor/bin/phpunit)",
+      "Bash(./vendor/bin/phpunit *)",
+      "Bash(actionlint)",
+      "Bash(actionlint *)",
+      "Bash(gh label list *)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NaokiTsuchiya\RayDiContext\Fake;
+namespace NaokiTsuchiya\RayDiContext\Support;
 
 use FilesystemIterator;
 use SplFileInfo;

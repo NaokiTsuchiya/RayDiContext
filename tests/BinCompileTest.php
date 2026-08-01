@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Fake\Cli;
-use NaokiTsuchiya\RayDiContext\Fake\Fs;
+use NaokiTsuchiya\RayDiContext\Support\Fs;
+use NaokiTsuchiya\RayDiContext\Support\PhpProcess;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -45,7 +45,7 @@ final class BinCompileTest extends TestCase
     {
         $appDir = "{$this->baseDir}/app";
 
-        [$status, $stderr] = Cli::run(self::SCRIPT, [
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
             $appDir,
             'prod',
@@ -63,7 +63,7 @@ final class BinCompileTest extends TestCase
         $compileDir = "{$this->baseDir}/custom-di";
         $tmpDir = "{$this->baseDir}/app/var/tmp/prod";
 
-        [$status, $stderr] = Cli::run(self::SCRIPT, [
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
             $appDir,
             'prod',
@@ -80,7 +80,7 @@ final class BinCompileTest extends TestCase
     #[Test]
     public function failsWithUsageWhenArgumentsMissing(): void
     {
-        [$status, $stderr] = Cli::run(self::SCRIPT, []);
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, []);
 
         static::assertSame(2, $status);
         static::assertStringContainsString('Usage:', $stderr);
@@ -90,7 +90,7 @@ final class BinCompileTest extends TestCase
     #[Test]
     public function failsWhenBootstrapReturnsWrongType(): void
     {
-        [$status, $stderr] = Cli::run(self::SCRIPT, [
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_invalid.php',
             "{$this->baseDir}/app",
             'prod',
@@ -106,7 +106,7 @@ final class BinCompileTest extends TestCase
     {
         $appDir = "{$this->baseDir}/app";
 
-        [$status, $stderr] = Cli::run(self::SCRIPT, [
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
             $appDir,
             'baked',
@@ -122,7 +122,7 @@ final class BinCompileTest extends TestCase
     #[Test]
     public function failsWithStatusOneOnUnknownContext(): void
     {
-        [$status, $stderr] = Cli::run(self::SCRIPT, [
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
             "{$this->baseDir}/app",
             'nosuch',
@@ -139,7 +139,7 @@ final class BinCompileTest extends TestCase
     {
         $appDir = "{$this->baseDir}/nosuch";
 
-        [$status, $stderr] = Cli::run(self::SCRIPT, [
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
             $appDir,
             'prod',
@@ -150,7 +150,7 @@ final class BinCompileTest extends TestCase
         static::assertStringContainsString($appDir, $stderr);
         static::assertStringNotContainsString('Stack trace', $stderr);
 
-        [$status, $stderr] = Cli::run(self::SCRIPT, [
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
             '.',
             'prod',
@@ -167,7 +167,7 @@ final class BinCompileTest extends TestCase
     {
         $appDir = "{$this->baseDir}/app";
 
-        [$status, $stderr] = Cli::run(self::SCRIPT, [
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
             self::FIXTURE_DIR . '/bootstrap_valid.php',
             $appDir,
             'prod',

@@ -25,9 +25,9 @@ vendor/bin/mago fmt   # auto-fix; CI only checks
 Run `composer cs && composer sa` before calling a change to `src/` done.
 
 **Run the suite as a non-root user.** Nine tests set a directory unreadable and assert the package
-reports it; root ignores permission bits, so they `markTestSkipped()` via `Fake\PermissionBits`,
+reports it; root ignores permission bits, so they `markTestSkipped()` via `Support\PermissionBits`,
 which measures the capability rather than reading the uid. Root gives
-`143 tests, 9 skipped`; non-root gives `143 tests, 0 skipped`. CI is non-root on purpose — don't
+`144 tests, 9 skipped`; non-root gives `144 tests, 0 skipped`. CI is non-root on purpose — don't
 move the `test` job into a `container:`.
 
 `CompileRunnerTest::resolvesFromReadOnlyCompileDir` is the opposite case and must **not** skip: its
@@ -89,7 +89,7 @@ that had already halved the volume). Nothing enforces it — see `decisions` for
 - Tests mirror `src/` one-to-one, tagged `#[CoversClass(...)]`, using `#[Test]` attributes. A test's
   docblock is `@throws ExceptionInterface` alone unless it has something to say. `src/` keeps its
   precise `@throws` enumeration (34f6a95); `BinCompileTest` keeps `RuntimeException` because
-  `Fake\Cli` really throws one.
+  `Support\PhpProcess` really throws one.
 - Coverage is effectively 100%. A new `src/` class needs its own `#[CoversClass(...)]` test even if
   existing tests already execute every line — PHPUnit only credits declared classes.
 - Exceptions are `final`, one per file, extending `AbstractRuntimeException`. `mago.toml`'s

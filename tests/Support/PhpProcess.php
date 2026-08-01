@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NaokiTsuchiya\RayDiContext\Fake;
+namespace NaokiTsuchiya\RayDiContext\Support;
 
 use RuntimeException;
 
@@ -15,7 +15,7 @@ use function stream_get_contents;
 use const PHP_BINARY;
 
 /** Runs a PHP CLI script in a subprocess for end-to-end tests */
-final class Cli
+final class PhpProcess
 {
     /**
      * @param list<string> $args

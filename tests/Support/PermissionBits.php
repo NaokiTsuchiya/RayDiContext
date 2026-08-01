@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NaokiTsuchiya\RayDiContext\Fake;
+namespace NaokiTsuchiya\RayDiContext\Support;
 
 use PHPUnit\Framework\TestCase;
 
@@ -35,7 +35,7 @@ final class PermissionBits
     }
 
     /** @param non-empty-string $scratchDir Writable directory to probe below; created if absent */
-    public static function areEnforced(string $scratchDir): bool
+    private static function areEnforced(string $scratchDir): bool
     {
         $probe = $scratchDir . '/' . uniqid('.permission-probe_', more_entropy: true);
 

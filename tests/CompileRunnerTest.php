@@ -201,11 +201,6 @@ final class CompileRunnerTest extends TestCase
     /**
      * A rejected compile names the baked path and leaves the compile dir empty
      *
-     * The scripts the guard just refused must not survive for the next COPY to bake into an
-     * image. Previously they did, and the only thing making them unusable was the normalizer
-     * not having run — so they were still 0600, a property of how ray/compiler happens to
-     * write rather than anything this package decided.
-     *
      * @throws RuntimeException
      */
     #[Test]
@@ -248,12 +243,8 @@ final class CompileRunnerTest extends TestCase
     }
 
     /**
-     * Returns a content hash per file, for change detection that does not depend on the mode
-     *
-     * Hashed rather than sized and timestamped, because mtime has one-second granularity: a
-     * rewrite of the same length within the same second left size and mtime identical and went
-     * unnoticed. The 0555 above closes that gap only for a process the mode actually denies,
-     * which root is not — so the comparison, not the mode, is what has to carry the assertion.
+     * Returns a content hash per file: mtime is second-granular, so a same-length rewrite
+     * inside one second would otherwise go unnoticed
      *
      * @return array<string, string>
      *

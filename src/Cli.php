@@ -11,16 +11,16 @@ use function count;
 use function file_put_contents;
 use function is_dir;
 use function is_file;
+use function restore_error_handler;
+use function set_error_handler;
 use function sprintf;
 
 /**
  * Argument handling and exit-status mapping for bin/ray-di-compile
  *
- * The CLI's exit status is this package's public contract; this class is not. It lives here
- * rather than inside the bin script so that the analyzer and the coverage floor reach it — a
- * bin script carries no ".php" extension, so a "*.php" source glob never discovers it and it
- * was checked by nothing. Only the autoloader lookup stays in the script, since it has to run
- * before this class can be loaded at all.
+ * The exit status is this package's public contract; this class is not. It lives here rather
+ * than in the bin script, which a "*.php" source glob never discovers, so the analyzer and the
+ * coverage floor reach it.
  *
  * @internal Build on the exit-status contract, not on this class
  */
@@ -68,18 +68,13 @@ final class Cli
             ));
         }
 
-        // Defaulted rather than indexed directly: the count above already guarantees the three
-        // required arguments, but that guarantee is not one a reader — or an analyzer — can
-        // recover from the index alone.
         $bootstrap = $argv[1] ?? '';
         $bootstrapExists = is_file($bootstrap);
         if (!$bootstrapExists) {
             return $this->usageError(sprintf("Bootstrap file not found: %s\n", $bootstrap));
         }
 
-        // AppMeta::fromAppDir() rejects a relative appDir rather than resolving it, so a missing
-        // directory and a relative one would both arrive as InvalidAppMeta. Existence is checked
-        // here to keep the two apart: one is a usage error, the other is a compile failure.
+        // Checked here so a missing appDir stays a usage error; a relative one is a compile failure.
         $appDir = $argv[2] ?? '';
         $appDirExists = is_dir($appDir);
         if (!$appDirExists) {
@@ -92,9 +87,8 @@ final class Cli
     /**
      * Loads the bootstrap and runs the compile
      *
-     * An empty override reads as "not given": the documented invocation forwards
-     * "$APP_COMPILE_DIR" through the shell, so an unset variable arrives as "". Compared
-     * against "" rather than tested for truthiness, so a directory named "0" survives.
+     * An empty override reads as "not given": an unset "$APP_COMPILE_DIR" arrives as "". Compared
+     * against "" rather than for truthiness, so a directory named "0" survives.
      */
     private function compile(
         string $bootstrap,
@@ -124,12 +118,7 @@ final class Cli
         } catch (ExceptionInterface $e) {
             return $this->runtimeError("{$e->getMessage()}\n");
         } catch (Throwable $e) {
-            // Not one of this package's own checks. Requiring the bootstrap and compiling the
-            // module run application code and Ray.Di, and a missing binding — the most ordinary
-            // compile failure there is — arrives as a Ray.Di exception. Left uncaught it escaped
-            // as a fatal with a stack trace and exit 255, outside the contract entirely. The
-            // class is named because at that point it is the part that says where the failure
-            // came from; the message alone rarely does.
+            // Named by class: a foreign throwable's message rarely says where it came from.
             return $this->runtimeError(sprintf("%s: %s\n", $e::class, $e->getMessage()));
         }
 
@@ -141,7 +130,7 @@ final class Cli
      */
     private function usageError(string $message): int
     {
-        file_put_contents($this->errorStream, $message);
+        $this->write($message);
 
         return 2;
     }
@@ -151,8 +140,24 @@ final class Cli
      */
     private function runtimeError(string $message): int
     {
-        file_put_contents($this->errorStream, $message);
+        $this->write($message);
 
         return 1;
+    }
+
+    /**
+     * Writes the one line a failure gets, best effort
+     *
+     * An unwritable error stream has no second channel to be reported on, and this package does
+     * not let E_WARNING reach its caller, so the diagnostic is dropped rather than raised.
+     */
+    private function write(string $message): void
+    {
+        set_error_handler(static fn(): bool => true);
+        try {
+            file_put_contents($this->errorStream, $message);
+        } finally {
+            restore_error_handler();
+        }
     }
 }

@@ -253,9 +253,23 @@ single required status check — the matrix can grow/shrink without touching bra
   are `final` and one-per-file as described above.
 - Every builtin function used is explicitly `use function`-imported (no fully-qualified `\strlen(...)`
   calls) — `mago`'s `no-fully-qualified-global-function` rule enforces this.
-- Doc comments explain the *why* (a rejected shape, a workaround for an upstream quirk, a security
-  boundary) rather than restating the method name — follow that tone rather than writing
-  what-it-does comments.
+- **Comments are capped, not just "explanatory".** Doc comments explain the *why* (a rejected shape,
+  a workaround for an upstream quirk, a security boundary) rather than restating the method name.
+  On top of that, three hard rules — PR #69 was reviewed with "不要"/"削除" seventeen times, all of
+  it comment written to this brief but at the wrong length:
+  1. **An inline `//` comment is one line.** Needing a second means the reason is too long to sit
+     next to the code — put the fact in the docblock, or leave it out.
+  2. **A docblock is a summary line, and at most two lines of prose after it.** History ("previously
+     they did…", "left uncaught it escaped as…") belongs in the commit message, which is where
+     someone looking for it will be. Do not narrate the bug you just fixed.
+  3. **Nothing that the signature, the type, or the adjacent line already says.** `@throws X` plus a
+     sentence restating X is one thing too many.
+
+  `mago` has no rule for any of this (checked: `no-empty-comment`, `no-hash-comment`,
+  `valid-docblock`, `missing-docs` are the only comment rules, and none bounds length). A
+  line-count check in CI is not viable either — files already on `main` carry 37-, 19- and 18-line
+  blocks that predate the rule. So this is the control: apply it when writing, and when reviewing a
+  diff, read every added comment and delete the ones that only restate.
 - `@api` marks the public surface — everything under `src/` except two. `PermissionNormalizer` is
   `@internal` (a workaround for a `ray/compiler` quirk, not something to build on) and so is `Cli`
   (the *exit-status contract* is public; the class carrying it is not, so it stays free to change).

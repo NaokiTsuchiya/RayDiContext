@@ -87,13 +87,8 @@ final readonly class AppMeta
         $normalizedCompileDir = self::trimSlash($compileDir);
         $normalizedTmpDir = self::trimSlash($tmpDir);
 
-        // Rejected because it is the one shape BakedPathGuard cannot see. The guard allows a
-        // literal that lies inside a compileDir literal — the compile dir is baked in with the
-        // scripts, so that is legitimate — and reports the tmpDir otherwise. When the two are
-        // the same string, every tmpDir occurrence is exactly a compileDir occurrence, so the
-        // tmpDir check silently passes on scripts it exists to reject. A tmpDir merely nested
-        // under the compile dir extends past the allowed literal and is still caught, so it is
-        // left to the guard rather than refused here.
+        // The one shape BakedPathGuard cannot see: every tmpDir occurrence is also a compileDir
+        // occurrence, so its check passes on the scripts it exists to reject.
         if ($normalizedCompileDir === $normalizedTmpDir) {
             throw new InvalidAppMeta(sprintf(
                 'AppMeta::$compileDir and AppMeta::$tmpDir must be different directories, both are: "%s". '

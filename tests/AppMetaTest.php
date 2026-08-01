@@ -90,12 +90,7 @@ final class AppMetaTest extends TestCase
     }
 
     /**
-     * compileDir and tmpDir must be different directories
-     *
-     * This is the one shape BakedPathGuard cannot see: it allows a literal that lies inside a
-     * compileDir literal, so when the two paths are the same string every tmpDir occurrence is
-     * also a compileDir occurrence and the tmpDir check passes on scripts it exists to reject.
-     * Trailing slashes are trimmed before the comparison, so they cannot spell around it.
+     * compileDir and tmpDir must be different directories, trailing slashes aside
      *
      * @throws InvalidAppMeta
      */
@@ -113,9 +108,6 @@ final class AppMetaTest extends TestCase
 
     /**
      * A tmp dir merely nested under the compile dir is left to BakedPathGuard
-     *
-     * That shape extends past the allowed compileDir literal, so the guard still reports it;
-     * refusing it here would only remove a working defence.
      *
      * @throws InvalidAppMeta
      */

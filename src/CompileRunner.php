@@ -37,16 +37,8 @@ final class CompileRunner
      * Cleans the compile dir, compiles the context module, guards against baked paths,
      * then normalizes the permissions of what was written
      *
-     * A rejected compile leaves the compile dir empty. Without that the scripts the guard just
-     * refused stayed on disk, fully formed, for the next COPY to bake into the image; the only
-     * thing making them unusable was that the normalizer had not run, so they were still 0600 —
-     * a property of how ray/compiler happens to write today, and one PermissionNormalizer exists
-     * to stop depending on. Emptying says it outright instead. The failure is reported either
-     * way, and it names the file and the literal, so nothing diagnosable is lost with the
-     * scripts.
-     *
-     * The normalizer is built here rather than injected: it is a fix for how ray/compiler
-     * writes, not a policy an application chooses.
+     * A rejected compile leaves the compile dir empty, so scripts the guard refused cannot be
+     * baked into an image by a later COPY.
      *
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
@@ -59,15 +51,12 @@ final class CompileRunner
      */
     public function run(AppMeta $meta): void
     {
-        // The context is resolved before the cleaner runs, so an unknown context aborts with the
-        // compile dir untouched. That ordering is the only thing standing between a mistyped
-        // context name and an emptied compile dir with nothing written back into it.
+        // Resolved before the cleaner runs, so an unknown context leaves the compile dir intact.
         $context = $this->contextProvider->get($meta);
         ($this->cleaner)($meta);
 
-        // Emptied through a flag and finally rather than catch-and-rethrow: a rethrow is typed as
-        // the marker interface, which would widen this method's declared throws from the precise
-        // list below back to "anything this package throws".
+        // A flag and finally rather than catch-and-rethrow: a rethrow types as the marker
+        // interface and would widen the precise @throws list above.
         $guarded = false;
         try {
             $this->compiler->compile($context(), $meta->compileDir);

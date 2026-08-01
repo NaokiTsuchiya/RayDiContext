@@ -4,16 +4,12 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Fake\Fs;
+use NaokiTsuchiya\RayDiContext\Fake\CliFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
-use function file_get_contents;
 use function glob;
-use function mkdir;
-use function uniqid;
 
 /**
  * Arguments the CLI refuses before compiling anything, all of them exit status 2
@@ -21,31 +17,15 @@ use function uniqid;
 #[CoversClass(Cli::class)]
 final class CliRejectionTest extends TestCase
 {
-    /** Bootstrap mapping "prod" and "baked" to fake contexts */
-    private const VALID = __DIR__ . '/Fixture/bootstrap_valid.php';
-
-    /** @var non-empty-string Per-test working directory */
-    private string $baseDir;
-
-    /** @var non-empty-string App dir the compile would write below */
-    private string $appDir;
-
-    /** @var non-empty-string File standing in for STDERR */
-    private string $errorFile;
-
-    /** System under test */
-    private Cli $cli;
+    /** Working directory, error stream and Cli under test */
+    private CliFixture $fixture;
 
     /**
      * {@inheritDoc}
      */
     protected function setUp(): void
     {
-        $this->baseDir = __DIR__ . '/tmp/' . uniqid('cli_reject_', more_entropy: true);
-        $this->appDir = "{$this->baseDir}/app";
-        mkdir("{$this->appDir}/var/tmp/prod", permissions: 0o755, recursive: true);
-        $this->errorFile = "{$this->baseDir}/stderr.txt";
-        $this->cli = new Cli($this->errorFile);
+        $this->fixture = new CliFixture();
     }
 
     /**
@@ -53,104 +33,73 @@ final class CliRejectionTest extends TestCase
      */
     protected function tearDown(): void
     {
-        Fs::removeDir($this->baseDir);
+        $this->fixture->remove();
     }
 
     /**
      * Too few arguments is a usage error naming the usage
-     *
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsMissingArguments(): void
     {
-        $status = ($this->cli)(['bin', self::VALID, $this->appDir]);
+        $status = ($this->fixture->cli)(['bin', CliFixture::VALID, $this->fixture->appDir]);
 
         static::assertSame(2, $status);
-        static::assertStringContainsString('Usage:', $this->stderr());
+        static::assertStringContainsString('Usage:', $this->fixture->stderr());
     }
 
     /**
      * More arguments than the CLI accepts is a usage error, and nothing is compiled
-     *
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsTooManyArguments(): void
     {
-        $status = ($this->cli)(['bin', self::VALID, $this->appDir, 'prod', '', '', 'extra']);
+        $status = ($this->fixture->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'prod', '', '', 'extra']);
 
         static::assertSame(2, $status);
-        static::assertStringContainsString('Too many arguments', $this->stderr());
-        static::assertStringContainsString('Usage:', $this->stderr());
-        static::assertSame([], glob("{$this->appDir}/var/di/prod/*.php"));
+        static::assertStringContainsString('Too many arguments', $this->fixture->stderr());
+        static::assertStringContainsString('Usage:', $this->fixture->stderr());
+        static::assertSame([], glob("{$this->fixture->appDir}/var/di/prod/*.php"));
     }
 
     /**
      * A bootstrap path that is not a file is a usage error naming the path
-     *
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsMissingBootstrap(): void
     {
-        $missing = "{$this->baseDir}/absent.php";
+        $missing = "{$this->fixture->baseDir}/absent.php";
 
-        $status = ($this->cli)(['bin', $missing, $this->appDir, 'prod']);
+        $status = ($this->fixture->cli)(['bin', $missing, $this->fixture->appDir, 'prod']);
 
         static::assertSame(2, $status);
-        static::assertStringContainsString('Bootstrap file not found', $this->stderr());
-        static::assertStringContainsString($missing, $this->stderr());
+        static::assertStringContainsString('Bootstrap file not found', $this->fixture->stderr());
+        static::assertStringContainsString($missing, $this->fixture->stderr());
     }
 
     /**
      * A bootstrap returning something else is a usage error naming the required type
-     *
-     * @throws RuntimeException
      */
     #[Test]
     public function rejectsBootstrapReturningWrongType(): void
     {
-        $status = ($this->cli)(['bin', __DIR__ . '/Fixture/bootstrap_invalid.php', $this->appDir, 'prod']);
+        $status = ($this->fixture->cli)(['bin', CliFixture::INVALID, $this->fixture->appDir, 'prod']);
 
         static::assertSame(2, $status);
-        static::assertStringContainsString('must return', $this->stderr());
+        static::assertStringContainsString('must return', $this->fixture->stderr());
     }
 
     /**
-     * A missing appDir is a usage error; a relative one is a compile failure
-     *
-     * AppMeta rejects a relative appDir rather than resolving it, so both would arrive as
-     * InvalidAppMeta. The CLI checks existence itself to keep the two apart: one is an argument
-     * it can see is wrong before starting, the other is the compile refusing to run.
-     *
-     * @throws RuntimeException
+     * A missing appDir is a usage error
      */
     #[Test]
-    public function separatesMissingAppDirFromRelativeAppDir(): void
+    public function rejectsMissingAppDir(): void
     {
-        $missing = "{$this->baseDir}/absent";
+        $missing = "{$this->fixture->baseDir}/absent";
 
-        $status = ($this->cli)(['bin', self::VALID, $missing, 'prod']);
+        $status = ($this->fixture->cli)(['bin', CliFixture::VALID, $missing, 'prod']);
 
         static::assertSame(2, $status);
-        static::assertStringContainsString('appDir does not exist', $this->stderr());
-
-        $relative = ($this->cli)(['bin', self::VALID, '.', 'prod']);
-
-        static::assertSame(1, $relative);
-        static::assertStringContainsString('must be an absolute path', $this->stderr());
-    }
-
-    /**
-     * Returns what the CLI wrote to its error stream
-     *
-     * @throws RuntimeException
-     */
-    private function stderr(): string
-    {
-        $written = file_get_contents($this->errorFile);
-
-        return $written === false ? '' : $written;
+        static::assertStringContainsString('appDir does not exist', $this->fixture->stderr());
     }
 }

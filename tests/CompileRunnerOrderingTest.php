@@ -4,19 +4,26 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
 use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
+use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
+use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
+use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingCompiler;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
-use function file_put_contents;
+use function copy;
 use function mkdir;
 use function uniqid;
 
@@ -30,6 +37,9 @@ use function uniqid;
 #[CoversClass(CompileRunner::class)]
 final class CompileRunnerOrderingTest extends TestCase
 {
+    /** Stands in for a script from a previous compile */
+    private const SCRIPT = __DIR__ . '/Fixture/script.php';
+
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;
 
@@ -52,7 +62,7 @@ final class CompileRunnerOrderingTest extends TestCase
         $this->meta = AppMeta::fromAppDir($appDir, 'prod');
         $this->compiler = new FakeRecordingCompiler();
         mkdir($this->meta->compileDir, permissions: 0o755, recursive: true);
-        file_put_contents("{$this->meta->compileDir}/stale.php", data: '<?php return 0;');
+        copy(self::SCRIPT, "{$this->meta->compileDir}/stale.php");
     }
 
     /**
@@ -66,13 +76,16 @@ final class CompileRunnerOrderingTest extends TestCase
     /**
      * An unknown context aborts with the compile dir untouched
      *
-     * The context is resolved before the cleaner runs, so a typo in the context name costs
-     * nothing. Were the two swapped, the compile dir would be emptied and then nothing written
-     * back into it — the previous compile gone and no new one to replace it.
-     *
-     * @throws RuntimeException
+     * @throws BakedPathFound
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
+     * @throws UnsafeCompileDir
+     * @throws CompileDirNotWritable
+     * @throws RemoveFailed
+     * @throws ScriptNotReadable
+     * @throws ChmodFailed
+     * @throws CompileDirNotFound
+     * @throws CompileDirNotReadable
      * @throws InvalidAppMeta
      */
     #[Test]
@@ -95,12 +108,16 @@ final class CompileRunnerOrderingTest extends TestCase
     /**
      * The compile dir is empty by the time the compiler is asked to write into it
      *
-     * A recompile must not leave scripts of renamed or removed classes behind, and the only
-     * moment that can be observed is while the compiler is running.
-     *
-     * @throws RuntimeException
+     * @throws BakedPathFound
      * @throws ContextClassNotFound
      * @throws InvalidContextClass
+     * @throws UnsafeCompileDir
+     * @throws CompileDirNotWritable
+     * @throws RemoveFailed
+     * @throws ScriptNotReadable
+     * @throws ChmodFailed
+     * @throws CompileDirNotFound
+     * @throws CompileDirNotReadable
      */
     #[Test]
     public function emptiesTheCompileDirBeforeCompiling(): void

@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
+use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
+use function copy;
 use function file_put_contents;
 use function mkdir;
 use function uniqid;
@@ -28,6 +31,9 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
 {
     /** Stands in for whatever an application knows must not reach a shipped script */
     private const CONFIGURED = 'zqx-must-not-ship-4f1c';
+
+    /** A compiled script holding nothing an application configured */
+    private const CLEAN_SCRIPT = __DIR__ . '/Fixture/script.php';
 
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;
@@ -59,13 +65,14 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
     /**
      * A configured literal in a compiled script is rejected, naming the script
      *
-     * @throws RuntimeException
+     * @throws CompileDirNotFound
+     * @throws CompileDirNotReadable
+     * @throws ScriptNotReadable
      */
     #[Test]
     public function rejectsAConfiguredLiteral(): void
     {
-        $script = "{$this->meta->compileDir}/-db_password.php";
-        file_put_contents($script, data: "<?php return '" . self::CONFIGURED . "';");
+        $script = $this->writeScriptHolding(self::CONFIGURED);
 
         try {
             (new BakedPathGuard([self::CONFIGURED]))($this->meta);
@@ -81,15 +88,14 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
      * These are supplied precisely because they must not ship, so a message quoting one would
      * move it out of the image and into the CI log rather than keep it out of both.
      *
-     * @throws RuntimeException
+     * @throws CompileDirNotFound
+     * @throws CompileDirNotReadable
+     * @throws ScriptNotReadable
      */
     #[Test]
     public function doesNotEchoTheConfiguredLiteral(): void
     {
-        file_put_contents(
-            "{$this->meta->compileDir}/-db_password.php",
-            data: "<?php return '" . self::CONFIGURED . "';",
-        );
+        $this->writeScriptHolding(self::CONFIGURED);
 
         try {
             (new BakedPathGuard([self::CONFIGURED]))($this->meta);
@@ -100,15 +106,30 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
     }
 
     /**
+     * Writes a compiled script holding $value and returns its path
+     *
+     * @return non-empty-string
+     */
+    private function writeScriptHolding(string $value): string
+    {
+        $script = "{$this->meta->compileDir}/-db_password.php";
+        file_put_contents($script, data: "<?php return '{$value}';");
+
+        return $script;
+    }
+
+    /**
      * Scripts free of the configured literals pass, as they did before any were configured
      *
      * @throws BakedPathFound
-     * @throws RuntimeException
+     * @throws CompileDirNotFound
+     * @throws CompileDirNotReadable
+     * @throws ScriptNotReadable
      */
     #[Test]
     public function passesWhenNoConfiguredLiteralIsPresent(): void
     {
-        file_put_contents("{$this->meta->compileDir}/clean.php", data: '<?php return 0;');
+        copy(self::CLEAN_SCRIPT, "{$this->meta->compileDir}/clean.php");
 
         (new BakedPathGuard([self::CONFIGURED]))($this->meta);
 

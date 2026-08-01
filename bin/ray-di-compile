@@ -21,11 +21,7 @@ use NaokiTsuchiya\RayDiContext\Cli;
 
 (static function (): void {
     foreach ([
-        // Set by Composer's bin proxy and pointing at the consumer's autoloader. Tried first
-        // because the candidates below resolve to this package's own vendor dir whenever it
-        // has one — a path repository, a monorepo checkout, local development — and loading
-        // that one leaves the consumer's own classes, its contexts included, unloadable.
-        $GLOBALS['_composer_autoload_path'] ?? null,
+        $GLOBALS['_composer_autoload_path'] ?? null, // set by Composer's bin proxy
         __DIR__ . '/../vendor/autoload.php', // installed as the root package
         __DIR__ . '/../../../autoload.php', // installed as a dependency (vendor/bin)
     ] as $autoload) {

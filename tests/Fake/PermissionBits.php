@@ -17,15 +17,8 @@ use function uniqid;
 /**
  * Whether this process is actually denied by the permission bits it sets
  *
- * Several tests make a directory unreadable and assert that the package reports it. Run as root
- * none of that holds — CAP_DAC_OVERRIDE and CAP_DAC_READ_SEARCH mean the mode is set and then
- * ignored — so those tests fail with "… was not thrown" and nothing in the message says why.
- * CI runs as a non-root user deliberately; a container shell usually does not.
- *
- * The capability is measured rather than inferred from the uid. Reading the uid would need
- * ext-posix, a dependency this package deliberately does not declare, and would still be a
- * proxy: a non-root process holding CAP_DAC_OVERRIDE, or a filesystem that does not enforce
- * modes at all, is denied nothing either.
+ * Measured rather than read off the uid: that would need ext-posix, and would still miss a
+ * non-root process holding CAP_DAC_OVERRIDE.
  */
 final class PermissionBits
 {

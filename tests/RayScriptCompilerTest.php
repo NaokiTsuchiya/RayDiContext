@@ -10,7 +10,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Ray\Compiler\DiCompileModule;
-use RuntimeException;
 
 use function glob;
 use function mkdir;
@@ -18,10 +17,6 @@ use function uniqid;
 
 /**
  * The bundled compiler writes where it is told
- *
- * CompileRunner reaches ray/compiler only through ScriptCompilerInterface now, so the one
- * implementation that actually calls it needs a case of its own; every other CompileRunner test
- * can then stand in a fake and still say something about the real thing.
  */
 #[CoversClass(RayScriptCompiler::class)]
 final class RayScriptCompilerTest extends TestCase
@@ -47,8 +42,6 @@ final class RayScriptCompilerTest extends TestCase
 
     /**
      * The module's bindings are compiled into the given directory
-     *
-     * @throws RuntimeException
      */
     #[Test]
     public function compilesTheModuleIntoTheCompileDir(): void

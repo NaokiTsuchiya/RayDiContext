@@ -9,10 +9,8 @@ use Ray\Di\AbstractModule;
 /**
  * Compiles a module into a directory of scripts
  *
- * The seam over ray/compiler. It exists so the pipeline's ordering guarantees — the compile dir
- * is verified before it is emptied, the scripts are guarded after they are written, permissions
- * are normalized only once the guard passed — can be asserted directly instead of being inferred
- * from the side effects of a real compile.
+ * The seam over ray/compiler, so the pipeline's ordering can be asserted without a real compile.
+ * Implementations pass their compiler's exceptions through unchanged.
  *
  * @api
  */

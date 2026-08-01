@@ -58,9 +58,9 @@ final class BakedPathGuardTest extends TestCase
     {
         file_put_contents("{$this->meta->compileDir}/clean.php", data: '<?php return new stdClass();');
 
-        ($this->guard)($this->meta);
-
         $this->expectNotToPerformAssertions();
+
+        ($this->guard)($this->meta);
     }
 
     /** @throws ExceptionInterface */
@@ -111,9 +111,9 @@ final class BakedPathGuardTest extends TestCase
     {
         file_put_contents("{$this->meta->compileDir}/script-dir.php", "<?php return '{$this->meta->compileDir}';");
 
-        ($this->guard)($this->meta);
-
         $this->expectNotToPerformAssertions();
+
+        ($this->guard)($this->meta);
     }
 
     /** @throws ExceptionInterface */
@@ -122,9 +122,9 @@ final class BakedPathGuardTest extends TestCase
     {
         file_put_contents("{$this->meta->compileDir}/_bindings.log", "toInstance('{$this->meta->appDir}')");
 
-        ($this->guard)($this->meta);
-
         $this->expectNotToPerformAssertions();
+
+        ($this->guard)($this->meta);
     }
 
     /** @throws ExceptionInterface */

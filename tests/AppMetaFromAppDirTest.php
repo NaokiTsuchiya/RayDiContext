@@ -60,20 +60,20 @@ final class AppMetaFromAppDirTest extends TestCase
     }
 
     /** @throws ExceptionInterface */
-    #[TestWith([''])]
-    #[TestWith(['../prod'])]
-    #[TestWith(['pro..d'])]
-    #[TestWith(['prod/../../etc'])]
-    #[TestWith(['.'])]
-    #[TestWith(['/'])]
-    #[TestWith(['./'])]
-    #[TestWith(['/prod'])]
-    #[TestWith(['prod/'])]
-    #[TestWith(['prod//staging'])]
-    #[TestWith(['prod/./staging'])]
-    #[TestWith(['App/ProdContext'])]
-    #[TestWith(['prod:staging'])]
-    #[TestWith(['prod staging'])]
+    #[TestWith([''], 'empty')]
+    #[TestWith(['../prod'], 'parent directory traversal')]
+    #[TestWith(['pro..d'], 'dots inside a word')]
+    #[TestWith(['prod/../../etc'], 'traversal below a segment')]
+    #[TestWith(['.'], 'current directory')]
+    #[TestWith(['/'], 'separator alone')]
+    #[TestWith(['./'], 'current directory with a trailing separator')]
+    #[TestWith(['/prod'], 'leading separator')]
+    #[TestWith(['prod/'], 'trailing separator')]
+    #[TestWith(['prod//staging'], 'doubled separator')]
+    #[TestWith(['prod/./staging'], 'current directory as a segment')]
+    #[TestWith(['App/ProdContext'], 'namespace spelled with a separator')]
+    #[TestWith(['prod:staging'], 'colon')]
+    #[TestWith(['prod staging'], 'space')]
     #[Test]
     public function rejectsUnsafeContext(string $context): void
     {
@@ -118,10 +118,10 @@ final class AppMetaFromAppDirTest extends TestCase
     }
 
     /** @throws ExceptionInterface */
-    #[TestWith(['.', 'must be an absolute path'])]
-    #[TestWith(['app', 'must be an absolute path'])]
-    #[TestWith(['./app', 'must be an absolute path'])]
-    #[TestWith(['', 'must not be empty'])]
+    #[TestWith(['.', 'must be an absolute path'], 'current directory')]
+    #[TestWith(['app', 'must be an absolute path'], 'bare relative segment')]
+    #[TestWith(['./app', 'must be an absolute path'], 'explicitly relative path')]
+    #[TestWith(['', 'must not be empty'], 'empty')]
     #[Test]
     public function rejectsInvalidAppDirShape(string $appDir, string $message): void
     {

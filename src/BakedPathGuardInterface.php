@@ -12,12 +12,8 @@ use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 /**
  * Decides whether what was just compiled may be shipped
  *
- * The bundled BakedPathGuard rejects the two runtime paths this package knows about. An
- * application knows things it does not — its own secrets, its own host names — and the README
- * is explicit that nothing else is checked: a value bound with toInstance() is frozen into the
- * compiled script, and only appDir and tmpDir are looked for. Passing an implementation to the
- * CompileRunner is how that gap gets closed, the same way CompileDirGuardInterface lets an
- * application refuse more compile dirs than the bundled guard does.
+ * The bundled guard only knows appDir and tmpDir. An application knows its own secrets and host
+ * names, and a value bound with toInstance() is frozen into the compiled script either way.
  *
  * @api
  */

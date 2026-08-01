@@ -253,23 +253,24 @@ single required status check — the matrix can grow/shrink without touching bra
   are `final` and one-per-file as described above.
 - Every builtin function used is explicitly `use function`-imported (no fully-qualified `\strlen(...)`
   calls) — `mago`'s `no-fully-qualified-global-function` rule enforces this.
-- **Comments are capped, not just "explanatory".** Doc comments explain the *why* (a rejected shape,
-  a workaround for an upstream quirk, a security boundary) rather than restating the method name.
-  On top of that, three hard rules — PR #69 was reviewed with "不要"/"削除" seventeen times, all of
-  it comment written to this brief but at the wrong length:
-  1. **An inline `//` comment is one line.** Needing a second means the reason is too long to sit
-     next to the code — put the fact in the docblock, or leave it out.
-  2. **A docblock is a summary line, and at most two lines of prose after it.** History ("previously
-     they did…", "left uncaught it escaped as…") belongs in the commit message, which is where
-     someone looking for it will be. Do not narrate the bug you just fixed.
-  3. **Nothing that the signature, the type, or the adjacent line already says.** `@throws X` plus a
-     sentence restating X is one thing too many.
+- **Write comments for the file, not for the review.** This is the failure mode here, and it is
+  specifically an AI-authored one: comment aimed at whoever is reading the diff *right now* —
+  justifying the change, narrating what the code used to do, answering an objection before it is
+  raised. It reads as thorough at review time and as noise a month later. PR #69 collected
+  seventeen "不要"/"削除" on exactly that. **Before keeping a comment, ask whether it still earns
+  its place for a reader with no diff, no PR and no memory of the change.**
+  - **Out**: "previously…", "used to…", "left uncaught it escaped…", "kept to one line so that…",
+    and anything the signature, the type or the next line already says. It goes in the commit
+    message, which is where someone looking for the history will be.
+  - **In**: a constraint not visible from the code — an upstream quirk, an OS behaviour, a security
+    boundary — and a shape a future maintainer would otherwise "fix" back. `fromAppDir()`'s absent
+    `realpath()` is the model: one line, names the issue, stops the change from being re-made.
+  - Length follows from that: an inline comment is one line, a docblock is a summary plus at most
+    two lines of prose. Needing more means it was written for the review.
 
-  `mago` has no rule for any of this (checked: `no-empty-comment`, `no-hash-comment`,
-  `valid-docblock`, `missing-docs` are the only comment rules, and none bounds length). A
-  line-count check in CI is not viable either — files already on `main` carry 37-, 19- and 18-line
-  blocks that predate the rule. So this is the control: apply it when writing, and when reviewing a
-  diff, read every added comment and delete the ones that only restate.
+  Nothing enforces this. `mago`'s only comment rules are `no-empty-comment`, `no-hash-comment`,
+  `valid-docblock` and `missing-docs`, none of which looks at length or audience, and a CI
+  line-count would fail on blocks already on `main`. It is a write-time and review-time check.
 - `@api` marks the public surface — everything under `src/` except two. `PermissionNormalizer` is
   `@internal` (a workaround for a `ray/compiler` quirk, not something to build on) and so is `Cli`
   (the *exit-status contract* is public; the class carrying it is not, so it stays free to change).

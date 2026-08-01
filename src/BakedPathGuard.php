@@ -40,10 +40,8 @@ use function sprintf;
 final class BakedPathGuard implements BakedPathGuardInterface
 {
     /**
-     * @param list<non-empty-string> $extraNeedles Literals this application knows must not ship —
-     *                                            a secret, a host name — beyond the two runtime
-     *                                            paths. Never echoed in the rejection, since a
-     *                                            CI log is the last place a secret should land
+     * @param list<non-empty-string> $extraNeedles Literals this application knows must not ship, a
+     *                                            secret or a host name. Never echoed in a rejection
      */
     public function __construct(
         private readonly array $extraNeedles = [],
@@ -128,9 +126,7 @@ final class BakedPathGuard implements BakedPathGuardInterface
         foreach ($this->extraNeedles as $needle) {
             $hasNeedle = $scanner->hasBakedPath($needle);
             if ($hasNeedle) {
-                // Named by position, never by value: an application supplies these because they
-                // are things that must not ship, and a rejection that prints one would put it in
-                // the CI log instead of the image.
+                // Named by position, never by value: printing one moves it into the CI log.
                 throw new BakedPathFound(sprintf(
                     'A configured literal was found in %s. '
                     . 'Bind runtime values through a provider instead of toInstance().',

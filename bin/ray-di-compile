@@ -9,9 +9,8 @@ declare(strict_types=1);
  * Usage:
  *   php bin/ray-di-compile <bootstrap> <appDir> <context> [compileDir] [tmpDir]
  *
- * Everything except locating the autoloader lives in NaokiTsuchiya\RayDiContext\Cli, which the
- * analyzer and the coverage floor can reach. The lookup below cannot move there: it is what
- * makes that class loadable in the first place.
+ * Everything but the autoloader lookup lives in NaokiTsuchiya\RayDiContext\Cli; the lookup
+ * cannot move there, since it is what makes that class loadable.
  *
  * The bootstrap file is a PHP script that returns a ContextProviderInterface. See the README
  * for the argument and exit-status contract (0 compiled, 1 the compile failed, 2 usage error).

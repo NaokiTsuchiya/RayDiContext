@@ -18,9 +18,9 @@ use function sprintf;
 /**
  * Argument handling and exit-status mapping for bin/ray-di-compile
  *
- * The exit status is this package's public contract; this class is not. It lives here rather
- * than in the bin script, which a "*.php" source glob never discovers, so the analyzer and the
- * coverage floor reach it.
+ * The exit status is this package's public contract; this class is not. It stays out of the bin
+ * script, which a "*.php" source glob never discovers, so the analyzer and the coverage floor
+ * reach it.
  *
  * @internal Build on the exit-status contract, not on this class
  */
@@ -46,9 +46,8 @@ final class Cli
     /**
      * Compiles the requested context and returns the process exit status
      *
-     * 0 compiled, 1 the compile failed, 2 the arguments were unusable — a public contract, so
-     * every failure resolves to one of the three and writes a single line without a stack
-     * trace, keeping a CI log readable.
+     * 0 compiled, 1 the compile failed, 2 the arguments were unusable. Every failure resolves to
+     * one of the three and writes a single line, never a stack trace.
      *
      * @param list<string> $argv Raw process arguments, script name first
      */

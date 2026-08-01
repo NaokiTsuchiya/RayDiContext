@@ -24,11 +24,11 @@ vendor/bin/mago fmt   # auto-fix; CI only checks
 `mago` is the only style/analysis tool, with every strictness flag on and `note` failing the build.
 Run `composer cs && composer sa` before calling a change to `src/` done.
 
-**Run the suite as a non-root user.** Nine tests set a directory unreadable and assert the package
-reports it; root ignores permission bits, so they `markTestSkipped()` via `Support\PermissionBits`,
-which measures the capability rather than reading the uid. Root gives
-`144 tests, 9 skipped`; non-root gives `144 tests, 0 skipped`. CI is non-root on purpose — don't
-move the `test` job into a `container:`.
+**Run the suite as a non-root user.** The tests that set a directory unreadable and assert the
+package reports it can say nothing as root, which ignores permission bits; they `markTestSkipped()`
+via `Support\PermissionBits`, which measures the capability rather than reading the uid. A root run
+therefore skips them, a non-root run skips nothing. CI is non-root on purpose — don't move the
+`test` job into a `container:`.
 
 `CompileRunnerTest::resolvesFromReadOnlyCompileDir` is the opposite case and must **not** skip: its
 assertion is a per-file `sha256` snapshot that never depended on the mode.

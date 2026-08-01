@@ -93,20 +93,19 @@ enumeration.
 
 ### Running the `test` CI job in a `container:`
 
-Rejected without trying it, on an outcome already observed locally: running the suite as root gives
-`144 tests, 9 skipped` against `144 tests, 0 skipped` as an ordinary user. Containers run as root,
-`Support\PermissionBits` finds the bits unenforced, and the nine tests that exist to assert the
-package reports a directory it cannot read skip silently. A green matrix would mean less than it
-appears.
+Rejected without trying it, on an outcome already observed locally: running the suite as root skips
+tests that an ordinary user runs, with the same total either way. Containers run as root,
+`Support\PermissionBits` finds the bits unenforced, and the tests that exist to assert the package
+reports a directory it cannot read skip silently. A green matrix would mean less than it appears.
 
 ## Declined for cost
 
 ### `ext-posix` to detect root in tests
 
 Rejected on its own merits: a uid check answers the wrong question. A non-root process holding
-`CAP_DAC_OVERRIDE` also ignores permission bits, so `posix_geteuid() !== 0` would let the nine
-permission tests run and fail. `Support\PermissionBits` measures the capability instead — it creates
-a directory, makes it unreadable, and checks whether this process is actually denied.
+`CAP_DAC_OVERRIDE` also ignores permission bits, so `posix_geteuid() !== 0` would let the permission
+tests run and fail. `Support\PermissionBits` measures the capability instead — it creates a
+directory, makes it unreadable, and checks whether this process is actually denied.
 
 The cost is real too. Unlike `ext-pcre` and `ext-SPL`, `ext-posix` is optional in a PHP build, so
 under the rule below it would have to be declared in `require` — a hard install constraint bought

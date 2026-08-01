@@ -4,18 +4,9 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
-use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
-use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
-use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
-use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
-use NaokiTsuchiya\RayDiContext\Exception\ContextClassNotFound;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
-use NaokiTsuchiya\RayDiContext\Exception\InvalidContextClass;
-use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
-use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
-use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingCompiler;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
@@ -76,17 +67,7 @@ final class CompileRunnerOrderingTest extends TestCase
     /**
      * An unknown context aborts with the compile dir untouched
      *
-     * @throws BakedPathFound
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
-     * @throws UnsafeCompileDir
-     * @throws CompileDirNotWritable
-     * @throws RemoveFailed
-     * @throws ScriptNotReadable
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
-     * @throws CompileDirNotReadable
-     * @throws InvalidAppMeta
+     * @throws ExceptionInterface
      */
     #[Test]
     public function resolvesTheContextBeforeEmptyingTheCompileDir(): void
@@ -108,16 +89,7 @@ final class CompileRunnerOrderingTest extends TestCase
     /**
      * The compile dir is empty by the time the compiler is asked to write into it
      *
-     * @throws BakedPathFound
-     * @throws ContextClassNotFound
-     * @throws InvalidContextClass
-     * @throws UnsafeCompileDir
-     * @throws CompileDirNotWritable
-     * @throws RemoveFailed
-     * @throws ScriptNotReadable
-     * @throws ChmodFailed
-     * @throws CompileDirNotFound
-     * @throws CompileDirNotReadable
+     * @throws ExceptionInterface
      */
     #[Test]
     public function emptiesTheCompileDirBeforeCompiling(): void

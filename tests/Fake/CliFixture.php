@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext\Fake;
 
-use NaokiTsuchiya\RayDiContext\Cli;
-
 use function file_get_contents;
 use function mkdir;
 use function uniqid;
 
 /**
- * Working directory, error stream and Cli instance shared by the CLI test classes
+ * Working directory and error stream shared by the CLI test classes
+ *
+ * The Cli is left to the test to construct: it is the system under test, not part of the fixture.
  *
  * @internal
  */
@@ -32,11 +32,8 @@ final class CliFixture
     /** @var non-empty-string App dir the compile writes below */
     public readonly string $appDir;
 
-    /** System under test */
-    public readonly Cli $cli;
-
-    /** @var non-empty-string File standing in for STDERR */
-    private readonly string $errorFile;
+    /** @var non-empty-string File the CLI is pointed at instead of STDERR */
+    public readonly string $errorFile;
 
     /**
      * Creates the working directory the CLI compiles into
@@ -47,7 +44,6 @@ final class CliFixture
         $this->appDir = "{$this->baseDir}/app";
         mkdir("{$this->appDir}/var/tmp/prod", permissions: 0o755, recursive: true);
         $this->errorFile = "{$this->baseDir}/stderr.txt";
-        $this->cli = new Cli($this->errorFile);
     }
 
     /**

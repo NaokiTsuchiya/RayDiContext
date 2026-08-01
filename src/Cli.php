@@ -86,8 +86,8 @@ final class Cli
     /**
      * Loads the bootstrap and runs the compile
      *
-     * An empty override reads as "not given": an unset "$APP_COMPILE_DIR" arrives as "". Compared
-     * against "" rather than for truthiness, so a directory named "0" survives.
+     * An empty override reads as "not given". Compared against "" rather than for truthiness, so a
+     * directory named "0" survives.
      */
     private function compile(
         string $bootstrap,

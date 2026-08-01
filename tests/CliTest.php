@@ -17,8 +17,11 @@ use function glob;
 #[CoversClass(Cli::class)]
 final class CliTest extends TestCase
 {
-    /** Working directory, error stream and Cli under test */
+    /** Working directory and error stream */
     private CliFixture $fixture;
+
+    /** System under test */
+    private Cli $cli;
 
     /**
      * {@inheritDoc}
@@ -26,6 +29,7 @@ final class CliTest extends TestCase
     protected function setUp(): void
     {
         $this->fixture = new CliFixture();
+        $this->cli = new Cli($this->fixture->errorFile);
     }
 
     /**
@@ -42,7 +46,7 @@ final class CliTest extends TestCase
     #[Test]
     public function compilesMappedContext(): void
     {
-        $status = ($this->fixture->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'prod']);
+        $status = ($this->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'prod']);
 
         static::assertSame(0, $status);
         static::assertNotSame([], glob("{$this->fixture->appDir}/var/di/prod/*FakeCarInterface*.php"));
@@ -57,7 +61,7 @@ final class CliTest extends TestCase
     #[Test]
     public function treatsEmptyOverrideAsAbsent(): void
     {
-        $status = ($this->fixture->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'prod', '', '']);
+        $status = ($this->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'prod', '', '']);
 
         static::assertSame(0, $status);
         static::assertNotSame([], glob("{$this->fixture->appDir}/var/di/prod/*FakeCarInterface*.php"));
@@ -71,7 +75,7 @@ final class CliTest extends TestCase
     {
         $compileDir = "{$this->fixture->baseDir}/elsewhere/di";
 
-        $status = ($this->fixture->cli)([
+        $status = ($this->cli)([
             'bin',
             CliFixture::VALID,
             $this->fixture->appDir,
@@ -91,7 +95,7 @@ final class CliTest extends TestCase
     #[Test]
     public function reportsPackageExceptionAsRuntimeFailure(): void
     {
-        $status = ($this->fixture->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'nosuch']);
+        $status = ($this->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'nosuch']);
 
         static::assertSame(1, $status);
         static::assertStringContainsString('Unknown context "nosuch"', $this->fixture->stderr());
@@ -108,7 +112,7 @@ final class CliTest extends TestCase
     #[Test]
     public function reportsForeignThrowableAsRuntimeFailure(): void
     {
-        $status = ($this->fixture->cli)(['bin', CliFixture::THROWING, $this->fixture->appDir, 'prod']);
+        $status = ($this->cli)(['bin', CliFixture::THROWING, $this->fixture->appDir, 'prod']);
 
         static::assertSame(1, $status);
         static::assertStringContainsString('LogicException: bootstrap blew up', $this->fixture->stderr());

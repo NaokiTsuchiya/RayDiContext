@@ -17,8 +17,11 @@ use function glob;
 #[CoversClass(Cli::class)]
 final class CliRejectionTest extends TestCase
 {
-    /** Working directory, error stream and Cli under test */
+    /** Working directory and error stream */
     private CliFixture $fixture;
+
+    /** System under test */
+    private Cli $cli;
 
     /**
      * {@inheritDoc}
@@ -26,6 +29,7 @@ final class CliRejectionTest extends TestCase
     protected function setUp(): void
     {
         $this->fixture = new CliFixture();
+        $this->cli = new Cli($this->fixture->errorFile);
     }
 
     /**
@@ -42,7 +46,7 @@ final class CliRejectionTest extends TestCase
     #[Test]
     public function rejectsMissingArguments(): void
     {
-        $status = ($this->fixture->cli)(['bin', CliFixture::VALID, $this->fixture->appDir]);
+        $status = ($this->cli)(['bin', CliFixture::VALID, $this->fixture->appDir]);
 
         static::assertSame(2, $status);
         static::assertStringContainsString('Usage:', $this->fixture->stderr());
@@ -54,7 +58,7 @@ final class CliRejectionTest extends TestCase
     #[Test]
     public function rejectsTooManyArguments(): void
     {
-        $status = ($this->fixture->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'prod', '', '', 'extra']);
+        $status = ($this->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'prod', '', '', 'extra']);
 
         static::assertSame(2, $status);
         static::assertStringContainsString('Too many arguments', $this->fixture->stderr());
@@ -70,7 +74,7 @@ final class CliRejectionTest extends TestCase
     {
         $missing = "{$this->fixture->baseDir}/absent.php";
 
-        $status = ($this->fixture->cli)(['bin', $missing, $this->fixture->appDir, 'prod']);
+        $status = ($this->cli)(['bin', $missing, $this->fixture->appDir, 'prod']);
 
         static::assertSame(2, $status);
         static::assertStringContainsString('Bootstrap file not found', $this->fixture->stderr());
@@ -83,7 +87,7 @@ final class CliRejectionTest extends TestCase
     #[Test]
     public function rejectsBootstrapReturningWrongType(): void
     {
-        $status = ($this->fixture->cli)(['bin', CliFixture::INVALID, $this->fixture->appDir, 'prod']);
+        $status = ($this->cli)(['bin', CliFixture::INVALID, $this->fixture->appDir, 'prod']);
 
         static::assertSame(2, $status);
         static::assertStringContainsString('must return', $this->fixture->stderr());
@@ -97,7 +101,7 @@ final class CliRejectionTest extends TestCase
     {
         $missing = "{$this->fixture->baseDir}/absent";
 
-        $status = ($this->fixture->cli)(['bin', CliFixture::VALID, $missing, 'prod']);
+        $status = ($this->cli)(['bin', CliFixture::VALID, $missing, 'prod']);
 
         static::assertSame(2, $status);
         static::assertStringContainsString('appDir does not exist', $this->fixture->stderr());

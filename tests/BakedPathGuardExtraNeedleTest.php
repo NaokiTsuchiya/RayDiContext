@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
-use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
-use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
+use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
-use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Fake\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -65,9 +63,7 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
     /**
      * A configured literal in a compiled script is rejected, naming the script
      *
-     * @throws CompileDirNotFound
-     * @throws CompileDirNotReadable
-     * @throws ScriptNotReadable
+     * @throws ExceptionInterface
      */
     #[Test]
     public function rejectsAConfiguredLiteral(): void
@@ -88,9 +84,7 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
      * These are supplied precisely because they must not ship, so a message quoting one would
      * move it out of the image and into the CI log rather than keep it out of both.
      *
-     * @throws CompileDirNotFound
-     * @throws CompileDirNotReadable
-     * @throws ScriptNotReadable
+     * @throws ExceptionInterface
      */
     #[Test]
     public function doesNotEchoTheConfiguredLiteral(): void
@@ -106,6 +100,21 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
     }
 
     /**
+     * Scripts free of the configured literals pass, as they did before any were configured
+     *
+     * @throws ExceptionInterface
+     */
+    #[Test]
+    public function passesWhenNoConfiguredLiteralIsPresent(): void
+    {
+        copy(self::CLEAN_SCRIPT, "{$this->meta->compileDir}/clean.php");
+
+        (new BakedPathGuard([self::CONFIGURED]))($this->meta);
+
+        static::assertFileExists("{$this->meta->compileDir}/clean.php");
+    }
+
+    /**
      * Writes a compiled script holding $value and returns its path
      *
      * @return non-empty-string
@@ -116,23 +125,5 @@ final class BakedPathGuardExtraNeedleTest extends TestCase
         file_put_contents($script, data: "<?php return '{$value}';");
 
         return $script;
-    }
-
-    /**
-     * Scripts free of the configured literals pass, as they did before any were configured
-     *
-     * @throws BakedPathFound
-     * @throws CompileDirNotFound
-     * @throws CompileDirNotReadable
-     * @throws ScriptNotReadable
-     */
-    #[Test]
-    public function passesWhenNoConfiguredLiteralIsPresent(): void
-    {
-        copy(self::CLEAN_SCRIPT, "{$this->meta->compileDir}/clean.php");
-
-        (new BakedPathGuard([self::CONFIGURED]))($this->meta);
-
-        static::assertFileExists("{$this->meta->compileDir}/clean.php");
     }
 }

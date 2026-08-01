@@ -21,15 +21,15 @@ use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 final class CompileRunner
 {
     /**
-     * @param ContextProviderInterface  $contextProvider Application env-to-context mapping
-     * @param Cleaner                   $cleaner         Empties the compile dir before compiling
-     * @param BakedPathGuardInterface   $guard           Verifies the compiled scripts afterwards
-     * @param ScriptCompilerInterface   $compiler        Writes the scripts
+     * @param ContextProviderInterface $contextProvider Application env-to-context mapping
+     * @param CompileDirGuardInterface $compileDirGuard Rejects a compile dir that must not be emptied
+     * @param BakedPathGuardInterface  $bakedPathGuard  Verifies the compiled scripts afterwards
+     * @param ScriptCompilerInterface  $compiler        Writes the scripts
      */
     public function __construct(
         private readonly ContextProviderInterface $contextProvider,
-        private readonly Cleaner $cleaner = new Cleaner(),
-        private readonly BakedPathGuardInterface $guard = new BakedPathGuard(),
+        private readonly CompileDirGuardInterface $compileDirGuard = new CompileDirGuard(),
+        private readonly BakedPathGuardInterface $bakedPathGuard = new BakedPathGuard(),
         private readonly ScriptCompilerInterface $compiler = new RayScriptCompiler(),
     ) {}
 
@@ -53,18 +53,19 @@ final class CompileRunner
     {
         // Resolved before the cleaner runs, so an unknown context leaves the compile dir intact.
         $context = $this->contextProvider->get($meta);
-        ($this->cleaner)($meta);
+        $cleaner = new Cleaner($this->compileDirGuard);
+        $cleaner($meta);
 
         // A flag and finally rather than catch-and-rethrow: a rethrow types as the marker
         // interface and would widen the precise @throws list above.
         $guarded = false;
         try {
             $this->compiler->compile($context(), $meta->compileDir);
-            ($this->guard)($meta);
+            ($this->bakedPathGuard)($meta);
             $guarded = true;
         } finally {
             if (!$guarded) {
-                ($this->cleaner)($meta);
+                $cleaner($meta);
             }
         }
 

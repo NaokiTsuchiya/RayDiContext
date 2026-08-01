@@ -14,44 +14,53 @@ AppMeta::fromAppDir(appDir, context, compileDir?, tmpDir?)
                          │
               Cli → CompileRunner::run($meta)
                          │
-        ┌────────────────┼─────────────────────────────┐
-        │                │                              │
-  provider->get($meta)  Cleaner($meta)         ScriptCompilerInterface
-  → ContextInterface    (guarded, empties/     (default RayScriptCompiler
-                         creates compileDir)    → Ray\Compiler\Compiler)
-                                                         │
-                                                  BakedPathGuardInterface($meta)
-                                                  (default BakedPathGuard: scans
-                                                   every *.php via BakedPathScanner)
-                                                         │
-                                                  PermissionNormalizer($compileDir)
-                                                  (0600 → 0644 files / 0755 dirs)
+                provider->get($meta)
+                → ContextInterface
+                         │
+                    Cleaner($meta)
+          (guarded, empties/creates compileDir)
+                         │
+                ScriptCompilerInterface
+             (default RayScriptCompiler
+              → Ray\Compiler\Compiler)
+                         │
+               BakedPathGuardInterface($meta)
+               (default BakedPathGuard: scans
+                every *.php via BakedPathScanner)
+                         │
+               PermissionNormalizer($compileDir)
+               (0600 → 0644 files / 0755 dirs)
 ```
 
 `CompileRunner::run()` is the whole pipeline — read it first when tracing behavior.
 
-1. **`Cleaner`** empties `compileDir` (or creates it) before every compile, so stale scripts from
+1. **`provider->get($meta)`** resolves the context strictly before `Cleaner` runs, not alongside it.
+   `Cleaner` deletes `compileDir`'s contents without inspecting them, so this order is the only
+   thing standing between an unknown context and an emptied `compileDir` — an `UnknownContext`
+   aborts `run()` before step 2 starts. Swapping the two lines still passes every assertion in
+   `CompileRunnerTest`; `CompileRunnerOrderingTest` pins the order directly for that reason.
+2. **`Cleaner`** empties `compileDir` (or creates it) before every compile, so stale scripts from
    renamed or removed classes never survive a recompile. It asks a `CompileDirGuardInterface`
    first — this is what stops an `APP_COMPILE_DIR` typo from recursively deleting the app directory
    or the filesystem root. An app that knows more about its own layout can inject a stricter guard.
-2. **`ScriptCompilerInterface`** (default `RayScriptCompiler`) compiles the context's module into
+3. **`ScriptCompilerInterface`** (default `RayScriptCompiler`) compiles the context's module into
    `compileDir`. `RayScriptCompiler` is a one-line delegate to `ray/compiler`; the seam exists so
    the pipeline's *ordering* can be asserted directly (`tests/CompileRunnerOrderingTest.php`)
    instead of inferred from a real compile.
-3. **`BakedPathGuardInterface`** (default `BakedPathGuard`, using `BakedPathScanner`) scans every
+4. **`BakedPathGuardInterface`** (default `BakedPathGuard`, using `BakedPathScanner`) scans every
    compiled `*.php` for a literal `$meta->appDir` or `$meta->tmpDir`. The scanner matches on
    path-segment boundaries (so `/app` does not false-positive inside `/appdata`) and exempts
    occurrences lying entirely inside a `compileDir` literal, which *is* meant to be baked in. Only
    those two paths are known here — an app passes `$extraNeedles` for anything else that must not
    ship, such as a secret. A rejection never echoes an extra needle's value, only the script.
-4. **`PermissionNormalizer`** (`@internal`) normalizes files to `0644` and directories to `0755`,
+5. **`PermissionNormalizer`** (`@internal`) normalizes files to `0644` and directories to `0755`,
    skipping symlinks and anything that already grants the needed world-bit, so it does not fight a
    pre-configured volume. Runs only after the guard passes.
 
 Only `Cleaner`'s guard runs before compilation; the baked-path guard and `PermissionNormalizer`
 necessarily run after, since they inspect what was just compiled.
 
-**A failed compile leaves `compileDir` empty.** Steps 2–3 run inside a `try`/`finally` that re-runs
+**A failed compile leaves `compileDir` empty.** Steps 3–4 run inside a `try`/`finally` that re-runs
 the `Cleaner` unless the guard passed, so scripts the guard refused never survive for the next
 `COPY` to bake into an image. The cleanup uses a flag and `finally` rather than `catch`/rethrow: a
 rethrown `$e` types as `ExceptionInterface` and would widen `run()`'s precise `@throws` list back to
@@ -84,5 +93,5 @@ directories out of sync between compile time and runtime is the main way to misu
 - **`BakedPathGuardInterface`** — the same idea on the verification side. For the common case pass
   `new BakedPathGuard([...$needles])` rather than reimplementing; replace the whole thing only if
   the scanning strategy itself must change.
-- **`ScriptCompilerInterface`** — rarely implemented by an app; see step 2 above for why the seam
+- **`ScriptCompilerInterface`** — rarely implemented by an app; see step 3 above for why the seam
   exists.

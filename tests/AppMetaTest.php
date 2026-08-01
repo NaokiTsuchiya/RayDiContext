@@ -39,14 +39,20 @@ final class AppMetaTest extends TestCase
     }
 
     /** @throws ExceptionInterface */
-    #[TestWith(['', 'prod', '/opt/di', '/tmp/rw'])]
-    #[TestWith(['/path/to/app', '', '/opt/di', '/tmp/rw'])]
-    #[TestWith(['/path/to/app', 'prod', '', '/tmp/rw'])]
-    #[TestWith(['/path/to/app', 'prod', '/opt/di', ''])]
+    #[TestWith(['', 'prod', '/opt/di', '/tmp/rw', 'AppMeta::$appDir must not be empty'])]
+    #[TestWith(['/path/to/app', '', '/opt/di', '/tmp/rw', 'AppMeta::$context must not be empty'])]
+    #[TestWith(['/path/to/app', 'prod', '', '/tmp/rw', 'AppMeta::$compileDir must not be empty'])]
+    #[TestWith(['/path/to/app', 'prod', '/opt/di', '', 'AppMeta::$tmpDir must not be empty'])]
     #[Test]
-    public function rejectsEmptyField(string $appDir, string $context, string $compileDir, string $tmpDir): void
-    {
+    public function rejectsEmptyField(
+        string $appDir,
+        string $context,
+        string $compileDir,
+        string $tmpDir,
+        string $message,
+    ): void {
         $this->expectException(InvalidAppMeta::class);
+        $this->expectExceptionMessage($message);
 
         new AppMeta($appDir, $context, $compileDir, $tmpDir);
     }

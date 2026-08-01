@@ -18,6 +18,7 @@ use function copy;
 use function file_put_contents;
 use function mkdir;
 use function serialize;
+use function sprintf;
 use function uniqid;
 
 #[CoversClass(BakedPathGuard::class)]
@@ -81,9 +82,11 @@ final class BakedPathGuardTest extends TestCase
     #[Test]
     public function detectsTmpDirLiteral(): void
     {
-        file_put_contents("{$this->meta->compileDir}/baked.php", "<?php return '{$this->meta->tmpDir}/cache';");
+        $baked = "{$this->meta->compileDir}/baked.php";
+        file_put_contents($baked, "<?php return '{$this->meta->tmpDir}/cache';");
 
         $this->expectException(BakedPathFound::class);
+        $this->expectExceptionMessage(sprintf('Baked path "%s" found in %s.', $this->meta->tmpDir, $baked));
 
         ($this->guard)($this->meta);
     }
@@ -93,9 +96,11 @@ final class BakedPathGuardTest extends TestCase
     public function detectsPathInSerializedInstance(): void
     {
         $serialized = serialize($this->meta);
-        file_put_contents("{$this->meta->compileDir}/baked.php", "<?php return unserialize('{$serialized}');");
+        $baked = "{$this->meta->compileDir}/baked.php";
+        file_put_contents($baked, "<?php return unserialize('{$serialized}');");
 
         $this->expectException(BakedPathFound::class);
+        $this->expectExceptionMessage(sprintf('Baked path "%s" found in %s.', $this->meta->appDir, $baked));
 
         ($this->guard)($this->meta);
     }

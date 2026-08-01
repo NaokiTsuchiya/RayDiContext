@@ -16,6 +16,7 @@ use PHPUnit\Framework\TestCase;
 
 use function file_put_contents;
 use function mkdir;
+use function sprintf;
 use function symlink;
 use function uniqid;
 
@@ -77,6 +78,10 @@ final class AppMetaFromAppDirTest extends TestCase
     public function rejectsUnsafeContext(string $context): void
     {
         $this->expectException(InvalidAppMeta::class);
+        $this->expectExceptionMessage(sprintf(
+            'AppMeta::fromAppDir(): $context must contain only letters, digits, "_", "-", or "\\": "%s"',
+            $context,
+        ));
 
         AppMeta::fromAppDir($this->appDir, $context);
     }

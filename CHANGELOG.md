@@ -23,6 +23,9 @@ README's Versioning section).
 
 - `AppMeta::__construct()` now rejects a relative `compileDir` or `tmpDir`, matching the
   existing requirement that `appDir` be an absolute path.
+- `BakedPathGuard::__construct()` now rejects an empty string or a non-string value among
+  `$extraNeedles`, throwing immediately instead of letting it silently fail every compile via a
+  rejection that cannot name the cause.
 
 ## [0.1.0] - 2026-08-02
 

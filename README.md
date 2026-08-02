@@ -114,23 +114,17 @@ composer require naoki-tsuchiya/ray-di-context
 ## Usage
 
 ```php
+use NaokiTsuchiya\RayDiContext\AbstractCompiledContext;
 use NaokiTsuchiya\RayDiContext\AbstractContext;
-use Ray\Compiler\CompiledInjector;
-use Ray\Compiler\DiCompileModule;
 use Ray\Di\AbstractModule;
 use Ray\Di\Injector;
 use Ray\Di\InjectorInterface;
 
-final class ProdContext extends AbstractContext
+final class ProdContext extends AbstractCompiledContext
 {
-    public function __invoke(): AbstractModule
+    protected function appModule(): AbstractModule
     {
-        return new DiCompileModule(true, new AppModule());
-    }
-
-    public function getInjectorInstance(): InjectorInterface
-    {
-        return new CompiledInjector($this->meta->compileDir);
+        return new AppModule();
     }
 }
 

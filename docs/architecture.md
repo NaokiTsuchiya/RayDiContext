@@ -77,7 +77,8 @@ execute it opens fine and every per-entry `stat()` fails instead, leaking one wa
 At runtime the application never touches `Cleaner`, `BakedPathGuard` or the compiler. It builds an
 `AppMeta` with the *same* `compileDir`/`tmpDir` used at compile time, looks up the `ContextInterface`
 through its own `ContextProviderInterface`, and calls `getInjectorInstance()`. A production context
-returns `Ray\Compiler\CompiledInjector($meta->compileDir)`, which only reads. Getting the two
+extending `AbstractCompiledContext` returns `Ray\Compiler\CompiledInjector($meta->compileDir)`,
+which only reads; that call lives in the base class, not application code. Getting the two
 directories out of sync between compile time and runtime is the main way to misuse this package.
 
 ## Extension points applications implement
@@ -85,6 +86,9 @@ directories out of sync between compile time and runtime is the main way to misu
 - **`ContextInterface`** — one per environment. Extend `AbstractContext`, whose constructor is
   `final` so `MapContextProvider`'s `new $class($meta)` stays valid for every subclass. See the
   interface's docblocks for the injector and `getSavedSingleton()` contracts.
+  For the ahead-of-time compiled production shape, extend `AbstractCompiledContext` instead and
+  implement only `appModule()` — it composes `DiCompileModule`/`CompiledInjector` so the consumer
+  never imports those class names.
 - **`ContextProviderInterface`** — maps an `AppMeta` to a `ContextInterface`. `MapContextProvider`
   is the bundled name→class-string implementation, and a bootstrap file returns one of these; it
   validates the whole map at construction (see its docblock).

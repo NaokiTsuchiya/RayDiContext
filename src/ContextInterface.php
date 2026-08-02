@@ -16,17 +16,11 @@ interface ContextInterface
 {
     /**
      * Returns the application module of this context
-     *
-     * A context that is compiled ahead of time composes DiCompileModule with the
-     * application module.
      */
     public function __invoke(): AbstractModule;
 
     /**
      * Returns the injector of this context
-     *
-     * A production context returns CompiledInjector($meta->compileDir); a development
-     * context returns Ray\Di\Injector.
      *
      * Whether repeated calls return the same instance is not part of this contract. Call
      * it once per process and reuse the result: warming up getSavedSingleton() against one

@@ -9,6 +9,12 @@ README's Versioning section).
 
 ## [Unreleased]
 
+### Added
+
+- `AbstractCompiledContext`, a base class for the ahead-of-time compiled production shape
+  that composes `DiCompileModule`/`CompiledInjector` so consumer code no longer imports
+  `Ray\Compiler` class names.
+
 ### Changed
 
 - `AppMeta::__construct()` now rejects a relative `compileDir` or `tmpDir`, matching the

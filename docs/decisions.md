@@ -69,11 +69,12 @@ giving a test helper a dependency on the hierarchy it exists to stay outside of.
 ### An abstract base `TestCase` to share test setup — [#79][79]
 
 Test classes live in the root namespace, which is exactly what `mago.toml`'s `must-be-final` rule
-covers, and its `not-on` names `AbstractContext` alone. An abstract class placed there fails:
+covers, and its `not-on` names `AbstractContext` and `AbstractCompiledContext` — no other abstract
+class. An abstract class placed there anyway fails:
 
 ```
 tests/ProbeRoot.php:8:16: error[must-be-final]: Structural flaw in `NaokiTsuchiya\RayDiContext\AbstractProbeRoot`
- = Every concrete class in the root namespace is final except AbstractContext, which exists to be extended
+ = Every concrete class in the root namespace is final except AbstractContext and AbstractCompiledContext, which exist to be extended
 ```
 
 The same probe under `NaokiTsuchiya\RayDiContext\Support` is not reported — `on =
@@ -82,8 +83,11 @@ rule, not a licence to use it. Shared setup goes through the final helpers in `t
 static utilities (`Fs`, `PermissionBits`, `PhpProcess`) and per-test objects (`CliFixture`,
 `AppDirFixture`, `CompileDirFixture`, `SeparatedDirFixture`).
 
-**Would change it:** a second `not-on` entry naming a base class, worth adding only for a case that
-earns its place beside `AbstractContext`.
+A second `not-on` entry landed in [#119][119]: `not-on = 'NaokiTsuchiya\RayDiContext\Abstract{Context,CompiledContext}'`
+(the brace form, since `mago.toml` rejects a TOML array here). The exemption still names exactly two
+classes — `Abstract*` was rejected because it would also exempt any concrete class spelled `Abstract…`
+and the abstract `TestCase` this entry exists to keep out. An abstract `TestCase` placed in the root
+namespace still fails the same way; only `AbstractContext` and `AbstractCompiledContext` are exempt.
 
 ## Deliberate direction — do not reverse
 
@@ -269,5 +273,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [84]: https://github.com/NaokiTsuchiya/RayDiContext/issues/84
 [86]: https://github.com/NaokiTsuchiya/RayDiContext/issues/86
 [116]: https://github.com/NaokiTsuchiya/RayDiContext/pull/116
+[119]: https://github.com/NaokiTsuchiya/RayDiContext/issues/119
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

@@ -164,13 +164,13 @@ containing only combinations CI has actually run, so a broken pairing is never i
 The price is that the range is also a gate. A consumer cannot install the new minor until this
 package merges the PR *and* tags a release, and releases here are a few a year. That price is only
 worth paying for a dependency the consumer neither names nor expects to control, and **neither of
-these is that dependency**. `ray/di` is the framework the application declares itself. `ray/compiler`
-looks like an implementation detail this package brackets, but is not: `ContextInterface` documents
-`getInjectorInstance()` as returning `CompiledInjector($meta->compileDir)` and `__invoke()` as
-composing `DiCompileModule`, so a consumer writes both class names into its own bootstrap — see the
-README's usage example and `tests/dist/consumer/bootstrap.php`. Pinning it would hold back an
-upgrade the consumer has every reason to want, and the app author would see `composer update` do
-nothing and need `composer why-not` to find out why.
+these is that dependency**. `ray/di` is the framework the application declares itself. Until
+[#119][119], `ray/compiler` looked like an implementation detail this package brackets, but was not:
+`ContextInterface` documented `getInjectorInstance()` as returning `CompiledInjector($meta->compileDir)`
+and `__invoke()` as composing `DiCompileModule`, so a consumer wrote both class names into its own
+bootstrap, and that same method's docblock let a third one, `Ray\Compiler\Exception\ScriptDirNotReadable`,
+pass through uncaught. Pinning it would hold back an upgrade the consumer has every reason to want,
+and the app author would see `composer update` do nothing and need `composer why-not` to find out why.
 
 Both stay carets, and `ci.yml`'s scheduled run is what covers what Renovate then has nothing to
 widen: `composer update` resolves each to the newest release its caret allows, so the ranges are
@@ -184,6 +184,20 @@ coupled to it than this package is, declares `ray/di ^2.19` itself.
 
 **Would change it:** a runtime dependency this package brackets completely, with no class name of
 its reaching consumer code — for that one, gating would cost nothing and the pin would be right.
+[#119][119] closed the two class names above: `AbstractCompiledContext` now composes
+`DiCompileModule`/`CompiledInjector` internally, so the README's usage example and
+`tests/dist/consumer/bootstrap.php` extend it and implement only `appModule()`; and
+`getInjectorInstance()` now catches `ScriptDirNotReadable` and rethrows this package's own
+`Exception\CompileDirUnavailable`, the original retrievable via `getPrevious()`. For the documented
+path (extend `AbstractCompiledContext`, catch this package's `ExceptionInterface`), the condition is
+met. It is not met completely: `CompiledInjector::getInstance()` can still throw
+`Ray\Compiler\Exception\Unbound` for a missing binding, unwrapped, and `ScriptCompilerInterface`
+remains an explicit escape hatch onto `ray/compiler` for an app that replaces the bundled compiler
+(see `src/ScriptCompilerInterface.php`'s docblock and `src/RayScriptCompiler.php`). Whether those two
+gaps are worth closing, and whether a mostly-bracketed dependency already clears the bar this entry
+set, is a judgment call this PR does not make — the pinning decision itself stays open for a
+dedicated follow-up, consistent with [#119][119]'s own scope note that re-evaluating the pin was
+left to a later issue.
 
 ### Naming a concrete test count in `CLAUDE.md` or here — [#82][82]
 

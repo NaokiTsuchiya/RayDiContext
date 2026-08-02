@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirUnavailable;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
@@ -50,10 +51,7 @@ final class AbstractCompiledContextTest extends TestCase
         static::assertInstanceOf(FakeCar::class, (new Injector($module))->getInstance(FakeCarInterface::class));
     }
 
-    /**
-     * @throws ExceptionInterface
-     * @throws ScriptDirNotReadable
-     */
+    /** @throws ExceptionInterface */
     #[Test]
     public function getInjectorInstanceReturnsCompiledInjectorResolvingTheCompiledAppModule(): void
     {
@@ -68,19 +66,19 @@ final class AbstractCompiledContextTest extends TestCase
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
 
-    /**
-     * @throws ExceptionInterface
-     * @throws ScriptDirNotReadable
-     */
+    /** @throws ExceptionInterface */
     #[Test]
-    public function getInjectorInstanceThrowsScriptDirNotReadableForAMissingCompileDir(): void
+    public function getInjectorInstanceThrowsCompileDirUnavailableForAMissingCompileDir(): void
     {
         $context = new FakeCompiledProdContext(
             new AppMeta($this->baseDir, 'prod', "{$this->baseDir}/absent-di", "{$this->baseDir}/tmp"),
         );
 
-        $this->expectException(ScriptDirNotReadable::class);
-
-        $context->getInjectorInstance();
+        try {
+            $context->getInjectorInstance();
+            static::fail('CompileDirUnavailable was not thrown');
+        } catch (CompileDirUnavailable $e) {
+            static::assertInstanceOf(ScriptDirNotReadable::class, $e->getPrevious());
+        }
     }
 }

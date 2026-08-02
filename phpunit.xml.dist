@@ -14,10 +14,6 @@
          displayDetailsOnTestsThatTriggerErrors="true"
          displayDetailsOnTestsThatTriggerNotices="true"
          displayDetailsOnTestsThatTriggerWarnings="true">
-    <php>
-        <env name="APP_COMPILE_DIR" value="" force="true"/>
-        <env name="APP_TMP_DIR" value="" force="true"/>
-    </php>
     <testsuites>
         <testsuite name="ray-di-context">
             <directory>tests</directory>

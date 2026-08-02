@@ -26,6 +26,9 @@ README's Versioning section).
 - `BakedPathGuard::__construct()` now rejects an empty string or a non-string value among
   `$extraNeedles`, throwing immediately instead of letting it silently fail every compile via a
   rejection that cannot name the cause.
+- `UnsafeCompileDir`'s messages now end with `Pass a compile dir that holds nothing but
+  compiled scripts.`, replacing the `Point APP_COMPILE_DIR at...` hint that named an
+  environment variable nothing in this package reads.
 
 ## [0.1.0] - 2026-08-02
 

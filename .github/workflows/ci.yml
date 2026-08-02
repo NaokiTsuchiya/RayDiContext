@@ -169,10 +169,6 @@ jobs:
 
       - run: composer dist
 
-  # Builds and runs examples/docker/ (read-only, tmpfs tmpDir, non-root) against this
-  # repository's working tree, and checks that README.md's Dockerfile block stays
-  # byte-identical to examples/docker/Dockerfile. Composer/PHP only run inside the
-  # containers this builds, so no setup-php step is needed on the runner itself.
   docker-example:
     name: docker-example
     runs-on: ubuntu-latest

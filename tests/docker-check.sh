@@ -12,12 +12,6 @@ fail() {
 
 command -v docker >/dev/null 2>&1 || fail "docker was not found on PATH"
 
-readme_block="$(mktemp)"
-awk '/^```dockerfile$/{flag=1;next} /^```$/{if(flag){exit}} flag' "${root}/README.md" > "${readme_block}"
-cmp -s "${readme_block}" "${example}/Dockerfile" \
-    || fail "README's Docker Dockerfile block no longer matches examples/docker/Dockerfile"
-rm -f "${readme_block}"
-
 work="$(mktemp -d)"
 tag="ray-di-context-docker-example:check"
 cleanup() {

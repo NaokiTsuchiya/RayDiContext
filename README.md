@@ -227,32 +227,17 @@ won't exist until something happens to request it first.
 ## Deploying to Docker / Kubernetes
 
 Build the compiled scripts in a build stage, `COPY` only the result into the
-runtime image, and run as a non-root user with a read-only root filesystem:
+runtime image, and run as a non-root user with a read-only root filesystem.
+[`examples/docker/Dockerfile`](examples/docker/Dockerfile) is the full,
+buildable version — its comments cover the two non-obvious parts (installing
+`composer`/`unzip`, since `php:8.3-cli` ships neither; and why the compiled
+scripts need a *second* `COPY` into the runtime stage). It's built and run
+(`--read-only`, `tmpDir` mounted as tmpfs, non-root) in CI against this
+repository's own working tree, not the published package; run `bash
+tests/docker-check.sh` from the repo root to reproduce it yourself.
 
-```dockerfile
-# syntax=docker/dockerfile:1
-FROM php:8.3-cli AS build
-WORKDIR /build
-COPY . .
-RUN composer install --no-dev --optimize-autoloader \
- && php bin/ray-di-compile bootstrap.php /build prod /app/var/di/prod
-
-FROM php:8.3-cli
-WORKDIR /app
-COPY --from=build /build /app
-RUN useradd --system appuser
-USER appuser
-CMD ["php", "bin/console"]
-```
-
-The build stage compiles at `/build`; the runtime image runs at `/app`. Left to
-its defaults, `AppMeta::fromAppDir()` would derive `compileDir` from `appDir`, so
-the scripts above would be compiled for `/build/var/di/prod` while the running
-app looks for them at `/app/var/di/prod` — a mismatch that `CompiledInjector`
-reports as `ScriptDirNotReadable` the moment the first class is resolved. That's
-why the `RUN` step above passes `APP_COMPILE_DIR` explicitly, resolved to the
-*runtime* path, not the build path — and the app's own bootstrap must resolve
-`APP_COMPILE_DIR` to that same runtime path:
+The app's own runtime bootstrap must resolve `compileDir` to the same literal
+path the Dockerfile compiles to:
 
 ```php
 $meta = AppMeta::fromAppDir(dirname(__DIR__), 'prod', '/app/var/di/prod');

@@ -140,6 +140,48 @@ arguments (layout, and create-or-not) whose only non-default caller is that one 
 
 **Would change it:** a second class needing the same non-default shape.
 
+### Covering the runtime minors with a caret range — [#116][116]
+
+`^2.19` was replaced by `~2.19.0 || ~2.20.0 || ~2.22.0`, and `^1.14` by `~1.14.0`, so that a new
+upstream minor falls *outside* the declared range. That is the condition `rangeStrategy: "widen"`
+tests, and the only one — it does not look at the semver level, and it returns the range untouched
+whenever the new version already satisfies it:
+
+```ts
+if (rangeStrategy === 'widen' && matches(newVersion, currentValue)) {
+    newValue = currentValue;
+```
+
+An update whose `newValue` equals its `currentValue` is then dropped from the result entirely, so
+under `^2.19` a release like `ray/di 2.22.2` produced no PR, no dashboard entry, and no CI run.
+Nothing re-tested an open-ended range against the versions it promised to support.
+
+Listing the minors turns each new one into a widen PR, and that PR is the test: the `test` job
+installs with `composer update`, so its matrix runs against the release being added. Detection and
+verification arrive together, and merging is what declares support. Widening appends to the last
+element of the chain, having asked `replace` what that element becomes, so the `~` form is preserved
+as it grows:
+
+```ts
+const lastValue = splitValues.at(-1)!;
+const replacementValue = getNewValue({ currentValue: lastValue.trim(), rangeStrategy: 'replace', ... });
+...
+newValue = `${currentValue} || ${replacementValue}`;
+```
+
+Two alternatives were weighed against it. `rangeStrategy: "bump"` reports the release, but what it
+reports is a proposal to *narrow* the floor, and it verifies nothing. A scheduled CI run on the
+caret range verifies but does not report: a red weekly build names no version and carries no
+constraint change to merge, and it is a second mechanism for what the widen PR already does in one.
+
+The cost is real and accepted: a consumer cannot install a new ray/di minor until this package
+merges the widen PR *and tags a release*, and releases here are a few a year. The three entries in
+the initial chain are every 2.x that exists at or above 2.19 — there is no 2.21 — so the change
+locks out nobody who is installable today.
+
+**Would change it:** a consumer actually blocked by the window between an upstream minor and a tag
+here, which would move the answer back to a caret range plus a scheduled run.
+
 ### Naming a concrete test count in `CLAUDE.md` or here — [#82][82]
 
 Removed in [28ea330][28ea330] after review, and not to be restored. A total was a tripwire every
@@ -227,5 +269,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [83]: https://github.com/NaokiTsuchiya/RayDiContext/issues/83
 [84]: https://github.com/NaokiTsuchiya/RayDiContext/issues/84
 [86]: https://github.com/NaokiTsuchiya/RayDiContext/issues/86
+[116]: https://github.com/NaokiTsuchiya/RayDiContext/pull/116
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

@@ -39,10 +39,9 @@
       "addLabels": ["automerge"]
     },
     {
-      "description": "The public contract — never widened without a manual OK from the Dependency Dashboard.",
+      "description": "The public contract, listed one minor at a time so each new one lands outside the range and widen opens a PR for it. That PR's CI run is what verifies the release; merging it is what declares support. No automerge — widening the contract is a decision.",
       "matchManagers": ["composer"],
       "matchDepTypes": ["require"],
-      "dependencyDashboardApproval": true,
       "rangeStrategy": "widen"
     },
     {

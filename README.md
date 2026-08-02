@@ -232,27 +232,36 @@ runtime image, and run as a non-root user with a read-only root filesystem:
 ```dockerfile
 # syntax=docker/dockerfile:1
 FROM php:8.3-cli AS build
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+RUN apt-get update && apt-get install -y --no-install-recommends unzip && apt-get clean
 WORKDIR /build
 COPY . .
 RUN composer install --no-dev --optimize-autoloader \
- && php bin/ray-di-compile bootstrap.php /build prod /app/var/di/prod
+ && php vendor/bin/ray-di-compile bootstrap.php /build prod /app/var/di/prod
 
 FROM php:8.3-cli
 WORKDIR /app
 COPY --from=build /build /app
+COPY --from=build /app /app
 RUN useradd --system appuser
 USER appuser
 CMD ["php", "bin/console"]
 ```
 
-The build stage compiles at `/build`; the runtime image runs at `/app`. Left to
-its defaults, `AppMeta::fromAppDir()` would derive `compileDir` from `appDir`, so
-the scripts above would be compiled for `/build/var/di/prod` while the running
-app looks for them at `/app/var/di/prod` — a mismatch that `CompiledInjector`
-reports as `ScriptDirNotReadable` the moment the first class is resolved. That's
-why the `RUN` step above passes `APP_COMPILE_DIR` explicitly, resolved to the
-*runtime* path, not the build path — and the app's own bootstrap must resolve
-`APP_COMPILE_DIR` to that same runtime path:
+This exact Dockerfile is built and run (`--read-only`, `tmpDir` mounted as tmpfs, non-root) in CI
+against this repository's own working tree, not the published package — see
+[`examples/docker/`](examples/docker/) for the full buildable example, and run
+`bash tests/docker-check.sh` from the repo root to reproduce it yourself.
+
+`php:8.3-cli` ships neither `composer` nor anything that can unpack a Packagist download, hence
+the `COPY --from=composer:2` and `apt-get install unzip` lines. The build stage compiles at
+`/build`, but the fourth `ray-di-compile` argument overrides `compileDir` to the literal *runtime*
+path `/app/var/di/prod` rather than deriving it from `appDir` — so the scripts already look for
+themselves at the path the running app will actually use. That literal path has no relationship to
+`/build`, though, so the first `COPY --from=build /build /app` (which brings over the app and its
+`vendor/` dependencies) never reaches it; the second `COPY --from=build /app /app` is what actually
+brings the compiled scripts into the runtime image. The app's own bootstrap must resolve to that
+same literal path:
 
 ```php
 $meta = AppMeta::fromAppDir(dirname(__DIR__), 'prod', '/app/var/di/prod');

@@ -1,0 +1,21 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use NaokiTsuchiya\RayDiContext\AppMeta;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$provider = require __DIR__ . '/../bootstrap.php';
+$meta = AppMeta::fromAppDir('/app', 'prod', '/app/var/di/prod', '/app/var/tmp');
+
+try {
+    $context = $provider->get($meta);
+    $greeter = $context->getInjectorInstance()->getInstance(GreeterInterface::class);
+    fwrite(STDOUT, sprintf("resolved GreeterInterface: %s\n", $greeter->greet()));
+    exit(0);
+} catch (Throwable $e) {
+    fwrite(STDERR, sprintf("%s: %s\n", $e::class, $e->getMessage()));
+    exit(1);
+}

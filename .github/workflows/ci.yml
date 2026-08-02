@@ -169,12 +169,26 @@ jobs:
 
       - run: composer dist
 
+  # Builds and runs examples/docker/ (read-only, tmpfs tmpDir, non-root) against this
+  # repository's working tree, and checks that README.md's Dockerfile block stays
+  # byte-identical to examples/docker/Dockerfile. Composer/PHP only run inside the
+  # containers this builds, so no setup-php step is needed on the runner itself.
+  docker-example:
+    name: docker-example
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - run: bash tests/docker-check.sh
+
   # The single required status check. Adding or removing a matrix entry above never
   # changes this job's name, so branch protection stays valid.
   ci:
     name: ci
     if: always()
-    needs: [lint, test, lowest, dist]
+    needs: [lint, test, lowest, dist, docker-example]
     runs-on: ubuntu-latest
     # Reads job results from the workflow context only — it never touches the repo.
     permissions: {}

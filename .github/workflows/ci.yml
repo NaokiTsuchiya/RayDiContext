@@ -4,11 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-  # Both runtime dependencies are caret ranges over versions that do not exist yet, so an
-  # upstream minor reaches users without passing through here and Renovate, which widens
-  # only what falls outside the range, has nothing to open a PR for. The weekly run is
-  # what tests the ranges against those releases — composer update in the test job
-  # resolves to the newest each one allows.
   schedule:
     - cron: '23 20 * * 0'
   workflow_dispatch:
@@ -97,9 +92,7 @@ jobs:
       - run: composer test -- --order-by=random --random-order-seed=${{ github.run_number }} --coverage-clover=coverage.xml --log-junit=junit.xml
 
       # after_n_builds in codecov.yml holds the status back until all four arrive,
-      # so a partial upload can never post a misleading number. The weekly run is
-      # excluded: it re-tests a commit whose coverage was uploaded and settled when it
-      # landed, and fail_ci_if_error would turn a re-report of it into a red build.
+      # so a partial upload can never post a misleading number.
       - if: ${{ github.event_name != 'schedule' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
@@ -109,10 +102,6 @@ jobs:
           flags: php-${{ matrix.php }}
           fail_ci_if_error: true
 
-      # Runs even when the suite failed, on every event the step above uploads for:
-      # a run that went red is exactly the one test analytics needs in order to tell
-      # a flake from a real regression. The weekly run is excluded here too, for the
-      # same reason it is excluded there.
       # An upload failure here is never fatal — unlike coverage, nothing gates on it,
       # so a Codecov outage must not turn a passing run red.
       - if: ${{ !cancelled() && github.event_name != 'schedule' }}

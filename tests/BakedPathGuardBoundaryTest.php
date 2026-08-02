@@ -12,10 +12,11 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 use function file_put_contents;
+use function mkdir;
 use function sprintf;
+use function symlink;
 
 #[CoversClass(BakedPathGuard::class)]
-#[CoversClass(BakedPathScanner::class)]
 final class BakedPathGuardBoundaryTest extends TestCase
 {
     /** Working directory and meta shared by the guard test classes */
@@ -85,5 +86,25 @@ final class BakedPathGuardBoundaryTest extends TestCase
         $this->expectExceptionMessage(sprintf('Baked path "%s" found in %s.', $this->meta->appDir, $baked));
 
         ($this->guard)($this->meta);
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function preservesSymlinkSpellingAgainstBakedPathGuard(): void
+    {
+        $target = "{$this->fixture->baseDir}/link-target";
+        mkdir($target, permissions: 0o755, recursive: true);
+        $link = "{$this->fixture->baseDir}/current";
+        symlink($target, $link);
+
+        $meta = AppMeta::fromAppDir($link, 'prod');
+        static::assertSame($link, $meta->appDir);
+
+        mkdir($meta->compileDir, permissions: 0o755, recursive: true);
+        file_put_contents("{$meta->compileDir}/baked.php", "<?php return '{$link}/src/Index.php';");
+
+        $this->expectException(BakedPathFound::class);
+
+        (new BakedPathGuard())($meta);
     }
 }

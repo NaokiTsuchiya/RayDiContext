@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidAppMeta;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
@@ -14,10 +13,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
 
-use function file_put_contents;
 use function mkdir;
 use function sprintf;
-use function symlink;
 use function uniqid;
 
 /**
@@ -140,23 +137,5 @@ final class AppMetaFromAppDirTest extends TestCase
         $meta = AppMeta::fromAppDir($appDir, 'prod');
 
         static::assertSame($appDir, $meta->appDir);
-    }
-
-    /** @throws ExceptionInterface */
-    #[Test]
-    public function preservesSymlinkSpellingAgainstBakedPathGuard(): void
-    {
-        $link = "{$this->baseDir}/current";
-        symlink($this->appDir, $link);
-
-        $meta = AppMeta::fromAppDir($link, 'prod');
-        static::assertSame($link, $meta->appDir);
-
-        mkdir($meta->compileDir, permissions: 0o755, recursive: true);
-        file_put_contents("{$meta->compileDir}/baked.php", "<?php return '{$link}/src/Index.php';");
-
-        $this->expectException(BakedPathFound::class);
-
-        (new BakedPathGuard())($meta);
     }
 }

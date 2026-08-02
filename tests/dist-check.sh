@@ -4,6 +4,7 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 fixture="${root}/tests/dist/consumer"
+ref="HEAD"
 
 fail() {
     echo "dist-check: $1" >&2
@@ -16,8 +17,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "${work}"' EXIT
 
 mkdir "${work}/package" "${work}/consumer"
-cp "${root}/composer.json" "${work}/package/composer.json"
-cp -R "${root}/src" "${root}/bin" "${work}/package/"
+git -C "${root}" archive "${ref}" | tar -x -C "${work}/package"
 cp -R "${fixture}/." "${work}/consumer/"
 
 cd "${work}/consumer"
@@ -36,4 +36,7 @@ php vendor/bin/ray-di-compile bootstrap.php "${consumer}" prod \
 compiled=(var/di/prod/*ConsumerCarInterface*.php)
 [ -f "${compiled[0]}" ] || fail "the compile produced no script for ConsumerCarInterface"
 
-echo "dist-check: OK — compiled $(basename "${compiled[0]}") through vendor/bin/ray-di-compile"
+resolved="$(php verify.php)" \
+    || fail "the installed package failed to resolve ConsumerCarInterface to a ConsumerCar: ${resolved}"
+
+echo "dist-check: OK — compiled $(basename "${compiled[0]}") through vendor/bin/ray-di-compile; ${resolved}"

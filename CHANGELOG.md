@@ -9,14 +9,6 @@ README's Versioning section).
 
 ## [Unreleased]
 
-### Changed
-
-- `ray/compiler` is constrained to `~1.14.0` in place of `^1.14`, so a new minor
-  is added only once CI has run against it. `ray/di` stays `^2.19`: an
-  application declares it directly, so narrowing it here would govern an upgrade
-  that is not this package's to hold. Every version installable under the old
-  constraints is still installable.
-
 ## [0.1.0] - 2026-08-02
 
 ### Added

@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
-  # ray/di is a caret range because the consuming app declares it too, so an upstream
-  # minor reaches users without passing through here and Renovate has nothing to widen.
-  # The weekly run is what tests the range against it — composer update in the test job
-  # resolves to the newest release the range allows. ray/compiler needs none of this:
-  # it is pinned to a minor, so a new one arrives as a PR that runs the whole suite.
+  # Both runtime dependencies are caret ranges over versions that do not exist yet, so an
+  # upstream minor reaches users without passing through here and Renovate, which widens
+  # only what falls outside the range, has nothing to open a PR for. The weekly run is
+  # what tests the ranges against those releases — composer update in the test job
+  # resolves to the newest each one allows.
   schedule:
     - cron: '23 20 * * 0'
   workflow_dispatch:

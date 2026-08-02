@@ -8,6 +8,7 @@ use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
+use NaokiTsuchiya\RayDiContext\Exception\EmptyExtraNeedle;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -15,6 +16,7 @@ use SplFileInfo;
 use UnexpectedValueException;
 
 use function file_get_contents;
+use function in_array;
 use function is_dir;
 use function is_executable;
 use function restore_error_handler;
@@ -28,13 +30,23 @@ use function sprintf;
  */
 final class BakedPathGuard implements BakedPathGuardInterface
 {
+    /** @var list<string> */
+    private readonly array $extraNeedles;
+
     /**
-     * @param list<non-empty-string> $extraNeedles Literals this application knows must not ship, a
-     *                                            secret or a host name. Never echoed in a rejection
+     * @param list<string> $extraNeedles Literals this application knows must not ship, a
+     *                                   secret or a host name. Never echoed in a rejection
+     *
+     * @throws EmptyExtraNeedle When $extraNeedles contains an empty string.
      */
-    public function __construct(
-        private readonly array $extraNeedles = [],
-    ) {}
+    public function __construct(array $extraNeedles = [])
+    {
+        if (in_array('', $extraNeedles, strict: true)) {
+            throw new EmptyExtraNeedle('BakedPathGuard::$extraNeedles must not contain an empty string');
+        }
+
+        $this->extraNeedles = $extraNeedles;
+    }
 
     /** {@inheritDoc} */
     public function __invoke(AppMeta $meta): void
@@ -110,7 +122,9 @@ final class BakedPathGuard implements BakedPathGuardInterface
             }
         }
 
-        foreach ($this->extraNeedles as $needle) {
+        /** @var list<non-empty-string> $extraNeedles */
+        $extraNeedles = $this->extraNeedles;
+        foreach ($extraNeedles as $needle) {
             $hasNeedle = $scanner->hasBakedPath($needle);
             if ($hasNeedle) {
                 throw new BakedPathFound(sprintf(

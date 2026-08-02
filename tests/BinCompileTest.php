@@ -26,7 +26,7 @@ final class BinCompileTest extends TestCase
     /** {@inheritDoc} */
     protected function setUp(): void
     {
-        $this->fixture = new CliFixture();
+        $this->fixture = new CliFixture('bin_compile_');
     }
 
     /** {@inheritDoc} */

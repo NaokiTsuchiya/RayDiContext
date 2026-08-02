@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-fixture="${root}/tests/Fixture/consumer"
+fixture="${root}/tests/dist/consumer"
 
 fail() {
     echo "dist-check: $1" >&2

@@ -17,7 +17,7 @@ final class AppMetaTest extends TestCase
 {
     /** @throws ExceptionInterface */
     #[Test]
-    public function construct(): void
+    public function constructStoresGivenFields(): void
     {
         $meta = new AppMeta('/path/to/app', 'prod:staging', '/opt/di', '/tmp/rw');
 

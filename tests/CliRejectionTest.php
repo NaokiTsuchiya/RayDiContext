@@ -24,7 +24,7 @@ final class CliRejectionTest extends TestCase
     /** {@inheritDoc} */
     protected function setUp(): void
     {
-        $this->fixture = new CliFixture();
+        $this->fixture = new CliFixture('cli_reject_');
         $this->cli = new Cli($this->fixture->errorFile);
     }
 

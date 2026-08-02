@@ -86,6 +86,12 @@ that had already halved the volume). Nothing enforces it — see `decisions` for
 
 ## Other conventions
 
+- **A test method name is a third-person present-tense sentence with the class name as its
+  subject.** `AppMetaTest::rejectsEmptyField` reads "AppMeta rejects empty field". The subject may
+  narrow to a member (`MapContextProviderTest::constructorThrowsOnMissingContextClass` =
+  "MapContextProvider constructor throws on missing context class",
+  `CompileRunnerTest::runCleansAndCompiles` = "CompileRunner run cleans and compiles"). A name that
+  is only a noun or adjective, with no predicate, is not allowed.
 - Tests mirror `src/` one-to-one, tagged `#[CoversClass(...)]`, using `#[Test]` attributes. A test's
   docblock is `@throws ExceptionInterface` alone unless it has something to say. `src/` keeps its
   precise `@throws` enumeration (34f6a95); `BinCompileTest` keeps `RuntimeException` because

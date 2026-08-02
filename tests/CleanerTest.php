@@ -66,7 +66,7 @@ final class CleanerTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function invokableRepeatedly(): void
+    public function remainsInvokableRepeatedly(): void
     {
         $compileDir = "{$this->baseDir}/di";
         $cleaner = new Cleaner();

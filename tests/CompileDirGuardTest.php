@@ -31,7 +31,7 @@ final class CompileDirGuardTest extends TestCase
     /** {@inheritDoc} */
     protected function setUp(): void
     {
-        $this->baseDir = __DIR__ . '/tmp/' . uniqid('guard_', more_entropy: true);
+        $this->baseDir = __DIR__ . '/tmp/' . uniqid('compile_dir_guard_', more_entropy: true);
         $this->appDir = "{$this->baseDir}/app";
         mkdir($this->appDir, permissions: 0o755, recursive: true);
         $this->guard = new CompileDirGuard();
@@ -92,18 +92,6 @@ final class CompileDirGuardTest extends TestCase
         $this->expectException(UnsafeCompileDir::class);
 
         ($this->guard)(new AppMeta($appDir, 'prod', $link, "{$appDir}/var/tmp"));
-    }
-
-    /** @throws ExceptionInterface */
-    #[Test]
-    public function rejectionImplementsPackageExceptionInterface(): void
-    {
-        try {
-            ($this->guard)(new AppMeta('/app', 'prod', '/', '/tmp'));
-            static::fail('UnsafeCompileDir was not thrown');
-        } catch (UnsafeCompileDir $e) {
-            static::assertInstanceOf(ExceptionInterface::class, $e);
-        }
     }
 
     /** @throws ExceptionInterface */

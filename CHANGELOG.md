@@ -9,6 +9,11 @@ README's Versioning section).
 
 ## [Unreleased]
 
+### Changed
+
+- `AppMeta::__construct()` now rejects a relative `compileDir` or `tmpDir`, matching the
+  existing requirement that `appDir` be an absolute path.
+
 ## [0.1.0] - 2026-08-02
 
 ### Added

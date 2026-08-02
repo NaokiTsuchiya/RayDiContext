@@ -307,6 +307,10 @@ affected test or relax `failOnDeprecation` for that PHP version only.
 
 ### Releasing
 
+Move `CHANGELOG.md`'s `## [Unreleased]` section into a new `## [x.y.z] - <date>`
+section before tagging — the tag is never re-pointed, so the changelog entry has
+to be right the first time.
+
 Tags carry no `v` prefix — `0.1.0`, not `v0.1.0`. Composer accepts either, so
 the only thing that matters is not mixing the two.
 

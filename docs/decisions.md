@@ -72,7 +72,7 @@ Test classes live in the root namespace, which is exactly what `mago.toml`'s `mu
 covers, and its `not-on` names `AbstractContext` and `AbstractCompiledContext` — no other abstract
 class. An abstract class placed there anyway fails:
 
-```
+```text
 tests/ProbeRoot.php:8:16: error[must-be-final]: Structural flaw in `NaokiTsuchiya\RayDiContext\AbstractProbeRoot`
  = Every concrete class in the root namespace is final except AbstractContext and AbstractCompiledContext, which exist to be extended
 ```

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
+use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
+use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCompiledProdContext;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -13,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use Ray\Compiler\CompiledInjector;
 use Ray\Compiler\DiCompileModule;
 use Ray\Compiler\Exception\ScriptDirNotReadable;
+use Ray\Di\Injector;
 
 use function mkdir;
 use function uniqid;
@@ -41,7 +44,10 @@ final class AbstractCompiledContextTest extends TestCase
     {
         $context = new FakeCompiledProdContext(new AppMeta('/app', 'prod', '/app/var/di/prod', '/app/var/tmp/prod'));
 
-        static::assertInstanceOf(DiCompileModule::class, $context());
+        $module = $context();
+
+        static::assertInstanceOf(DiCompileModule::class, $module);
+        static::assertInstanceOf(FakeCar::class, (new Injector($module))->getInstance(FakeCarInterface::class));
     }
 
     /**
@@ -49,14 +55,32 @@ final class AbstractCompiledContextTest extends TestCase
      * @throws ScriptDirNotReadable
      */
     #[Test]
-    public function getInjectorInstanceReturnsCompiledInjectorForCompileDir(): void
+    public function getInjectorInstanceReturnsCompiledInjectorResolvingTheCompiledAppModule(): void
     {
-        $compileDir = "{$this->baseDir}/di";
-        mkdir($compileDir, permissions: 0o755, recursive: true);
+        $meta = AppMeta::fromAppDir("{$this->baseDir}/app", 'prod');
+        mkdir($meta->tmpDir, permissions: 0o755, recursive: true);
+        (new CompileRunner(new MapContextProvider(['prod' => FakeCompiledProdContext::class])))->run($meta);
+        $context = new FakeCompiledProdContext($meta);
+
+        $injector = $context->getInjectorInstance();
+
+        static::assertInstanceOf(CompiledInjector::class, $injector);
+        static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
+    }
+
+    /**
+     * @throws ExceptionInterface
+     * @throws ScriptDirNotReadable
+     */
+    #[Test]
+    public function getInjectorInstanceThrowsScriptDirNotReadableForAMissingCompileDir(): void
+    {
         $context = new FakeCompiledProdContext(
-            new AppMeta($this->baseDir, 'prod', $compileDir, "{$this->baseDir}/tmp"),
+            new AppMeta($this->baseDir, 'prod', "{$this->baseDir}/absent-di", "{$this->baseDir}/tmp"),
         );
 
-        static::assertInstanceOf(CompiledInjector::class, $context->getInjectorInstance());
+        $this->expectException(ScriptDirNotReadable::class);
+
+        $context->getInjectorInstance();
     }
 }

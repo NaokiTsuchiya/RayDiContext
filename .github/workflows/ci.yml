@@ -109,8 +109,10 @@ jobs:
           flags: php-${{ matrix.php }}
           fail_ci_if_error: true
 
-      # Runs even when the suite failed: a run that went red is exactly the one
-      # test analytics needs in order to tell a flake from a real regression.
+      # Runs even when the suite failed, on every event the step above uploads for:
+      # a run that went red is exactly the one test analytics needs in order to tell
+      # a flake from a real regression. The weekly run is excluded here too, for the
+      # same reason it is excluded there.
       # An upload failure here is never fatal — unlike coverage, nothing gates on it,
       # so a Codecov outage must not turn a passing run red.
       - if: ${{ !cancelled() && github.event_name != 'schedule' }}

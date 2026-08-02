@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Support\CliFixture;
+use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -89,5 +90,30 @@ final class CliRejectionTest extends TestCase
 
         static::assertSame(2, $status);
         static::assertStringContainsString('appDir does not exist', $this->fixture->stderr());
+    }
+
+    /** A bootstrap path that exists but is not a regular file is a usage error, not a require() warning */
+    #[Test]
+    public function rejectsBootstrapThatIsADirectory(): void
+    {
+        $status = ($this->cli)(['bin', $this->fixture->baseDir, $this->fixture->appDir, 'prod']);
+
+        static::assertSame(2, $status);
+        static::assertStringContainsString('Bootstrap file not found', $this->fixture->stderr());
+        static::assertStringContainsString($this->fixture->baseDir, $this->fixture->stderr());
+    }
+
+    /** An appDir path that exists but is not a directory is a usage error, not an internal failure */
+    #[Test]
+    public function rejectsAppDirThatIsAFile(): void
+    {
+        $plainFile = "{$this->fixture->baseDir}/plainfile.txt";
+        Fs::copyFile(Fs::SCRIPT, $plainFile);
+
+        $status = ($this->cli)(['bin', CliFixture::VALID, $plainFile, 'prod']);
+
+        static::assertSame(2, $status);
+        static::assertStringContainsString('appDir does not exist or is not a directory', $this->fixture->stderr());
+        static::assertStringContainsString($plainFile, $this->fixture->stderr());
     }
 }

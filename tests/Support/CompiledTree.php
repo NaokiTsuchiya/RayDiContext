@@ -27,10 +27,10 @@ final class CompiledTree
     public static function assertWorldReadable(string $compileDir): array
     {
         $paths = [];
-        $entries = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(
-            $compileDir,
-            FilesystemIterator::SKIP_DOTS,
-        ));
+        $entries = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($compileDir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST,
+        );
         /** @var SplFileInfo $entry */
         foreach ($entries as $entry) {
             $pathname = $entry->getPathname();
@@ -38,7 +38,7 @@ final class CompiledTree
             $isDir = $entry->isDir();
             $required = $isDir ? 0o005 : 0o004;
             TestCase::assertSame($required, $mode & $required, $pathname);
-            $isScript = $entry->getExtension() === 'php';
+            $isScript = !$isDir && $entry->getExtension() === 'php';
             if ($isScript) {
                 TestCase::assertSame(0o644, $mode, $pathname);
             }

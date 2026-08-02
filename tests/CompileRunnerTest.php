@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
-use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
-use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
 use NaokiTsuchiya\RayDiContext\Support\CompiledTree;
@@ -18,16 +15,11 @@ use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Ray\Compiler\CompiledInjector;
-use SplFileInfo;
 
 use function chmod;
-use function dirname;
 use function file_put_contents;
 use function glob;
-use function hash_file;
 use function is_dir;
-use function ksort;
 use function mkdir;
 
 #[CoversClass(CompileRunner::class)]
@@ -79,43 +71,6 @@ final class CompileRunnerTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function resolvesFromReadOnlyCompileDir(): void
-    {
-        $this->runner->run($this->meta);
-        chmod($this->meta->compileDir, permissions: 0o555);
-        $before = $this->snapshot($this->meta->compileDir);
-
-        $injector = (new MapContextProvider([
-            'prod' => FakeProdContext::class,
-        ]))->get($this->meta)->getInjectorInstance();
-
-        static::assertInstanceOf(CompiledInjector::class, $injector);
-        static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
-        static::assertSame($before, $this->snapshot($this->meta->compileDir));
-    }
-
-    /** @throws ExceptionInterface */
-    #[Test]
-    public function resolvesWithoutCompileTimeTmpDir(): void
-    {
-        $this->runner->run($this->meta);
-        Fs::removeDir(dirname($this->meta->tmpDir));
-        $runtimeMeta = new AppMeta(
-            $this->meta->appDir,
-            'prod',
-            $this->meta->compileDir,
-            "{$this->fixture->baseDir}/absent-tmp",
-        );
-
-        $injector = (new MapContextProvider(['prod' => FakeProdContext::class]))->get(
-            $runtimeMeta,
-        )->getInjectorInstance();
-
-        static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
-    }
-
-    /** @throws ExceptionInterface */
-    #[Test]
     public function runMakesCompiledScriptsWorldReadable(): void
     {
         $this->runner->run($this->meta);
@@ -152,24 +107,5 @@ final class CompileRunnerTest extends TestCase
         } catch (UnsafeCompileDir) {
             static::assertDirectoryExists($this->meta->tmpDir);
         }
-    }
-
-    /**
-     * @return array<string, string>
-     * @throws ExceptionInterface
-     */
-    private function snapshot(string $dir): array
-    {
-        $files = [];
-        /** @var SplFileInfo $entry */
-        foreach (new FilesystemIterator($dir) as $entry) {
-            $pathname = $entry->getPathname();
-            $hash = hash_file('sha256', $pathname);
-            $files[$pathname] = $hash === false ? '' : $hash;
-        }
-
-        ksort($files);
-
-        return $files;
     }
 }

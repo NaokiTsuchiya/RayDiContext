@@ -104,10 +104,7 @@ final class MapContextProviderResolutionTest extends TestCase
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
 
-    /**
-     * @return array<string, string>
-     * @throws ExceptionInterface
-     */
+    /** @return array<string, string> */
     private function snapshot(string $dir): array
     {
         $files = [];

@@ -36,7 +36,7 @@ php vendor/bin/ray-di-compile bootstrap.php "${consumer}" prod \
 compiled=(var/di/prod/*ConsumerCarInterface*.php)
 [ -f "${compiled[0]}" ] || fail "the compile produced no script for ConsumerCarInterface"
 
-resolved="$(php verify.php)" \
+resolved="$(php verify.php 2>&1)" \
     || fail "the installed package failed to resolve ConsumerCarInterface to a ConsumerCar: ${resolved}"
 
 echo "dist-check: OK — compiled $(basename "${compiled[0]}") through vendor/bin/ray-di-compile; ${resolved}"

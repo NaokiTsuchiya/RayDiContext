@@ -6,6 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Support\CliFixture;
 use NaokiTsuchiya\RayDiContext\Support\PhpProcess;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -13,6 +14,7 @@ use RuntimeException;
 use function glob;
 
 /** Arguments bin/ray-di-compile refuses before compiling anything, all of them exit status 2 */
+#[CoversNothing]
 final class BinCompileRejectionTest extends TestCase
 {
     /** Path to the compile CLI under test */

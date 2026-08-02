@@ -140,6 +140,47 @@ arguments (layout, and create-or-not) whose only non-default caller is that one 
 
 **Would change it:** a second class needing the same non-default shape.
 
+### Pinning a runtime dependency to a minor so Renovate reports it — [#116][116]
+
+Rejected for both, after being tried on each. `rangeStrategy: "widen"` does not look at the semver
+level; it asks only whether the new version falls outside the declared range, and returns the range
+untouched when it does not:
+
+```ts
+if (rangeStrategy === 'widen' && matches(newVersion, currentValue)) {
+    newValue = currentValue;
+```
+
+An update whose `newValue` equals its `currentValue` is then dropped entirely, so under `^2.19` a
+release like `ray/di 2.22.2` produces no PR, no dashboard entry and no CI run. Replacing the caret
+with a chain of pinned minors (`~2.19.0 || ~2.20.0 || …`) puts each new one outside the range, which
+turns it into a PR whose matrix runs against it — detection and verification in one, and a range
+containing only combinations CI has actually run, so a broken pairing is never installable.
+
+The price is that the range is also a gate. A consumer cannot install the new minor until this
+package merges the PR *and* tags a release, and releases here are a few a year. That price is only
+worth paying for a dependency the consumer neither names nor expects to control, and **neither of
+these is that dependency**. `ray/di` is the framework the application declares itself. `ray/compiler`
+looks like an implementation detail this package brackets, but is not: `ContextInterface` documents
+`getInjectorInstance()` as returning `CompiledInjector($meta->compileDir)` and `__invoke()` as
+composing `DiCompileModule`, so a consumer writes both class names into its own bootstrap — see the
+README's usage example and `tests/dist/consumer/bootstrap.php`. Pinning it would hold back an
+upgrade the consumer has every reason to want, and the app author would see `composer update` do
+nothing and need `composer why-not` to find out why.
+
+Both stay carets, and `ci.yml`'s scheduled run is what covers what Renovate then has nothing to
+widen: `composer update` resolves each to the newest release its caret allows, so the ranges are
+re-tested against versions that did not exist when they were written. What this gives up is real —
+a red weekly build means users can already install the broken pairing, where a gate would have made
+it unreachable.
+
+Two further measurements support leaving `ray/di` alone specifically: `src/` reaches it through
+`AbstractModule` and `InjectorInterface` and nothing else, and `ray/compiler`, far more deeply
+coupled to it than this package is, declares `ray/di ^2.19` itself.
+
+**Would change it:** a runtime dependency this package brackets completely, with no class name of
+its reaching consumer code — for that one, gating would cost nothing and the pin would be right.
+
 ### Naming a concrete test count in `CLAUDE.md` or here — [#82][82]
 
 Removed in [28ea330][28ea330] after review, and not to be restored. A total was a tripwire every
@@ -227,5 +268,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [83]: https://github.com/NaokiTsuchiya/RayDiContext/issues/83
 [84]: https://github.com/NaokiTsuchiya/RayDiContext/issues/84
 [86]: https://github.com/NaokiTsuchiya/RayDiContext/issues/86
+[116]: https://github.com/NaokiTsuchiya/RayDiContext/pull/116
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

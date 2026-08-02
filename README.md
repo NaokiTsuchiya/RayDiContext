@@ -298,6 +298,12 @@ PHP 8.2 – 8.5, ray/di ^2.19, ray/compiler ^1.14
 
 ## Development
 
+CI also runs weekly on a schedule, and `workflow_dispatch` runs it on demand.
+The `test` job installs with `composer update`, so a scheduled run tests the
+declared ranges against whatever upstream has released since — a red one means
+the newest release broke something, not that anyone changed this repository.
+`composer show --direct` in the job log records which versions it resolved.
+
 `phpunit.xml.dist` sets `failOnDeprecation="true"`. Combined with the PHP 8.5
 job in the CI matrix, a deprecation raised by `ray/di` or `ray/aop` under a
 newer PHP version can turn CI red with zero changes in this repository — if a

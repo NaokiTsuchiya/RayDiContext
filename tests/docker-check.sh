@@ -54,6 +54,10 @@ JSON
 docker build -f "${work}/consumer/Dockerfile" -t "${tag}" "${work}/consumer" \
     || fail "docker build failed"
 
+docker run --rm --read-only --tmpfs /app/var/tmp --entrypoint sh "${tag}" \
+    -c 'test "$(id -u)" -ne 0' \
+    || fail "container ran as root"
+
 output="$(docker run --rm --read-only --tmpfs /app/var/tmp "${tag}" 2>&1)" \
     || fail "docker run failed under --read-only with tmpDir mounted as tmpfs: ${output}"
 

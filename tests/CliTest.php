@@ -24,7 +24,7 @@ final class CliTest extends TestCase
     /** {@inheritDoc} */
     protected function setUp(): void
     {
-        $this->fixture = new CliFixture();
+        $this->fixture = new CliFixture('cli_');
         $this->cli = new Cli($this->fixture->errorFile);
     }
 
@@ -44,7 +44,7 @@ final class CliTest extends TestCase
         static::assertNotSame([], glob("{$this->fixture->appDir}/var/di/prod/*FakeCarInterface*.php"));
     }
 
-    /** Asserts through the CLI's exit status */
+    /** Empty compileDir/tmpDir arguments are treated as omitted, not as an override to nothing */
     #[Test]
     public function treatsEmptyOverrideAsAbsent(): void
     {
@@ -85,7 +85,7 @@ final class CliTest extends TestCase
         static::assertStringNotContainsString('Stack trace', $this->fixture->stderr());
     }
 
-    /** Asserts through the CLI's exit status */
+    /** A throwable unrelated to this package's exception hierarchy is still reported as one line, not a trace */
     #[Test]
     public function reportsForeignThrowableAsRuntimeFailure(): void
     {

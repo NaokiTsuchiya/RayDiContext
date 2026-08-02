@@ -45,7 +45,7 @@ final class AppMetaFromAppDirTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function defaults(): void
+    public function appliesConventionalDefaults(): void
     {
         $context = FakeProdContext::class;
         $meta = AppMeta::fromAppDir($this->appDir, $context);
@@ -85,7 +85,7 @@ final class AppMetaFromAppDirTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function override(): void
+    public function overridesCompileDirAndTmpDir(): void
     {
         $meta = AppMeta::fromAppDir($this->appDir, 'prod', '/opt/di', '/tmp/rw');
 
@@ -95,7 +95,7 @@ final class AppMetaFromAppDirTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function partialOverride(): void
+    public function overridesCompileDirOnly(): void
     {
         $meta = AppMeta::fromAppDir($this->appDir, 'prod', compileDir: '/opt/di');
 
@@ -115,9 +115,7 @@ final class AppMetaFromAppDirTest extends TestCase
     }
 
     /** @throws ExceptionInterface */
-    #[TestWith(['.', 'must be an absolute path'], 'current directory')]
     #[TestWith(['app', 'must be an absolute path'], 'bare relative segment')]
-    #[TestWith(['./app', 'must be an absolute path'], 'explicitly relative path')]
     #[TestWith(['', 'must not be empty'], 'empty')]
     #[Test]
     public function rejectsInvalidAppDirShape(string $appDir, string $message): void

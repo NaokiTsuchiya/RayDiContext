@@ -33,10 +33,10 @@ final class CliFixture
     /** @var non-empty-string File the CLI is pointed at instead of STDERR */
     public readonly string $errorFile;
 
-    /** Creates the working directory the CLI compiles into */
-    public function __construct()
+    /** @param non-empty-string $prefix Names the working directory after the test class using it */
+    public function __construct(string $prefix)
     {
-        $this->baseDir = __DIR__ . '/../tmp/' . uniqid('cli_', more_entropy: true);
+        $this->baseDir = __DIR__ . '/../tmp/' . uniqid($prefix, more_entropy: true);
         $this->appDir = "{$this->baseDir}/app";
         mkdir("{$this->appDir}/var/tmp/prod", permissions: 0o755, recursive: true);
         $this->errorFile = "{$this->baseDir}/stderr.txt";

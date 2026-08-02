@@ -33,6 +33,15 @@ it is caught by nothing. That is why the constraint is one of the few lines left
 
 **Would change it:** `mago guard` gaining a method target.
 
+### Enforce test method naming with `mago guard` — [#83][83]
+
+Same limitation as above: `[[guard.structural.rules]]`'s `target` has no `method` variant, so a rule
+requiring `#[Test]` method names to be predicate sentences cannot be expressed. `mago`'s
+`method-name` lint rule only checks PSR casing, not sentence shape. The convention (see CLAUDE.md's
+"Other conventions") is enforced by review only.
+
+**Would change it:** `mago guard` gaining a method target, same as [#71][71].
+
 ### Add `bin` to mago's `[source] paths`
 
 Does nothing. A bin script has no `.php` extension, so the source glob never discovers it. Pointed
@@ -215,6 +224,7 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [71]: https://github.com/NaokiTsuchiya/RayDiContext/pull/71
 [79]: https://github.com/NaokiTsuchiya/RayDiContext/issues/79
 [82]: https://github.com/NaokiTsuchiya/RayDiContext/issues/82
+[83]: https://github.com/NaokiTsuchiya/RayDiContext/issues/83
 [84]: https://github.com/NaokiTsuchiya/RayDiContext/issues/84
 [86]: https://github.com/NaokiTsuchiya/RayDiContext/issues/86
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330

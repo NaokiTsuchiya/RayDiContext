@@ -8,7 +8,7 @@ php-version = "8.2"
 [source]
 paths = ["src", "tests"]
 includes = ["vendor"]
-excludes = ["tests/tmp", "tests/Fixture"]
+excludes = ["tests/tmp", "tests/Fixture", "tests/dist"]
 
 [linter]
 integrations = ["phpunit"]

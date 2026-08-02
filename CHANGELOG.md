@@ -9,6 +9,16 @@ README's Versioning section).
 
 ## [Unreleased]
 
+### Added
+
+- `AbstractCompiledContext`, a base class for the ahead-of-time compiled production shape
+  that composes `DiCompileModule`/`CompiledInjector` so consumer code no longer imports
+  `Ray\Compiler` class names. Its `getInjectorInstance()` catches `ray/compiler`'s
+  `ScriptDirNotReadable` and rethrows the new `Exception\CompileDirUnavailable`, so a
+  missing or unreadable `compileDir` is observable through this package's own
+  `ExceptionInterface` without naming a `Ray\Compiler` exception either; the original stays
+  retrievable via `getPrevious()`.
+
 ### Changed
 
 - `AppMeta::__construct()` now rejects a relative `compileDir` or `tmpDir`, matching the

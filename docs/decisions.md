@@ -69,11 +69,12 @@ giving a test helper a dependency on the hierarchy it exists to stay outside of.
 ### An abstract base `TestCase` to share test setup — [#79][79]
 
 Test classes live in the root namespace, which is exactly what `mago.toml`'s `must-be-final` rule
-covers, and its `not-on` names `AbstractContext` alone. An abstract class placed there fails:
+covers, and its `not-on` names `AbstractContext` and `AbstractCompiledContext` — no other abstract
+class. An abstract class placed there anyway fails:
 
-```
+```text
 tests/ProbeRoot.php:8:16: error[must-be-final]: Structural flaw in `NaokiTsuchiya\RayDiContext\AbstractProbeRoot`
- = Every concrete class in the root namespace is final except AbstractContext, which exists to be extended
+ = Every concrete class in the root namespace is final except AbstractContext and AbstractCompiledContext, which exist to be extended
 ```
 
 The same probe under `NaokiTsuchiya\RayDiContext\Support` is not reported — `on =
@@ -82,8 +83,11 @@ rule, not a licence to use it. Shared setup goes through the final helpers in `t
 static utilities (`Fs`, `PermissionBits`, `PhpProcess`) and per-test objects (`CliFixture`,
 `AppDirFixture`, `CompileDirFixture`, `SeparatedDirFixture`).
 
-**Would change it:** a second `not-on` entry naming a base class, worth adding only for a case that
-earns its place beside `AbstractContext`.
+A second `not-on` entry landed in [#119][119]: `not-on = 'NaokiTsuchiya\RayDiContext\Abstract{Context,CompiledContext}'`
+(the brace form, since `mago.toml` rejects a TOML array here). The exemption still names exactly two
+classes — `Abstract*` was rejected because it would also exempt any concrete class spelled `Abstract…`
+and the abstract `TestCase` this entry exists to keep out. An abstract `TestCase` placed in the root
+namespace still fails the same way; only `AbstractContext` and `AbstractCompiledContext` are exempt.
 
 ## Deliberate direction — do not reverse
 
@@ -160,13 +164,13 @@ containing only combinations CI has actually run, so a broken pairing is never i
 The price is that the range is also a gate. A consumer cannot install the new minor until this
 package merges the PR *and* tags a release, and releases here are a few a year. That price is only
 worth paying for a dependency the consumer neither names nor expects to control, and **neither of
-these is that dependency**. `ray/di` is the framework the application declares itself. `ray/compiler`
-looks like an implementation detail this package brackets, but is not: `ContextInterface` documents
-`getInjectorInstance()` as returning `CompiledInjector($meta->compileDir)` and `__invoke()` as
-composing `DiCompileModule`, so a consumer writes both class names into its own bootstrap — see the
-README's usage example and `tests/dist/consumer/bootstrap.php`. Pinning it would hold back an
-upgrade the consumer has every reason to want, and the app author would see `composer update` do
-nothing and need `composer why-not` to find out why.
+these is that dependency**. `ray/di` is the framework the application declares itself. Until
+[#119][119], `ray/compiler` looked like an implementation detail this package brackets, but was not:
+`ContextInterface` documented `getInjectorInstance()` as returning `CompiledInjector($meta->compileDir)`
+and `__invoke()` as composing `DiCompileModule`, so a consumer wrote both class names into its own
+bootstrap, and that same method's docblock let a third one, `Ray\Compiler\Exception\ScriptDirNotReadable`,
+pass through uncaught. Pinning it would hold back an upgrade the consumer has every reason to want,
+and the app author would see `composer update` do nothing and need `composer why-not` to find out why.
 
 Both stay carets, and `ci.yml`'s scheduled run is what covers what Renovate then has nothing to
 widen: `composer update` resolves each to the newest release its caret allows, so the ranges are
@@ -180,6 +184,20 @@ coupled to it than this package is, declares `ray/di ^2.19` itself.
 
 **Would change it:** a runtime dependency this package brackets completely, with no class name of
 its reaching consumer code — for that one, gating would cost nothing and the pin would be right.
+[#119][119] closed the two class names above: `AbstractCompiledContext` now composes
+`DiCompileModule`/`CompiledInjector` internally, so the README's usage example and
+`tests/dist/consumer/bootstrap.php` extend it and implement only `appModule()`; and
+`getInjectorInstance()` now catches `ScriptDirNotReadable` and rethrows this package's own
+`Exception\CompileDirUnavailable`, the original retrievable via `getPrevious()`. For the documented
+path (extend `AbstractCompiledContext`, catch this package's `ExceptionInterface`), the condition is
+met. It is not met completely: `CompiledInjector::getInstance()` can still throw
+`Ray\Compiler\Exception\Unbound` for a missing binding, unwrapped, and `ScriptCompilerInterface`
+remains an explicit escape hatch onto `ray/compiler` for an app that replaces the bundled compiler
+(see `src/ScriptCompilerInterface.php`'s docblock and `src/RayScriptCompiler.php`). Whether those two
+gaps are worth closing, and whether a mostly-bracketed dependency already clears the bar this entry
+set, is a judgment call this PR does not make — the pinning decision itself stays open for a
+dedicated follow-up, consistent with [#119][119]'s own scope note that re-evaluating the pin was
+left to a later issue.
 
 ### Naming a concrete test count in `CLAUDE.md` or here — [#82][82]
 
@@ -269,5 +287,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [84]: https://github.com/NaokiTsuchiya/RayDiContext/issues/84
 [86]: https://github.com/NaokiTsuchiya/RayDiContext/issues/86
 [116]: https://github.com/NaokiTsuchiya/RayDiContext/pull/116
+[119]: https://github.com/NaokiTsuchiya/RayDiContext/issues/119
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

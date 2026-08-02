@@ -52,9 +52,9 @@ jobs:
 
       - run: composer sa
 
-  # ubuntu-latest runs as a non-root user on purpose: CompileRunnerTest chmods the
-  # compile dir to 0555 to prove nothing is written at runtime, and root ignores that.
-  # Do not move this job into a `container:` — it would silently weaken the test.
+  # ubuntu-latest runs as a non-root user on purpose: tests that call
+  # Support\PermissionBits::skipUnlessEnforced() rely on permission bits root ignores.
+  # Do not move this job into a `container:` — it would silently weaken those tests.
   test:
     name: test
     runs-on: ubuntu-latest

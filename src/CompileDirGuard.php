@@ -17,7 +17,7 @@ use function str_starts_with;
 final class CompileDirGuard implements CompileDirGuardInterface
 {
     /** Appended to every rejection: the compile dir is disposable, nothing else is */
-    private const HINT = 'Point APP_COMPILE_DIR at a directory that holds nothing but compiled scripts.';
+    private const HINT = 'Pass a compile dir that holds nothing but compiled scripts.';
 
     /**
      * {@inheritDoc}

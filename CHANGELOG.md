@@ -11,11 +11,11 @@ README's Versioning section).
 
 ### Changed
 
-- The runtime dependencies are declared one minor at a time — `ray/di` as
-  `~2.19.0 || ~2.20.0 || ~2.22.0` and `ray/compiler` as `~1.14.0`, in place of
-  `^2.19` and `^1.14`. Every version installable under the old constraints is
-  still installable; a minor released from now on is added by a Renovate PR
-  once CI has run against it.
+- `ray/compiler` is constrained to `~1.14.0` in place of `^1.14`, so a new minor
+  is added only once CI has run against it. `ray/di` stays `^2.19`: an
+  application declares it directly, so narrowing it here would govern an upgrade
+  that is not this package's to hold. Every version installable under the old
+  constraints is still installable.
 
 ## [0.1.0] - 2026-08-02
 

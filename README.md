@@ -294,19 +294,26 @@ scripts `BakedPathGuard` scans, either.
 
 ## Requirements
 
-PHP 8.2 – 8.5, ray/di 2.19 / 2.20 / 2.22, ray/compiler 1.14
+PHP 8.2 – 8.5, ray/di ^2.19, ray/compiler ~1.14.0
 
-Each runtime minor is listed explicitly rather than covered by a caret range,
-so support for one means a CI run against it — see *Development* below.
+`ray/di` is left open because your application declares it too, and a narrower
+constraint here would govern your upgrade of it. `ray/compiler` is pinned to a
+minor: this package is the bridge to it, so nothing in your `composer.json`
+names it and the pin holds nothing back — see *Development* below.
 
 ## Development
 
-The runtime dependencies are declared one minor at a time, so a new upstream
-minor falls outside the range and Renovate opens a PR widening it. That PR is
-where the new release gets tested: the `test` job installs with `composer
-update`, so its matrix runs against the release being added. Merging it is what
-declares support for that minor — a red one is the release telling you it broke
-something. Nothing merges those automatically.
+A new `ray/compiler` minor falls outside the pin, so Renovate opens a PR
+widening it and that PR is where the release gets tested: the `test` job
+installs with `composer update`, so its matrix runs against it. Merging is what
+declares support; nothing merges those automatically.
+
+A new `ray/di` minor satisfies `^2.19` and reaches you without passing through
+here, so there is nothing to widen. CI runs weekly on a schedule instead
+(`workflow_dispatch` runs it on demand), which re-tests the range against
+whatever upstream has released since. A red one means the newest release broke
+something, not that anyone changed this repository; `composer show --direct` in
+the job log records which versions it resolved.
 
 `phpunit.xml.dist` sets `failOnDeprecation="true"`. Combined with the PHP 8.5
 job in the CI matrix, a deprecation raised by `ray/di` or `ray/aop` under a

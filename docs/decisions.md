@@ -140,47 +140,40 @@ arguments (layout, and create-or-not) whose only non-default caller is that one 
 
 **Would change it:** a second class needing the same non-default shape.
 
-### Covering the runtime minors with a caret range — [#116][116]
+### Treating the two runtime dependencies the same way — [#116][116]
 
-`^2.19` was replaced by `~2.19.0 || ~2.20.0 || ~2.22.0`, and `^1.14` by `~1.14.0`, so that a new
-upstream minor falls *outside* the declared range. That is the condition `rangeStrategy: "widen"`
-tests, and the only one — it does not look at the semver level, and it returns the range untouched
-whenever the new version already satisfies it:
+`ray/compiler` is pinned to a minor (`~1.14.0`) and `ray/di` is left a caret (`^2.19`), because the
+two sit differently in a consumer's `composer.json`. This package exists to bridge to the compiler
+and keep it out of sight, so nothing downstream names `ray/compiler` and pinning it blocks nobody.
+`ray/di` is the framework the application declares itself; a constraint here silently governs *its*
+version, and the app author finds out only by running `composer why-not`.
+
+The syntax is what selects the mechanism — `rangeStrategy: "widen"` does not look at the semver
+level, only at whether the release falls outside the range, and it returns the range untouched when
+it does not:
 
 ```ts
 if (rangeStrategy === 'widen' && matches(newVersion, currentValue)) {
     newValue = currentValue;
 ```
 
-An update whose `newValue` equals its `currentValue` is then dropped from the result entirely, so
-under `^2.19` a release like `ray/di 2.22.2` produced no PR, no dashboard entry, and no CI run.
-Nothing re-tested an open-ended range against the versions it promised to support.
+An update whose `newValue` equals its `currentValue` is dropped entirely. So one Renovate rule
+produces both behaviours: a new `ray/compiler` minor lands outside `~1.14.0` and becomes a PR whose
+matrix runs against it before anything is declared supported, while a new `ray/di` minor satisfies
+`^2.19` and passes silently. `ci.yml`'s scheduled run is what covers that second case — `composer
+update` resolves to the newest release the caret allows, so the range is re-tested against versions
+that did not exist when it was written.
 
-Listing the minors turns each new one into a widen PR, and that PR is the test: the `test` job
-installs with `composer update`, so its matrix runs against the release being added. Detection and
-verification arrive together, and merging is what declares support. Widening appends to the last
-element of the chain, having asked `replace` what that element becomes, so the `~` form is preserved
-as it grows:
+Pinning `ray/di` per minor as well was tried and rejected. It buys a real property the caret cannot
+have — a range containing only combinations CI has run, so a broken pairing is never installable —
+but it pays for it by holding the application's own framework upgrade until this package merges a PR
+*and* tags a release, and releases here are a few a year. Two measurements decided it: `src/` reaches
+`ray/di` through `AbstractModule` and `InjectorInterface` and nothing else, and `ray/compiler`, far
+more deeply coupled to `ray/di` than this package is, declares `ray/di ^2.19` itself. Being stricter
+than the package being wrapped needed a reason that the coupling did not supply.
 
-```ts
-const lastValue = splitValues.at(-1)!;
-const replacementValue = getNewValue({ currentValue: lastValue.trim(), rangeStrategy: 'replace', ... });
-...
-newValue = `${currentValue} || ${replacementValue}`;
-```
-
-Two alternatives were weighed against it. `rangeStrategy: "bump"` reports the release, but what it
-reports is a proposal to *narrow* the floor, and it verifies nothing. A scheduled CI run on the
-caret range verifies but does not report: a red weekly build names no version and carries no
-constraint change to merge, and it is a second mechanism for what the widen PR already does in one.
-
-The cost is real and accepted: a consumer cannot install a new ray/di minor until this package
-merges the widen PR *and tags a release*, and releases here are a few a year. The three entries in
-the initial chain are every 2.x that exists at or above 2.19 — there is no 2.21 — so the change
-locks out nobody who is installable today.
-
-**Would change it:** a consumer actually blocked by the window between an upstream minor and a tag
-here, which would move the answer back to a caret range plus a scheduled run.
+**Would change it:** a `ray/di` release that breaks against a compiler this package supports, which
+would show that the pairing needs gating rather than reporting.
 
 ### Naming a concrete test count in `CLAUDE.md` or here — [#82][82]
 

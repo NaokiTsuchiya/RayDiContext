@@ -39,7 +39,7 @@
       "addLabels": ["automerge"]
     },
     {
-      "description": "The public contract, listed one minor at a time so each new one lands outside the range and widen opens a PR for it. That PR's CI run is what verifies the release; merging it is what declares support. No automerge — widening the contract is a decision.",
+      "description": "The public contract. widen fires only for a release outside the range, so the constraint syntax decides the behaviour and one rule covers both: ray/compiler is pinned to a minor and gets a PR for each new one, ray/di is a caret the consuming app also declares and is left alone until a major. No automerge — widening the contract is a decision.",
       "matchManagers": ["composer"],
       "matchDepTypes": ["require"],
       "rangeStrategy": "widen"

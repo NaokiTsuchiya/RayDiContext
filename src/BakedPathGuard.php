@@ -30,7 +30,7 @@ use function sprintf;
  */
 final class BakedPathGuard implements BakedPathGuardInterface
 {
-    /** @var list<string> */
+    /** @var list<non-empty-string> */
     private readonly array $extraNeedles;
 
     /**
@@ -45,6 +45,7 @@ final class BakedPathGuard implements BakedPathGuardInterface
             throw new EmptyExtraNeedle('BakedPathGuard::$extraNeedles must not contain an empty string');
         }
 
+        /** @var list<non-empty-string> $extraNeedles */
         $this->extraNeedles = $extraNeedles;
     }
 
@@ -122,9 +123,7 @@ final class BakedPathGuard implements BakedPathGuardInterface
             }
         }
 
-        /** @var list<non-empty-string> $extraNeedles */
-        $extraNeedles = $this->extraNeedles;
-        foreach ($extraNeedles as $needle) {
+        foreach ($this->extraNeedles as $needle) {
             $hasNeedle = $scanner->hasBakedPath($needle);
             if ($hasNeedle) {
                 throw new BakedPathFound(sprintf(

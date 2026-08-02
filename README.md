@@ -71,7 +71,7 @@ use NaokiTsuchiya\RayDiContext\BakedPathGuard;
 $dbPassword = getenv('DB_PASSWORD');
 $needles = $dbPassword === false || $dbPassword === '' ? [] : [$dbPassword];
 
-(new CompileRunner($provider, guard: new BakedPathGuard($needles)))->run($meta);
+(new CompileRunner($provider, bakedPathGuard: new BakedPathGuard($needles)))->run($meta);
 ```
 
 A rejection names the script but never repeats the value — these are supplied precisely

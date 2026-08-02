@@ -9,6 +9,8 @@ use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
+use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingBakedPathGuard;
+use NaokiTsuchiya\RayDiContext\Fake\FakeRejectingGuard;
 use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
 use NaokiTsuchiya\RayDiContext\Support\CompiledTree;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
@@ -106,6 +108,36 @@ final class CompileRunnerTest extends TestCase
             static::fail('UnsafeCompileDir was not thrown');
         } catch (UnsafeCompileDir) {
             static::assertDirectoryExists($this->meta->tmpDir);
+        }
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function runUsesTheInjectedBakedPathGuard(): void
+    {
+        $guard = new FakeRecordingBakedPathGuard();
+        $runner = new CompileRunner(new MapContextProvider([
+            'prod' => FakeProdContext::class,
+        ]), bakedPathGuard: $guard);
+
+        $runner->run($this->meta);
+
+        static::assertTrue($guard->called);
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function runHonoursTheInjectedCompileDirGuard(): void
+    {
+        $runner = new CompileRunner(new MapContextProvider([
+            'prod' => FakeProdContext::class,
+        ]), compileDirGuard: new FakeRejectingGuard());
+
+        try {
+            $runner->run($this->meta);
+            static::fail('UnsafeCompileDir was not thrown');
+        } catch (UnsafeCompileDir) {
+            static::assertDirectoryDoesNotExist($this->meta->compileDir);
         }
     }
 }

@@ -296,19 +296,13 @@ scripts `BakedPathGuard` scans, either.
 
 PHP 8.2 – 8.5, ray/di ^2.19, ray/compiler ^1.14
 
-Both are left open on purpose. Your context class names `CompiledInjector` and
-`DiCompileModule` as well as `AbstractModule`, so both packages are yours to
-upgrade; a narrower constraint here would govern that upgrade instead.
-
 ## Development
 
-A new `ray/di` or `ray/compiler` minor satisfies the declared range and reaches
-you without passing through here, so Renovate has nothing to widen. CI runs
-weekly on a schedule instead (`workflow_dispatch` runs it on demand), which
-re-tests the ranges against whatever upstream has released since. A red one
-means the newest release broke something, not that anyone changed this
-repository; `composer show --direct` in the job log records which versions it
-resolved.
+CI also runs weekly on a schedule, and `workflow_dispatch` runs it on demand.
+The `test` job installs with `composer update`, so a scheduled run tests the
+declared ranges against whatever upstream has released since — a red one means
+the newest release broke something, not that anyone changed this repository.
+`composer show --direct` in the job log records which versions it resolved.
 
 `phpunit.xml.dist` sets `failOnDeprecation="true"`. Combined with the PHP 8.5
 job in the CI matrix, a deprecation raised by `ray/di` or `ray/aop` under a

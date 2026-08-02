@@ -44,8 +44,8 @@ final readonly class AppMeta
      * @param string $compileDir Read-only DI script directory baked into the image
      * @param string $tmpDir     Runtime-writable directory, never baked
      *
-     * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, appDir is not an
-     *                        absolute path, or compileDir and tmpDir are the same directory.
+     * @throws InvalidAppMeta When appDir/context/compileDir/tmpDir is empty, appDir/compileDir/tmpDir
+     *                        is not an absolute path, or compileDir and tmpDir are the same directory.
      */
     public function __construct(string $appDir, string $context, string $compileDir, string $tmpDir)
     {
@@ -67,6 +67,14 @@ final readonly class AppMeta
 
         if ($tmpDir === '') {
             throw new InvalidAppMeta('AppMeta::$tmpDir must not be empty');
+        }
+
+        if (!str_starts_with($compileDir, '/')) {
+            throw new InvalidAppMeta(sprintf('AppMeta::$compileDir must be an absolute path: "%s"', $compileDir));
+        }
+
+        if (!str_starts_with($tmpDir, '/')) {
+            throw new InvalidAppMeta(sprintf('AppMeta::$tmpDir must be an absolute path: "%s"', $tmpDir));
         }
 
         $normalizedCompileDir = self::trimSlash($compileDir);
@@ -109,8 +117,9 @@ final readonly class AppMeta
      * @param string|null $compileDir Defaults to "{appDir}/var/di/{context}"
      * @param string|null $tmpDir     Defaults to "{appDir}/var/tmp/{context}"
      *
-     * @throws InvalidAppMeta When appDir is not absolute or empty, or context does not
-     *                        match CONTEXT_PATTERN (letters, digits, "_", "-", "\" only).
+     * @throws InvalidAppMeta When appDir is not absolute or empty, context does not match
+     *                        CONTEXT_PATTERN (letters, digits, "_", "-", "\" only), or an explicitly
+     *                        given compileDir/tmpDir is not an absolute path.
      */
     public static function fromAppDir(
         string $appDir,

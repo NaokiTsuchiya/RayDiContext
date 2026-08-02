@@ -128,6 +128,16 @@ final class AppMetaFromAppDirTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
+    public function rejectsNonAbsoluteCompileDirOverride(): void
+    {
+        $this->expectException(InvalidAppMeta::class);
+        $this->expectExceptionMessage('AppMeta::$compileDir must be an absolute path: "var/di/prod"');
+
+        AppMeta::fromAppDir($this->appDir, 'prod', 'var/di/prod');
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
     public function doesNotRequireAppDirToExist(): void
     {
         $appDir = "{$this->baseDir}/nosuch";

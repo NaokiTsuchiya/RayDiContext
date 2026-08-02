@@ -71,6 +71,26 @@ final class AppMetaTest extends TestCase
     }
 
     /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsNonAbsoluteCompileDir(): void
+    {
+        $this->expectException(InvalidAppMeta::class);
+        $this->expectExceptionMessage('AppMeta::$compileDir must be an absolute path: "var/di/prod"');
+
+        new AppMeta('/app', 'prod', 'var/di/prod', '/app/var/tmp/prod');
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsNonAbsoluteTmpDir(): void
+    {
+        $this->expectException(InvalidAppMeta::class);
+        $this->expectExceptionMessage('AppMeta::$tmpDir must be an absolute path: "var/tmp/prod"');
+
+        new AppMeta('/app', 'prod', '/app/var/di/prod', 'var/tmp/prod');
+    }
+
+    /** @throws ExceptionInterface */
     #[TestWith(['/opt/di', '/opt/di'], 'identical spelling')]
     #[TestWith(['/opt/di/', '/opt/di'], 'equal after trimming the compile dir trailing slash')]
     #[TestWith(['/opt/di', '/opt/di///'], 'equal after trimming repeated tmp dir trailing slashes')]

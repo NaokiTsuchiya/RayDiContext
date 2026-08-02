@@ -9,7 +9,7 @@ use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
-use NaokiTsuchiya\RayDiContext\Exception\EmptyExtraNeedle;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidExtraNeedle;
 use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
@@ -27,8 +27,9 @@ final class CompileRunner
      * @param BakedPathGuardInterface  $bakedPathGuard  Verifies the compiled scripts afterwards
      * @param ScriptCompilerInterface  $compiler        Writes the scripts
      *
-     * @throws EmptyExtraNeedle Declared because the default BakedPathGuard's constructor can throw
-     *                          it; unreachable here since that default is built with zero needles.
+     * @throws InvalidExtraNeedle Declared because the default BakedPathGuard's constructor can
+     *                            throw it; unreachable here since that default is built with zero
+     *                            needles.
      */
     public function __construct(
         private readonly ContextProviderInterface $contextProvider,

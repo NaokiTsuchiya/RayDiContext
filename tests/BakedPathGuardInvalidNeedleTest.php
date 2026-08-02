@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\EmptyExtraNeedle;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidExtraNeedle;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -15,8 +15,8 @@ use PHPUnit\Framework\TestCase;
  * BakedPathGuardExtraNeedleTest so neither class needs a filesystem fixture
  */
 #[CoversClass(BakedPathGuard::class)]
-#[CoversClass(EmptyExtraNeedle::class)]
-final class BakedPathGuardEmptyNeedleTest extends TestCase
+#[CoversClass(InvalidExtraNeedle::class)]
+final class BakedPathGuardInvalidNeedleTest extends TestCase
 {
     /** Stands in for whatever an application knows must not reach a shipped script */
     private const CONFIGURED = 'zqx-must-not-ship-4f1c';
@@ -25,7 +25,7 @@ final class BakedPathGuardEmptyNeedleTest extends TestCase
     #[Test]
     public function rejectsAnEmptyNeedleAtConstruction(): void
     {
-        $this->expectException(EmptyExtraNeedle::class);
+        $this->expectException(InvalidExtraNeedle::class);
 
         new BakedPathGuard(['']);
     }
@@ -34,19 +34,31 @@ final class BakedPathGuardEmptyNeedleTest extends TestCase
     #[Test]
     public function rejectsAnEmptyNeedleAmongOthers(): void
     {
-        $this->expectException(EmptyExtraNeedle::class);
+        $this->expectException(InvalidExtraNeedle::class);
 
         new BakedPathGuard([self::CONFIGURED, '']);
     }
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function emptyNeedleRejectionDoesNotEchoOtherNeedles(): void
+    public function rejectsANonStringNeedle(): void
+    {
+        /** @var string $needle */
+        $needle = 42;
+
+        $this->expectException(InvalidExtraNeedle::class);
+
+        new BakedPathGuard([$needle]);
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function invalidNeedleRejectionDoesNotEchoOtherNeedles(): void
     {
         try {
             new BakedPathGuard([self::CONFIGURED, '']);
-            static::fail('EmptyExtraNeedle was not thrown');
-        } catch (EmptyExtraNeedle $e) {
+            static::fail('InvalidExtraNeedle was not thrown');
+        } catch (InvalidExtraNeedle $e) {
             static::assertStringNotContainsString(self::CONFIGURED, $e->getMessage());
         }
     }

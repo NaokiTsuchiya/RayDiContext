@@ -8,17 +8,18 @@ use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
-use NaokiTsuchiya\RayDiContext\Exception\EmptyExtraNeedle;
+use NaokiTsuchiya\RayDiContext\Exception\InvalidExtraNeedle;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 use UnexpectedValueException;
 
+use function array_filter;
 use function file_get_contents;
-use function in_array;
 use function is_dir;
 use function is_executable;
+use function is_string;
 use function restore_error_handler;
 use function set_error_handler;
 use function sprintf;
@@ -34,15 +35,19 @@ final class BakedPathGuard implements BakedPathGuardInterface
     private readonly array $extraNeedles;
 
     /**
-     * @param list<string> $extraNeedles Literals this application knows must not ship, a
-     *                                   secret or a host name. Never echoed in a rejection
+     * @param list<mixed> $extraNeedles Literals this application knows must not ship, a
+     *                                  secret or a host name. Never echoed in a rejection
      *
-     * @throws EmptyExtraNeedle When $extraNeedles contains an empty string.
+     * @throws InvalidExtraNeedle When $extraNeedles contains an empty string or a non-string value.
      */
     public function __construct(array $extraNeedles = [])
     {
-        if (in_array('', $extraNeedles, strict: true)) {
-            throw new EmptyExtraNeedle('BakedPathGuard::$extraNeedles must not contain an empty string');
+        $invalidNeedles = array_filter(
+            $extraNeedles,
+            static fn(mixed $needle): bool => !is_string($needle) || $needle === '',
+        );
+        if ($invalidNeedles !== []) {
+            throw new InvalidExtraNeedle('BakedPathGuard::$extraNeedles must contain only non-empty strings');
         }
 
         /** @var list<non-empty-string> $extraNeedles */

@@ -307,7 +307,6 @@ final class BakedPathGuardTest extends TestCase
     #[Test]
     public function rejectsANonStringNeedle(): void
     {
-        /** @var string $needle */
         $needle = 42;
 
         $this->expectException(InvalidExtraNeedle::class);

@@ -76,7 +76,7 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
         chmod($this->meta->compileDir, permissions: 0o555);
         $before = $this->snapshot($this->meta->compileDir);
 
-        $injector = (new FakeProdContext($this->meta))->getInjectorInstance();
+        $injector = (new FakeCompiledProdContext($this->meta))->getInjectorInstance();
 
         static::assertInstanceOf(CompiledInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
@@ -95,7 +95,7 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
             "{$this->fixture->baseDir}/absent-tmp",
         );
 
-        $injector = (new FakeProdContext($runtimeMeta))->getInjectorInstance();
+        $injector = (new FakeCompiledProdContext($runtimeMeta))->getInjectorInstance();
 
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
@@ -109,7 +109,7 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
         Fs::removeDir($this->meta->compileDir);
         $relocatedMeta = new AppMeta($this->meta->appDir, 'prod', $relocatedCompileDir, $this->meta->tmpDir);
 
-        $injector = (new FakeProdContext($relocatedMeta))->getInjectorInstance();
+        $injector = (new FakeCompiledProdContext($relocatedMeta))->getInjectorInstance();
 
         static::assertInstanceOf(CompiledInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));

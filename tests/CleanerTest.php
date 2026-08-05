@@ -211,16 +211,16 @@ final class CleanerTest extends TestCase
     public function honoursApplicationSuppliedGuard(): void
     {
         $appDir = "{$this->baseDir}/app";
-        $compileDir = "{$appDir}/var/di/prod";
+        $compileDir = "{$this->baseDir}/di";
         mkdir($compileDir, permissions: 0o755, recursive: true);
-        copy(Fs::SCRIPT, "{$appDir}/keep.php");
         copy(Fs::SCRIPT, "{$compileDir}/stale.php");
-        $meta = new AppMeta($appDir, 'prod', $compileDir, "{$appDir}/var/tmp");
+        $meta = new AppMeta($appDir, 'prod', $compileDir, "{$this->baseDir}/tmp");
 
         try {
             (new Cleaner(new FakeRejectingGuard()))($meta);
             static::fail('UnsafeCompileDir was not thrown');
-        } catch (UnsafeCompileDir) {
+        } catch (UnsafeCompileDir $e) {
+            static::assertStringContainsString('Rejected by the application guard:', $e->getMessage());
             static::assertFileExists("{$compileDir}/stale.php");
         }
     }

@@ -13,11 +13,12 @@ a reason worth not rediscovering. This file is only what you would get wrong wit
 ## Commands
 
 ```bash
-composer tests   # cs + sa + test + dist — the full gate, mirrors CI's `ci` job
+composer tests   # cs + sa + test + dist — mirrors CI's `ci` job except its own `infection` job
 composer cs      # mago lint + fmt --check
 composer sa      # mago analyze + guard
 composer test    # phpunit
 composer dist    # installs the package into a real fixture consumer and runs the real binary
+composer infection    # mutation testing; slow, so it stays out of `tests` and runs as its own CI job
 vendor/bin/mago fmt   # auto-fix; CI only checks
 ```
 

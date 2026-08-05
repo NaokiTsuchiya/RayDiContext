@@ -11,23 +11,20 @@ fail() {
     exit 1
 }
 
+command -v yq >/dev/null 2>&1 || fail "yq was not found on PATH"
 [ -f "${ci_file}" ] || fail "${ci_file} not found"
 [ -f "${codecov_file}" ] || fail "${codecov_file} not found"
 
-# The `test:` job is the only one whose matrix drives a codecov upload — scope the
-# search to its block, not the whole file, since the `lowest:` job has its own
-# unrelated `php:` matrix key.
-test_block="$(awk '/^  test:$/{flag=1; next} /^  [a-zA-Z_-]+:$/{flag=0} flag' "${ci_file}")"
-[ -n "${test_block}" ] || fail "could not locate the 'test:' job block in ${ci_file}"
+# jobs.test.strategy.matrix.php is the only PHP matrix that drives a codecov upload
+# (jobs.lowest has its own, unrelated one) — query it by path instead of by text
+# position so the check keeps working regardless of where the job sits in the file.
+matrix_count="$(yq '.jobs.test.strategy.matrix.php | length' "${ci_file}")"
+[[ "${matrix_count}" =~ ^[0-9]+$ ]] && [ "${matrix_count}" -gt 0 ] \
+    || fail "could not read jobs.test.strategy.matrix.php from ${ci_file}"
 
-php_line="$(printf '%s\n' "${test_block}" | grep -E "^[[:space:]]*php:[[:space:]]*\[" | head -1)"
-[ -n "${php_line}" ] || fail "could not find the php matrix line inside the 'test:' job block"
-
-matrix_count="$(printf '%s\n' "${php_line}" | grep -oE "'[^']*'" | wc -l | tr -d ' ')"
-[ "${matrix_count}" -gt 0 ] || fail "the php matrix in the 'test:' job appears empty"
-
-after_n_builds="$(grep -E '^[[:space:]]*after_n_builds:[[:space:]]*[0-9]+' "${codecov_file}" | grep -oE '[0-9]+' | head -1)"
-[ -n "${after_n_builds}" ] || fail "could not find after_n_builds in ${codecov_file}"
+after_n_builds="$(yq '.codecov.notify.after_n_builds' "${codecov_file}")"
+[[ "${after_n_builds}" =~ ^[0-9]+$ ]] \
+    || fail "could not read codecov.notify.after_n_builds from ${codecov_file}"
 
 [ "${after_n_builds}" = "${matrix_count}" ] \
     || fail "after_n_builds (${after_n_builds}) in ${codecov_file} does not match the test job's PHP matrix size (${matrix_count}) in ${ci_file}"

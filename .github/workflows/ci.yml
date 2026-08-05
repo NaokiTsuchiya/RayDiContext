@@ -52,6 +52,10 @@ jobs:
 
       - run: composer sa
 
+      # after_n_builds in codecov.yml (see the comment there and on the `test:` job's
+      # upload step) has to equal the `test:` job's PHP matrix size.
+      - run: composer ci-matrix-check
+
   # ubuntu-latest runs as a non-root user on purpose: tests that call
   # Support\PermissionBits::skipUnlessEnforced() rely on permission bits root ignores.
   # Do not move this job into a `container:` — it would silently weaken those tests.
@@ -150,6 +154,10 @@ jobs:
       - run: composer update --no-progress --prefer-dist --prefer-lowest --prefer-stable --with-dependencies ray/di ray/compiler
 
       - run: composer show --direct
+
+      # composer.json's require is the only source of truth for the lower bound; this
+      # step derives it from there and fails if the resolved version does not match.
+      - run: composer lowest-check
 
       - run: composer test
 

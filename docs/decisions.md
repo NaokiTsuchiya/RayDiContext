@@ -357,6 +357,77 @@ run from `composer tests` locally.
 **Would change it:** a release whose default preset stops excluding Markdown/LICENSE, or a second,
 unrelated need for `symfony/console` that would already put it in `vendor/`.
 
+## Reversed after an earlier rejection
+
+### Mutation testing with Infection — rejected by [#16][16], adopted by [#137][137]
+
+[#16][16] rejected Infection on a cost/benefit measurement of this package's *test quality*:
+`infection` 0.34.0 on PHP 8.5.5 with pcov, one full run, `86 mutants / Covered MSI 90% / 8
+survivors`, concluding the tool would motivate at most two more tests and was not worth a
+permanent maintenance cost that also nearly doubles `vendor/` (32 → ~65 packages).
+
+[#137][137] reopens it on a different axis entirely: not test quality, but using this package's
+small size as a place to build real operational experience running Infection in CI. It does not
+dispute [#16][16]'s measurement — it simply is not optimizing for what that measurement was
+about. Any improvement to test quality here is a side effect, not the success criterion.
+
+[#16][16]'s premise that `src/` was "functionally frozen" is also stale: 62 commits landed in
+`src/` between its comment (2026-07-25) and this one, growing the tree to 34 files / 1557 lines.
+Re-measuring was mandatory, not optional — the 86-mutant figure no longer describes this
+codebase.
+
+Current measurement (Linux/PHP 8.2.33/pcov, `infection/infection` 0.32.6, non-root, `@default`
+mutators, matching the dedicated CI job and verified identical across 5 independent,
+non-bind-mounted containers): 280 mutations, 242 killed, 34 escaped, 2 errors, 2 timed out, 100%
+mutation code coverage, `msi = coveredCodeMsi = 87.86`. `infection.json5`'s `minMsi`/
+`minCoveredMsi` are pinned to this measured value, not a round number chosen up front — the CI
+job only fails on a regression below it.
+
+`infection/infection` is pinned to `0.32.6`, not the newest release (`0.34.1`, what [#16][16]
+used). Every release `>= 0.33` requires `"php": "^8.3"`; the `lint`/`dist` jobs and the `8.2` leg
+of `lowest` run `composer update` (including dev dependencies) under PHP 8.2, where such a
+requirement fails the whole update, not just Infection's own install. `0.32.6` is the newest
+release that still declares `"php": "^8.2"` (its own caret already reaches 8.3–8.5), so one exact
+pin installs cleanly across the whole matrix — the same convention `carthage-software/mago` and
+`phpunit/phpunit` already use in `require-dev`.
+
+**Would change it:** an Infection release declaring `"php": "^8.2"` (or wider) again, at which
+point the pin could move forward without losing the PHP 8.2 jobs.
+
+### Why the MSI floor cannot be 100%
+
+The same structural reasons [#16][16] already found are still present, plus one newly confirmed
+twin found while re-measuring:
+
+- `Cleaner`'s `mkdir()` permission literal (`0o755→0o754`) is umask-dependent and not portable to
+  assert exactly.
+- `Cleaner::removeContents()`'s `&&→||` on the race-only branch is already `@codeCoverageIgnore`d
+  — the code itself declares that path non-deterministic.
+- `BakedPathScanner`'s `$offset = $position + 1` mutated to `+2` is an equivalent mutant: every
+  needle passed to `hasBakedPath()`/`compileDirRanges()` is an absolute path, so the two byte
+  offsets can never produce an observable difference.
+- The same `+1` mutated the other way (`+0`/`-1`, mutators `DecrementInteger`/`Plus`) breaks the
+  loop instead of leaving it equivalent: the search offset stops advancing, and the mutant either
+  times out (`BakedPathScanner.php:50`, inside `hasBakedPath()`) or exhausts PHP's memory limit
+  building an ever-growing `$ranges` array (`BakedPathScanner.php:85`, inside
+  `compileDirRanges()`). Infection counts `errors` and `time outs` toward MSI the same as
+  `killed`, so these need no dedicated test — but they are not "killed by an assertion" either,
+  they crash instead.
+- `BakedPathGuard::__invoke()`'s `continue→break` (`RecursiveDirectoryIterator` enumeration
+  order) is the landmine [#16][16] already named: killing it deterministically depends on the
+  order the filesystem returns directory entries, which is not portable across OSes.
+- **Newly found**: `PermissionNormalizer::normalizeContents()` has the identical shape twice
+  (`continue` on a symlink entry at `PermissionNormalizer.php:68`, `continue` on a non-directory
+  entry at `PermissionNormalizer.php:76`), walking a `FilesystemIterator` the same way
+  `BakedPathGuard` walks a `RecursiveDirectoryIterator`. One of the two
+  (`PermissionNormalizer.php:76`) reproduces the exact cross-OS instability: killed on
+  macOS/APFS/PHP 8.5, escaped on Linux/ext4/PHP 8.2 in every one of the 5 measurement runs on the
+  CI-matching environment. It is left unkilled for the same reason as `BakedPathGuard`'s —
+  deliberately trying to kill it would make the CI-pinned MSI depend on directory enumeration
+  order, which this package cannot control. (The 5 repeated measurements on Linux/PHP 8.2 alone
+  were identical to each other; the instability is across OSes, not across runs of the same
+  environment — which is what the CI job's fixed MSI floor actually depends on.)
+
 ## Possible, not done
 
 ### A CI check for comment length
@@ -376,6 +447,7 @@ Detecting "previously", "used to" and similar, restricted to added lines of a di
 cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 
 [14]: https://github.com/NaokiTsuchiya/RayDiContext/issues/14
+[16]: https://github.com/NaokiTsuchiya/RayDiContext/issues/16
 [26]: https://github.com/NaokiTsuchiya/RayDiContext/issues/26
 [53]: https://github.com/NaokiTsuchiya/RayDiContext/issues/53
 [70]: https://github.com/NaokiTsuchiya/RayDiContext/issues/70
@@ -391,5 +463,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [130]: https://github.com/NaokiTsuchiya/RayDiContext/issues/130
 [131]: https://github.com/NaokiTsuchiya/RayDiContext/issues/131
 [135]: https://github.com/NaokiTsuchiya/RayDiContext/issues/135
+[137]: https://github.com/NaokiTsuchiya/RayDiContext/issues/137
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

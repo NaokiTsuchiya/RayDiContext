@@ -1,0 +1,10 @@
+{
+    "source": {
+        "directories": ["src"],
+    },
+    "mutators": {
+        "@default": true,
+    },
+    "minMsi": 87.86,
+    "minCoveredMsi": 87.86,
+}

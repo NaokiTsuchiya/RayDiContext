@@ -5,18 +5,23 @@ declare(strict_types=1);
 namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
+use NaokiTsuchiya\RayDiContext\Exception\CompileFailed;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
 use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingBakedPathGuard;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRejectingGuard;
+use NaokiTsuchiya\RayDiContext\Fake\FakeThrowingCompiler;
+use NaokiTsuchiya\RayDiContext\Fake\FakeUnboundContext;
 use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
 use NaokiTsuchiya\RayDiContext\Support\CompiledTree;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Ray\Compiler\Exception\Unbound;
+use RuntimeException;
 
 use function chmod;
 use function file_put_contents;
@@ -138,6 +143,39 @@ final class CompileRunnerTest extends TestCase
             static::fail('UnsafeCompileDir was not thrown');
         } catch (UnsafeCompileDir) {
             static::assertDirectoryDoesNotExist($this->meta->compileDir);
+        }
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function runWrapsAnyCompilerExceptionInCompileFailed(): void
+    {
+        $runner = new CompileRunner(new MapContextProvider([
+            'prod' => FakeProdContext::class,
+        ]), compiler: new FakeThrowingCompiler());
+
+        try {
+            $runner->run($this->meta);
+            static::fail('CompileFailed was not thrown');
+        } catch (CompileFailed $e) {
+            static::assertInstanceOf(RuntimeException::class, $e->getPrevious());
+            static::assertSame([], glob("{$this->meta->compileDir}/*"));
+        }
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function runWrapsARealCompileFailureFromAnUnboundDependency(): void
+    {
+        $unboundMeta = new AppMeta($this->meta->appDir, 'unbound', $this->meta->compileDir, $this->meta->tmpDir);
+        $runner = new CompileRunner(new MapContextProvider(['unbound' => FakeUnboundContext::class]));
+
+        try {
+            $runner->run($unboundMeta);
+            static::fail('CompileFailed was not thrown');
+        } catch (CompileFailed $e) {
+            static::assertInstanceOf(Unbound::class, $e->getPrevious());
+            static::assertSame([], glob("{$this->meta->compileDir}/*"));
         }
     }
 }

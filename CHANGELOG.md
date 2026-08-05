@@ -9,6 +9,21 @@ README's Versioning section).
 
 ## [Unreleased]
 
+### Added
+
+- `Exception\CompileFailed`, thrown by `CompileRunner::run()` when the injected
+  `ScriptCompilerInterface` throws while compiling the context module. Wraps the compiler's own
+  exception (e.g. a missing binding surfacing as `ray/compiler`'s or `ray/di`'s own `Unbound`),
+  retrievable via `getPrevious()`, so a `CompileRunner::run()` caller no longer needs to catch a
+  `ray/compiler`/`ray/di` exception type directly.
+
+### Changed
+
+- `bin/ray-di-compile`'s STDERR message for a compile-step failure (e.g. a missing binding) now
+  reads through the wrapped `Exception\CompileFailed` instead of the raw exception's
+  `{class}: {message}` passthrough; the message still carries the original exception's class and
+  text, and the exit status (`1`) is unchanged.
+
 ## [0.2.0] - 2026-08-05
 
 ### Added

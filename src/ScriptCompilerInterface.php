@@ -9,7 +9,10 @@ use Ray\Di\AbstractModule;
 /**
  * Compiles a module into a directory of scripts
  *
- * The seam over ray/compiler. Implementations pass their compiler's exceptions through unchanged.
+ * The seam over ray/compiler. Implementations pass their compiler's exceptions through unchanged —
+ * that binds compile() itself; a caller going through CompileRunner::run() instead sees whatever an
+ * implementation throws wrapped in Exception\CompileFailed, the original retrievable via
+ * getPrevious().
  *
  * @api
  */

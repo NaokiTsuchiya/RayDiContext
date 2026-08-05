@@ -199,6 +199,41 @@ set, is a judgment call this PR does not make — the pinning decision itself st
 dedicated follow-up, consistent with [#119][119]'s own scope note that re-evaluating the pin was
 left to a later issue.
 
+### Wrapping `CompileRunner::run()`'s compile-step exceptions instead of leaving them raw or documenting the gap — [#131][131]
+
+Three options, continuing the compile-side half of what the `#116` entry above left open after
+[#119][119] closed the runtime half: leave `$this->compiler->compile(...)`'s exceptions raw (status
+quo), document the gap in `ScriptCompilerInterface`'s docblock without changing behavior, or catch
+and wrap them the way `AbstractCompiledContext::getInjectorInstance()` already wraps
+`ScriptDirNotReadable` into `Exception\CompileDirUnavailable`. Wrapping was chosen.
+
+Leaving it raw costs nothing at `bin/ray-di-compile`'s boundary — `Cli::compile()`'s
+`catch (Throwable $e)` already turns any exception into exit status `1` — but leaves a consumer
+calling `CompileRunner::run()` directly needing to know and catch `ray/compiler`'s or `ray/di`'s own
+exception types, exactly the coupling [#119][119] stopped requiring on the runtime side. Documenting
+only removes the surprise without removing that coupling: a consumer still has to name
+`Ray\Compiler\Exception\Unbound` (or similar) to handle a bad binding.
+
+Wrapping has one real cost, not weighed when the gap was first noticed: `Cli::compile()` picks its
+`catch` branch by type (`ExceptionInterface` before `Throwable`, `src/Cli.php:110-114`), and the two
+branches format STDERR differently — `Throwable`'s branch prefixes the message with the exception's
+class name, `ExceptionInterface`'s does not. Once a compile-step failure is wrapped in this
+package's `ExceptionInterface`, it moves branches, so `CompileFailed`'s own message has to carry the
+wrapped exception's class and message itself, or `bin/ray-di-compile`'s STDERR gets strictly less
+informative for this one failure mode. The exit status (`1`) is unchanged either way.
+
+This changes what the `#116` entry's "not met completely" carve-out describes: `CompileRunner::run()`
+now wraps a `compile()` failure, closing that half of the gap the same way [#119][119] closed the
+runtime half, for the documented path (`CompileRunner::run()`, not calling `ScriptCompilerInterface`
+directly). `ScriptCompilerInterface` remains an "explicit escape hatch onto `ray/compiler`" for an
+app calling `compile()` outside `run()` — unaffected, per its own docblock. Re-evaluating the `#116`
+pin is still out of scope: closing this half changes what re-evaluating that pin would be *for*, not
+a reason to do it here.
+
+**Would change it:** evidence that `bin/ray-di-compile` CLI users depend on the exact
+`{class}: {message}` STDERR format for a compile-step failure — at that point `CompileFailed` alone
+might not be the right fix and the `Cli` branch selection itself would need revisiting.
+
 ### Naming a concrete test count in `CLAUDE.md` or here — [#82][82]
 
 Removed in [28ea330][28ea330] after review, and not to be restored. A total was a tripwire every
@@ -338,5 +373,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [119]: https://github.com/NaokiTsuchiya/RayDiContext/issues/119
 [127]: https://github.com/NaokiTsuchiya/RayDiContext/issues/127
 [130]: https://github.com/NaokiTsuchiya/RayDiContext/issues/130
+[131]: https://github.com/NaokiTsuchiya/RayDiContext/issues/131
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

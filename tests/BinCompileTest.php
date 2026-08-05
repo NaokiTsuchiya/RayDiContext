@@ -119,4 +119,19 @@ final class BinCompileTest extends TestCase
         static::assertStringContainsString('must be an absolute path', $stderr);
         static::assertStringNotContainsString('Stack trace', $stderr);
     }
+
+    /** @throws RuntimeException */
+    #[Test]
+    public function failsWithStatusOneOnAnUnboundCompilerDependency(): void
+    {
+        [$status, $stderr] = PhpProcess::run(self::SCRIPT, [
+            CliFixture::VALID,
+            $this->fixture->appDir,
+            'unbound',
+        ]);
+
+        static::assertSame(1, $status, $stderr);
+        static::assertStringContainsString('Unbound', $stderr);
+        static::assertStringNotContainsString('Stack trace', $stderr);
+    }
 }

@@ -10,46 +10,11 @@ fail() {
     exit 1
 }
 
-# filterCompileDirFiles()/relativePath() (examples/docker/bin/build-check-support.php) back
-# preload.php generation. This repo's own toy Greeter binding has no AOP interceptor, so a real
-# build never produces a proxy file for filterCompileDirFiles() to keep, and compileDir is always
-# nested directly under appDir, so relativePath() never climbs. Neither of those needs Docker, a
-# real compile, or an AOP binding to exercise as a pure function over constructed paths.
+# Docker-free check of examples/docker/bin/build-check-support.php's pure functions — see
+# tests/docker-check-probe.php for what it exercises and why.
 support="${example}/bin/build-check-support.php"
 probe_dir="$(mktemp -d)"
-php -r '
-    require $argv[1];
-    $compileDir = realpath($argv[2]);
-
-    $kept = filterCompileDirFiles($compileDir, [$compileDir . "/Proxy.php", "/etc/hosts"]);
-    if ($kept !== [$compileDir . "/Proxy.php"]) {
-        fwrite(STDERR, "filterCompileDirFiles: expected only the compileDir file kept, got " . json_encode($kept) . "\n");
-        exit(1);
-    }
-
-    if (relativePath("/app", "/app/var/di/prod/Foo.php") !== "var/di/prod/Foo.php") {
-        fwrite(STDERR, "relativePath: nested case failed: " . relativePath("/app", "/app/var/di/prod/Foo.php") . "\n");
-        exit(1);
-    }
-
-    if (relativePath("/build", "/app/var/di/prod/Foo.php") !== "../app/var/di/prod/Foo.php") {
-        fwrite(STDERR, "relativePath: non-nested case failed: " . relativePath("/build", "/app/var/di/prod/Foo.php") . "\n");
-        exit(1);
-    }
-
-    // writePreload() must throw, not silently succeed, when preload.php cannot be written —
-    // otherwise build-check would exit(0) with the preload step having failed unnoticed.
-    $threw = false;
-    try {
-        writePreload($compileDir, "/no/such/directory/ray-di-context-build-check-probe", []);
-    } catch (RuntimeException $e) {
-        $threw = true;
-    }
-    if (!$threw) {
-        fwrite(STDERR, "writePreload: expected a RuntimeException when preload.php cannot be written, none thrown\n");
-        exit(1);
-    }
-' "${support}" "${probe_dir}" \
+php "${root}/tests/docker-check-probe.php" "${support}" "${probe_dir}" \
     || fail "examples/docker/bin/build-check-support.php's pure functions failed synthetic verification"
 rm -rf "${probe_dir}"
 echo "docker-check: OK — filterCompileDirFiles()/relativePath() synthetic verification"

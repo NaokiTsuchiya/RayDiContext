@@ -46,7 +46,10 @@ AppMeta::fromAppDir(appDir, context, compileDir?, tmpDir?)
 3. **`ScriptCompilerInterface`** (default `RayScriptCompiler`) compiles the context's module into
    `compileDir`. `RayScriptCompiler` is a one-line delegate to `ray/compiler`; the seam exists so
    the pipeline's *ordering* can be asserted directly (`tests/CompileRunnerOrderingTest.php`)
-   instead of inferred from a real compile.
+   instead of inferred from a real compile. `CompileRunner::run()` wraps anything `compile()` throws
+   in `Exception\CompileFailed` (original retrievable via `getPrevious()`); an app calling
+   `compile()` directly through the interface still sees the implementation's own exception type,
+   unwrapped, per its docblock.
 4. **`BakedPathGuardInterface`** (default `BakedPathGuard`, using `BakedPathScanner`) scans every
    compiled `*.php` for a literal `$meta->appDir` or `$meta->tmpDir`. The scanner matches on
    path-segment boundaries (so `/app` does not false-positive inside `/appdata`) and exempts

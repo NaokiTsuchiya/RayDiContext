@@ -9,10 +9,14 @@ use NaokiTsuchiya\RayDiContext\Exception\ChmodFailed;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotWritable;
+use NaokiTsuchiya\RayDiContext\Exception\CompileFailed;
 use NaokiTsuchiya\RayDiContext\Exception\InvalidExtraNeedle;
 use NaokiTsuchiya\RayDiContext\Exception\RemoveFailed;
 use NaokiTsuchiya\RayDiContext\Exception\ScriptNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
+use Throwable;
+
+use function sprintf;
 
 /**
  * Compiles the context of an env into the compile dir
@@ -45,6 +49,8 @@ final class CompileRunner
      * A rejected compile leaves the compile dir empty, so scripts the guard refused cannot be
      * baked into an image by a later COPY.
      *
+     * @throws CompileFailed When $this->compiler->compile(...) throws while compiling the context
+     *         module. Wraps the compiler's own exception, retrievable via getPrevious().
      * @throws BakedPathFound When a compiled script contains an appDir or tmpDir literal.
      * @throws UnsafeCompileDir When the compile dir is the filesystem root or holds the app dir.
      * @throws CompileDirNotWritable When the compile dir does not exist and cannot be created.
@@ -62,7 +68,20 @@ final class CompileRunner
 
         $guarded = false;
         try {
-            $this->compiler->compile($context(), $meta->compileDir);
+            try {
+                $this->compiler->compile($context(), $meta->compileDir);
+            } catch (Throwable $e) {
+                throw new CompileFailed(
+                    sprintf(
+                        'Compiling the context into "%s" failed: %s: %s',
+                        $meta->compileDir,
+                        $e::class,
+                        $e->getMessage(),
+                    ),
+                    previous: $e,
+                );
+            }
+
             ($this->bakedPathGuard)($meta);
             $guarded = true;
         } finally {

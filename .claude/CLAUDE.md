@@ -93,9 +93,14 @@ that had already halved the volume). Nothing enforces it — see `decisions` for
   "MapContextProvider constructor throws on missing context class",
   `CompileRunnerTest::runCleansAndCompiles` = "CompileRunner run cleans and compiles"). A name that
   is only a noun or adjective, with no predicate, is not allowed.
-- Tests mirror `src/` one-to-one, tagged `#[CoversClass(...)]`, using `#[Test]` attributes. A test's
-  docblock is `@throws ExceptionInterface` alone unless it has something to say. `src/` keeps its
-  precise `@throws` enumeration (34f6a95); `BinCompileTest` keeps `RuntimeException` because
+- Tests mirror `src/` one-to-one at a first tier — one `{CoversClass}Test.php` per
+  `#[CoversClass(...)]`, using `#[Test]` attributes. A second tier splits that file only along
+  `{CoversClass}IntegrationTest.php` (a separate process, or a real `ray/compiler` run — judged by
+  reading the test, not by grep); size alone is not a third reason, so `too-many-methods` is off
+  for `tests/`, and a `setUp()` that can't be shared becomes a private helper instead of a split.
+  See `docs/decisions.md` (#140) for the full rule set and its evidence. A test's docblock is
+  `@throws ExceptionInterface` alone unless it has something to say. `src/` keeps its precise
+  `@throws` enumeration (34f6a95); `BinCompileTest` keeps `RuntimeException` because
   `Support\PhpProcess` really throws one.
 - Coverage is effectively 100%. A new `src/` class needs its own `#[CoversClass(...)]` test even if
   existing tests already execute every line — PHPUnit only credits declared classes.

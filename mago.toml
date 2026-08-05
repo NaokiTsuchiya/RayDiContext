@@ -54,6 +54,9 @@ no-null-property-init = { enabled = true }
 prefer-explode-over-preg-split = { enabled = true }
 prefer-test-attribute = { enabled = true }
 class-name = { enabled = true, psr = true }
+# Splitting a test class for size alone is not a reason (docs/decisions.md, #140): only
+# #[CoversClass] and the unit/integration axis split a test file.
+too-many-methods = { enabled = true, exclude = ["tests/"] }
 
 [analyzer]
 minimum-fail-level = "note"

@@ -7,6 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use NaokiTsuchiya\RayDiContext\Support\CliFixture;
 use NaokiTsuchiya\RayDiContext\Support\PhpProcess;
 use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -15,6 +16,7 @@ use function glob;
 
 /** End-to-end test for the bin/ray-di-compile CLI, run as a separate process */
 #[CoversNothing]
+#[Group('infection-excluded')]
 final class BinCompileIntegrationTest extends TestCase
 {
     /** Path to the compile CLI under test */

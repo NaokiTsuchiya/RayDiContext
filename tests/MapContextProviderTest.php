@@ -54,10 +54,16 @@ final class MapContextProviderTest extends TestCase
         /** @var array<string, class-string<AbstractContext>> $map A bootstrap typo, as the runtime sees it */
         $map = ['prod' => 'NoSuchContextClass'];
 
-        $this->expectException(ContextClassNotFound::class);
-        $this->expectExceptionMessage('Context class "NoSuchContextClass" mapped to context "prod" does not exist');
-
-        new MapContextProvider($map);
+        try {
+            new MapContextProvider($map);
+            static::fail('ContextClassNotFound was not thrown');
+        } catch (ContextClassNotFound $e) {
+            static::assertSame(
+                'Context class "NoSuchContextClass" mapped to context "prod" does not exist',
+                $e->getMessage(),
+            );
+            static::assertNull($e->getPrevious());
+        }
     }
 
     /** @throws ExceptionInterface */

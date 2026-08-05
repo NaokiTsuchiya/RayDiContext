@@ -520,12 +520,14 @@ about. Any improvement to test quality here is a side effect, not the success cr
 Re-measuring was mandatory, not optional — the 86-mutant figure no longer describes this
 codebase.
 
-Current measurement (Linux/PHP 8.2.33/pcov, `infection/infection` 0.32.6, non-root, `@default`
-mutators, matching the dedicated CI job and verified identical across 5 independent,
+Measurement at adoption time (Linux/PHP 8.2.33/pcov, `infection/infection` 0.32.6, non-root,
+`@default` mutators, matching the dedicated CI job and verified identical across 5 independent,
 non-bind-mounted containers): 280 mutations, 242 killed, 34 escaped, 2 errors, 2 timed out, 100%
 mutation code coverage, `msi = coveredCodeMsi = 87.86`. `infection.json5`'s `minMsi`/
-`minCoveredMsi` are pinned to this measured value, not a round number chosen up front — the CI
-job only fails on a regression below it.
+`minCoveredMsi` were pinned to this measured value at the time, not a round number chosen up
+front — the CI job only failed on a regression below it. **Historical**: [#143][143] triaged every
+escaped mutant this measurement found and re-pinned the floor to `100.0` — see "Why three mutants
+are ignored" below for the current state and the up-to-date numbers.
 
 `infection/infection` is pinned to `0.32.6`, not the newest release (`0.34.1`, what [#16][16]
 used). Every release `>= 0.33` requires `"php": "^8.3"`; the `lint`/`dist` jobs and the `8.2` leg
@@ -538,39 +540,69 @@ pin installs cleanly across the whole matrix — the same convention `carthage-s
 **Would change it:** an Infection release declaring `"php": "^8.2"` (or wider) again, at which
 point the pin could move forward without losing the PHP 8.2 jobs.
 
-### Why the MSI floor cannot be 100%
+### Why three mutants are ignored
 
-The same structural reasons [#16][16] already found are still present, plus one newly confirmed
-twin found while re-measuring:
+[#143][143] re-measured on the CI environment (`ubuntu-latest`/PHP 8.2/pcov via
+`composer infection`) after the `tests/` reorg in [#142][142] changed which of [#16][16]'s
+original findings still escape. Four of the six reasons this section used to list no longer
+correspond to an escaped mutant — `Cleaner`'s `mkdir()` permission literal, its
+`@codeCoverageIgnore`d race branch, `BakedPathGuard::__invoke()`'s `continue`→`break`, and
+`PermissionNormalizer::normalizeContents()`'s non-directory `continue` are all killed by the
+current suite (checked twice, independently, on the CI-equivalent environment) — so none of them
+carries an `infection.json5` ignore entry any more. Three reasons remain or are newly found, each
+naming a mutant Infection cannot be made to see without asserting behaviour this package does not
+promise; `infection.json5` ignores exactly these three (and nothing else), so the section below
+covers every entry `infection.json5` ignores, and vice versa:
 
-- `Cleaner`'s `mkdir()` permission literal (`0o755→0o754`) is umask-dependent and not portable to
-  assert exactly.
-- `Cleaner::removeContents()`'s `&&→||` on the race-only branch is already `@codeCoverageIgnore`d
-  — the code itself declares that path non-deterministic.
-- `BakedPathScanner`'s `$offset = $position + 1` mutated to `+2` is an equivalent mutant: every
-  needle passed to `hasBakedPath()`/`compileDirRanges()` is an absolute path, so the two byte
-  offsets can never produce an observable difference.
-- The same `+1` mutated the other way (`+0`/`-1`, mutators `DecrementInteger`/`Plus`) breaks the
-  loop instead of leaving it equivalent: the search offset stops advancing, and the mutant either
-  times out (`BakedPathScanner.php:50`, inside `hasBakedPath()`) or exhausts PHP's memory limit
-  building an ever-growing `$ranges` array (`BakedPathScanner.php:85`, inside
-  `compileDirRanges()`). Infection counts `errors` and `time outs` toward MSI the same as
-  `killed`, so these need no dedicated test — but they are not "killed by an assertion" either,
-  they crash instead.
-- `BakedPathGuard::__invoke()`'s `continue→break` (`RecursiveDirectoryIterator` enumeration
-  order) is the landmine [#16][16] already named: killing it deterministically depends on the
-  order the filesystem returns directory entries, which is not portable across OSes.
-- **Newly found**: `PermissionNormalizer::normalizeContents()` has the identical shape twice
-  (`continue` on a symlink entry at `PermissionNormalizer.php:68`, `continue` on a non-directory
-  entry at `PermissionNormalizer.php:76`), walking a `FilesystemIterator` the same way
-  `BakedPathGuard` walks a `RecursiveDirectoryIterator`. One of the two
-  (`PermissionNormalizer.php:76`) reproduces the exact cross-OS instability: killed on
-  macOS/APFS/PHP 8.5, escaped on Linux/ext4/PHP 8.2 in every one of the 5 measurement runs on the
-  CI-matching environment. It is left unkilled for the same reason as `BakedPathGuard`'s —
-  deliberately trying to kill it would make the CI-pinned MSI depend on directory enumeration
-  order, which this package cannot control. (The 5 repeated measurements on Linux/PHP 8.2 alone
-  were identical to each other; the instability is across OSes, not across runs of the same
-  environment — which is what the CI job's fixed MSI floor actually depends on.)
+- `BakedPathScanner`'s `$offset = $position + 1` mutated to `+2` (`hasBakedPath()` and
+  `compileDirRanges()`, both `IncrementInteger`) is an equivalent mutant: every needle passed to
+  either method is an absolute path, so the two byte offsets can never produce an observable
+  difference. The same `+1` mutated the other way (`DecrementInteger`/`Minus`) does not escape at
+  all — the search offset stops advancing, so the mutant either times out (`hasBakedPath()`) or
+  exhausts PHP's memory limit building an ever-growing `$ranges` array (`compileDirRanges()`).
+  Infection counts a time out or an error the same as killed, so only the `+2` direction needs an
+  ignore entry.
+- `AbstractCompiledContext::__invoke()`'s `DiCompileModule(true, ...)` mutated to `(false, ...)`
+  (`TrueValue`) is an equivalent mutant given how this package actually uses `ray/compiler`: the
+  flag is bound to `Ray\Compiler\Annotation\Compile` and read only by
+  `Ray\Compiler\InjectorFactory::getInstance()`, to choose between an in-memory and a compiled
+  injector. This package never calls that factory — compile time goes through
+  `RayScriptCompiler`→`Ray\Compiler\Compiler::compile()` directly, runtime goes through
+  `AbstractCompiledContext::getInjectorInstance()`→`new CompiledInjector(...)` directly — so the
+  flag's value never reaches anything this package's tests can observe.
+- `Cli::write()`'s error-suppression plumbing has two mutants that are unkillable without pinning
+  behaviour this package does not promise. `set_error_handler(static fn(): bool => true)` mutated
+  to `=> false` (`TrueValue`) changes only what happens to a `file_put_contents()` warning once
+  `write()`'s own handler declines it: PHP falls through to its *built-in* default handling for
+  that warning, not to any handler a test installs beforehand, and whether that becomes observable
+  depends on `display_errors`/`error_reporting`, which this package does not control or promise.
+  The surrounding `try { file_put_contents(...) } finally { restore_error_handler(); }`
+  (`UnwrapFinally`) is only distinguishable from the two statements run in sequence if
+  `file_put_contents()` itself throws, which it never does — it reports failure through the
+  warning above, not an exception.
+
+`infection.json5`'s `IncrementInteger`/`TrueValue`/`UnwrapFinally` ignore entries exclude these
+five methods (two for the `BakedPathScanner` bullet, one for `AbstractCompiledContext`, two for
+`Cli::write()`) from Infection's tested-mutant count entirely, not just from what fails the build.
+With them excluded, re-measuring on the same CI environment gives 275 mutations (280 minus the
+five ignored), 271 killed, 2 errors, 2 timed out, 0 escaped, 100% mutation code coverage,
+`msi = coveredCodeMsi = 100.0` — `infection.json5`'s `minMsi`/`minCoveredMsi` are pinned to this
+value, replacing the `87.86` recorded above.
+
+Separately, `infection.json5`'s `testFrameworkOptions: "--exclude-group=infection-excluded"` skips
+`tests/BinCompileIntegrationTest.php` (marked `#[Group('infection-excluded')]`) during Infection's
+own test runs. This is not a fourth ignored mutant — it drops a whole test file from every killer
+process's run, not an escaped mutant from the count. It costs nothing to drop: the file launches
+`bin/ray-di-compile` in a separate process via `Support\PhpProcess`, and pcov only instruments the
+parent process, so it was already contributing zero measured coverage or MSI before this change
+(the file was `BinCompileTest`/`BinCompileRejectionTest` when [#140][140] first measured this;
+[#142][142] merged both into today's `BinCompileIntegrationTest`). Re-confirmed for [#143][143]:
+`php -d pcov.enabled=1 vendor/bin/phpunit --coverage-text` and the same command with
+`--exclude-group=infection-excluded` report identical `Classes: 100.00% (12/12)` /
+`Methods: 100.00% (38/38)` / `Lines: 100.00% (330/330)` — excluding the file changes nothing
+Infection or Codecov can see, it only removes the one initial-suite run this file cost from every
+mutant's killer process. `composer test` and CI's `test` job are unaffected and still run it in
+full; only Infection's own invocation skips it.
 
 ## Possible, not done
 
@@ -609,6 +641,8 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [135]: https://github.com/NaokiTsuchiya/RayDiContext/issues/135
 [137]: https://github.com/NaokiTsuchiya/RayDiContext/issues/137
 [140]: https://github.com/NaokiTsuchiya/RayDiContext/issues/140
+[142]: https://github.com/NaokiTsuchiya/RayDiContext/issues/142
+[143]: https://github.com/NaokiTsuchiya/RayDiContext/issues/143
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95
 [888a9b1]: https://github.com/NaokiTsuchiya/RayDiContext/commit/888a9b1

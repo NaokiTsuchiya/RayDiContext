@@ -94,6 +94,7 @@ final class BakedPathScannerTest extends TestCase
             '/tmp',
         ];
         yield 'letter before the needle' => ["<?php return '/var/backup/app/config';", self::COMPILE_DIR, '/app'];
+        yield 'segment char forms the very first byte of the script' => ['p/app/var', self::COMPILE_DIR, '/app'];
 
         yield 'needle differing in case' => ["<?php return '/App/src/Index.php';", self::COMPILE_DIR, '/app'];
 

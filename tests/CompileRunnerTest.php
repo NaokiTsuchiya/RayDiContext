@@ -4,101 +4,101 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
-use NaokiTsuchiya\RayDiContext\Exception\BakedPathFound;
 use NaokiTsuchiya\RayDiContext\Exception\CompileFailed;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
+use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
-use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
-use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingBakedPathGuard;
+use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingCompiler;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRejectingGuard;
 use NaokiTsuchiya\RayDiContext\Fake\FakeThrowingCompiler;
-use NaokiTsuchiya\RayDiContext\Fake\FakeUnboundContext;
+use NaokiTsuchiya\RayDiContext\Fake\FakeThrowingContext;
 use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
-use NaokiTsuchiya\RayDiContext\Support\CompiledTree;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Ray\Compiler\Exception\Unbound;
 use RuntimeException;
 
-use function chmod;
-use function file_put_contents;
 use function glob;
-use function is_dir;
-use function mkdir;
 
+/** Steps run() takes without ever reaching a real compile; CompileRunnerIntegrationTest covers the rest */
 #[CoversClass(CompileRunner::class)]
 final class CompileRunnerTest extends TestCase
 {
-    /** Working directory and meta shared by the compile test classes */
+    /** Working directory and meta shared by the tests in this class */
     private AppDirFixture $fixture;
 
     /** Meta with conventional paths under the app dir */
     private AppMeta $meta;
-
-    /** System under test */
-    private CompileRunner $runner;
 
     /** @throws ExceptionInterface */
     protected function setUp(): void
     {
         $this->fixture = new AppDirFixture('runner_');
         $this->meta = $this->fixture->meta;
-        $this->runner = new CompileRunner(new MapContextProvider([
-            'prod' => FakeProdContext::class,
-            'baked' => FakeBakedContext::class,
-        ]));
     }
 
     /** {@inheritDoc} */
     protected function tearDown(): void
     {
-        $exists = is_dir($this->meta->compileDir);
-        if ($exists) {
-            chmod($this->meta->compileDir, permissions: 0o755);
-        }
-
         $this->fixture->remove();
     }
 
-    /** @throws ExceptionInterface */
+    /**
+     * A ContextInterface::__invoke() failure is not a compiler failure, so it must not be wrapped
+     *
+     * @throws ExceptionInterface
+     */
     #[Test]
-    public function runCleansAndCompiles(): void
+    public function runDoesNotWrapAContextResolutionFailure(): void
     {
-        mkdir($this->meta->compileDir, permissions: 0o755, recursive: true);
-        file_put_contents("{$this->meta->compileDir}/stale.php", data: '<?php return 0;');
-
-        $this->runner->run($this->meta);
-
-        static::assertFileDoesNotExist("{$this->meta->compileDir}/stale.php");
-        static::assertNotSame([], glob("{$this->meta->compileDir}/*FakeCarInterface*.php"));
-    }
-
-    /** @throws ExceptionInterface */
-    #[Test]
-    public function runMakesCompiledScriptsWorldReadable(): void
-    {
-        $this->runner->run($this->meta);
-
-        static::assertSame(0o755, Fs::mode($this->meta->compileDir));
-        static::assertNotSame([], CompiledTree::assertWorldReadable($this->meta->compileDir));
-    }
-
-    /** @throws ExceptionInterface */
-    #[Test]
-    public function runEmptiesTheCompileDirWhenTheGuardRejects(): void
-    {
-        $bakedMeta = new AppMeta($this->meta->appDir, 'baked', $this->meta->compileDir, $this->meta->tmpDir);
+        $throwingMeta = new AppMeta($this->meta->appDir, 'throwing', $this->meta->compileDir, $this->meta->tmpDir);
+        $runner = new CompileRunner(new MapContextProvider(['throwing' => FakeThrowingContext::class]));
 
         try {
-            $this->runner->run($bakedMeta);
-            static::fail('BakedPathFound was not thrown');
-        } catch (BakedPathFound $e) {
-            static::assertStringContainsString($this->meta->appDir, $e->getMessage());
+            $runner->run($throwingMeta);
+            static::fail('RuntimeException was not thrown');
+        } catch (RuntimeException $e) {
+            static::assertNotInstanceOf(CompileFailed::class, $e);
             static::assertSame([], glob("{$this->meta->compileDir}/*"));
         }
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function resolvesTheContextBeforeEmptyingTheCompileDir(): void
+    {
+        $this->seedStaleScript();
+        $compiler = new FakeRecordingCompiler();
+        $runner = new CompileRunner(new MapContextProvider([
+            'prod' => FakeProdContext::class,
+        ]), compiler: $compiler);
+        $unknown = new AppMeta($this->meta->appDir, 'nosuch', $this->meta->compileDir, $this->meta->tmpDir);
+
+        try {
+            $runner->run($unknown);
+            static::fail('UnknownContext was not thrown');
+        } catch (UnknownContext) {
+            static::assertFileExists("{$this->meta->compileDir}/stale.php");
+            static::assertFalse($compiler->called);
+        }
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function emptiesTheCompileDirBeforeCompiling(): void
+    {
+        $this->seedStaleScript();
+        $compiler = new FakeRecordingCompiler();
+        $runner = new CompileRunner(new MapContextProvider([
+            'prod' => FakeProdContext::class,
+        ]), compiler: $compiler);
+
+        $runner->run($this->meta);
+
+        static::assertTrue($compiler->called);
+        static::assertSame([], $compiler->entriesWhenCalled);
     }
 
     /** @throws ExceptionInterface */
@@ -107,27 +107,14 @@ final class CompileRunnerTest extends TestCase
     {
         $appDir = $this->meta->appDir;
         $unsafeMeta = new AppMeta($appDir, 'prod', $appDir, $this->meta->tmpDir);
+        $runner = new CompileRunner(new MapContextProvider(['prod' => FakeProdContext::class]));
 
         try {
-            $this->runner->run($unsafeMeta);
+            $runner->run($unsafeMeta);
             static::fail('UnsafeCompileDir was not thrown');
         } catch (UnsafeCompileDir) {
             static::assertDirectoryExists($this->meta->tmpDir);
         }
-    }
-
-    /** @throws ExceptionInterface */
-    #[Test]
-    public function runUsesTheInjectedBakedPathGuard(): void
-    {
-        $guard = new FakeRecordingBakedPathGuard();
-        $runner = new CompileRunner(new MapContextProvider([
-            'prod' => FakeProdContext::class,
-        ]), bakedPathGuard: $guard);
-
-        $runner->run($this->meta);
-
-        static::assertTrue($guard->called);
     }
 
     /** @throws ExceptionInterface */
@@ -165,17 +152,25 @@ final class CompileRunnerTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function runWrapsARealCompileFailureFromAnUnboundDependency(): void
+    public function runCleansUpWhenTheBakedPathGuardRejects(): void
     {
-        $unboundMeta = new AppMeta($this->meta->appDir, 'unbound', $this->meta->compileDir, $this->meta->tmpDir);
-        $runner = new CompileRunner(new MapContextProvider(['unbound' => FakeUnboundContext::class]));
+        $runner = new CompileRunner(
+            new MapContextProvider(['prod' => FakeProdContext::class]),
+            bakedPathGuard: new FakeRejectingGuard(),
+            compiler: new FakeRecordingCompiler(),
+        );
 
         try {
-            $runner->run($unboundMeta);
-            static::fail('CompileFailed was not thrown');
-        } catch (CompileFailed $e) {
-            static::assertInstanceOf(Unbound::class, $e->getPrevious());
+            $runner->run($this->meta);
+            static::fail('UnsafeCompileDir was not thrown');
+        } catch (UnsafeCompileDir) {
             static::assertSame([], glob("{$this->meta->compileDir}/*"));
         }
+    }
+
+    /** Seeds a stale script only the ordering-sensitive tests need, so it cannot bias the others */
+    private function seedStaleScript(): void
+    {
+        Fs::copyFile(Fs::SCRIPT, "{$this->meta->compileDir}/stale.php");
     }
 }

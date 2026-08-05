@@ -13,14 +13,13 @@ use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Ray\Compiler\CompiledInjector;
 use Ray\Compiler\DiCompileModule;
 use Ray\Compiler\Exception\ScriptDirNotReadable;
 use Ray\Di\Injector;
 
-use function mkdir;
 use function uniqid;
 
+/** Behaviour that does not need a real compile; AbstractCompiledContextIntegrationTest covers the compiled path */
 #[CoversClass(AbstractCompiledContext::class)]
 final class AbstractCompiledContextTest extends TestCase
 {
@@ -49,21 +48,6 @@ final class AbstractCompiledContextTest extends TestCase
 
         static::assertInstanceOf(DiCompileModule::class, $module);
         static::assertInstanceOf(FakeCar::class, (new Injector($module))->getInstance(FakeCarInterface::class));
-    }
-
-    /** @throws ExceptionInterface */
-    #[Test]
-    public function getInjectorInstanceReturnsCompiledInjectorResolvingTheCompiledAppModule(): void
-    {
-        $meta = AppMeta::fromAppDir("{$this->baseDir}/app", 'prod');
-        mkdir($meta->tmpDir, permissions: 0o755, recursive: true);
-        (new CompileRunner(new MapContextProvider(['prod' => FakeCompiledProdContext::class])))->run($meta);
-        $context = new FakeCompiledProdContext($meta);
-
-        $injector = $context->getInjectorInstance();
-
-        static::assertInstanceOf(CompiledInjector::class, $injector);
-        static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
 
     /** @throws ExceptionInterface */

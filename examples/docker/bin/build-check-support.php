@@ -49,6 +49,8 @@ function relativePath(string $from, string $to): string
  * those are left out rather than duplicated.
  *
  * @param list<class-string> $loadedClasses Classes recorded by the autoload spy this run
+ *
+ * @throws RuntimeException When appDir/preload.php cannot be written.
  */
 function writePreload(string $compileDir, string $appDir, array $loadedClasses): void
 {
@@ -74,5 +76,9 @@ function writePreload(string $compileDir, string $appDir, array $loadedClasses):
         $kept,
     );
 
-    file_put_contents($appDir . '/preload.php', "<?php\n\ndeclare(strict_types=1);\n\n" . implode('', $lines));
+    $target = $appDir . '/preload.php';
+    $written = file_put_contents($target, "<?php\n\ndeclare(strict_types=1);\n\n" . implode('', $lines));
+    if ($written === false) {
+        throw new RuntimeException(sprintf('Failed to write "%s"', $target));
+    }
 }

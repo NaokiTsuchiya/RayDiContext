@@ -36,6 +36,19 @@ php -r '
         fwrite(STDERR, "relativePath: non-nested case failed: " . relativePath("/build", "/app/var/di/prod/Foo.php") . "\n");
         exit(1);
     }
+
+    // writePreload() must throw, not silently succeed, when preload.php cannot be written —
+    // otherwise build-check would exit(0) with the preload step having failed unnoticed.
+    $threw = false;
+    try {
+        writePreload($compileDir, "/no/such/directory/ray-di-context-build-check-probe", []);
+    } catch (RuntimeException $e) {
+        $threw = true;
+    }
+    if (!$threw) {
+        fwrite(STDERR, "writePreload: expected a RuntimeException when preload.php cannot be written, none thrown\n");
+        exit(1);
+    }
 ' "${support}" "${probe_dir}" \
     || fail "examples/docker/bin/build-check-support.php's pure functions failed synthetic verification"
 rm -rf "${probe_dir}"

@@ -366,14 +366,23 @@ argue for writing the rule down rather than leaving it implicit:
   itself is named after `MapContextProvider`) without revisiting the attribute against what the
   assertions actually target.
 
-**Convention:** split `tests/` on exactly two axes — `#[CoversClass]` (or `#[CoversNothing]`,
-first tier: one `{CoversClass}Test.php`) and, within that, integration (second tier:
-`{CoversClass}IntegrationTest.php`, meaning a separate process via `Support\PhpProcess` or a real
-`ray/compiler` run — judged by reading the test). `too-many-methods` is disabled for `tests/`
-(`mago.toml`) so size is never a third reason. A `setUp()` that can't be shared across files in the
-same pair becomes a `private` helper method, not a reason to split further.
-`#[CoversClass]`/`#[CoversNothing]` must name the class the test's assertions actually target, not
-merely the class the test happens to pass through.
+**Convention:** split a `#[CoversClass]`-covered class's tests on exactly two axes —
+`#[CoversClass]` itself (first tier: one `{CoversClass}Test.php`) and, within that, integration
+(second tier: `{CoversClass}IntegrationTest.php`, meaning a separate process via
+`Support\PhpProcess` or a real `ray/compiler` run — judged by reading the test). `#[CoversClass]`
+must name the class the test's assertions actually target, not merely the class the test happens
+to pass through.
+
+`#[CoversNothing]` sits outside that naming rule — it takes no class parameter, so neither
+`{CoversClass}Test.php` nor the "must name the class actually targeted" requirement applies to it.
+Use it only for a classless integration test that exercises something outside any `src/` class as
+a black box; today that means exactly `BinCompileTest`/`BinCompileRejectionTest`, which run
+`bin/ray-di-compile` in a separate process via `Support\PhpProcess` and are named after what they
+test (`BinCompile`), not after a covered class.
+
+`too-many-methods` is disabled for `tests/` (`mago.toml`) so size is never a third reason to
+split, for either case. A `setUp()` that can't be shared across files in the same pair becomes a
+`private` helper method, not a reason to split further.
 
 **Out of scope here, left to a follow-up issue:** the actual 28-to-~14 file reorg, fixing
 `MapContextProviderResolutionTest`'s `#[CoversClass]`, and unit-izing the one line of

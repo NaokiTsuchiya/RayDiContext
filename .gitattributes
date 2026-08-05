@@ -7,3 +7,5 @@
 /.gitignore         export-ignore
 /mago.toml          export-ignore
 /phpunit.xml.dist   export-ignore
+/docs/              export-ignore
+/examples/          export-ignore

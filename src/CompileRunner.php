@@ -68,8 +68,10 @@ final class CompileRunner
 
         $guarded = false;
         try {
+            $module = $context();
+
             try {
-                $this->compiler->compile($context(), $meta->compileDir);
+                $this->compiler->compile($module, $meta->compileDir);
             } catch (Throwable $e) {
                 throw new CompileFailed(
                     sprintf(

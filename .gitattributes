@@ -9,3 +9,4 @@
 /phpunit.xml.dist   export-ignore
 /docs/              export-ignore
 /examples/          export-ignore
+/infection.json5    export-ignore

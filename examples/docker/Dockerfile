@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends unzip && apt-ge
 WORKDIR /build
 COPY . .
 RUN composer install --no-dev --optimize-autoloader \
- && php vendor/bin/ray-di-compile bootstrap.php /build prod /app/var/di/prod
+ && php vendor/bin/ray-di-compile bootstrap.php /build prod /app/var/di/prod \
+ && php bin/build-check
 
 FROM php:8.3-cli
 WORKDIR /app

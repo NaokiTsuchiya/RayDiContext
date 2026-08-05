@@ -218,6 +218,33 @@ compiled injector never unserializes instances, so anything holding a runtime
 resource (a database connection, for example) needs this explicit warmup, or it
 won't exist until something happens to request it first.
 
+### Verifying the compile
+
+Compiling only proves the binding graph is internally consistent — every constructor argument
+resolves to something bound. It never calls any of it, so a `Provider::get()` body, a
+`#[Set(...)]` multibinding target that was never separately bound, and a compiled script missing
+from an incomplete `COPY` all compile clean and fail only once something actually resolves them,
+at whatever point your running app first asks for the binding.
+
+Catch that where the compile is caught: resolve the compiled result for real, in the build stage,
+before the image exists.
+[`examples/docker/bin/build-check`](examples/docker/bin/build-check) does this — it walks
+`getSavedSingleton()` and resolves the app's own entry point through the compiled injector, the
+same way `bin/console` does at container start (above), except a failure here fails `docker build`
+instead of only surfacing once the image is already running.
+[`examples/docker/Dockerfile`](examples/docker/Dockerfile)'s build stage runs it with a `RUN` step
+right after compiling; `bash tests/docker-check.sh` proves it fails the build when a binding is
+broken.
+
+The same run doubles as a preload collector: an `spl_autoload_register` spy, registered
+`prepend: true` *after* `vendor/autoload.php` (register it before, or without `prepend: true`, and
+Composer's own loader resolves classmap classes first, so the spy only ever sees what Composer's
+classmap doesn't already cover), records the one asset unique to a Ray.Di compile that Composer's
+classmap can't list: AOP proxy classes materialized into `compileDir`, which `CompiledInjector`'s
+own autoloader resolves at `{compileDir}/{Class_Name}.php`. It writes what it finds to
+`preload.php` in `appDir`, with `__DIR__`-relative paths — an absolute path baked in there would
+be rejected by `BakedPathGuard` if it were written into `compileDir` instead.
+
 ## Deploying to Docker / Kubernetes
 
 Build the compiled scripts in a build stage, `COPY` only the result into the

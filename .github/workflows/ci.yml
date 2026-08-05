@@ -53,8 +53,7 @@ jobs:
       - run: composer sa
 
       # after_n_builds in codecov.yml (see the comment there and on the `test:` job's
-      # upload step) has to equal the `test:` job's PHP matrix size for both comments'
-      # claims to stay true; nothing else enforces that, so this does.
+      # upload step) has to equal the `test:` job's PHP matrix size.
       - run: composer ci-matrix-check
 
   # ubuntu-latest runs as a non-root user on purpose: tests that call
@@ -157,9 +156,7 @@ jobs:
       - run: composer show --direct
 
       # composer.json's require is the only source of truth for the lower bound; this
-      # step derives it from there and fails if the resolved version does not match,
-      # so a require change that stops touching ray/di or ray/compiler cannot leave
-      # this job silently testing the newest release instead of the declared floor.
+      # step derives it from there and fails if the resolved version does not match.
       - run: composer lowest-check
 
       - run: composer test

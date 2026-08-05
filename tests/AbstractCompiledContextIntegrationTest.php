@@ -25,7 +25,7 @@ use function is_dir;
 use function ksort;
 use function mkdir;
 
-/** The compiled-context path, which needs a real compile to observe; MapContextProvider::get() is a pass-through */
+/** The compiled-context path, which needs a real compile to observe */
 #[CoversClass(AbstractCompiledContext::class)]
 final class AbstractCompiledContextIntegrationTest extends TestCase
 {
@@ -76,9 +76,7 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
         chmod($this->meta->compileDir, permissions: 0o555);
         $before = $this->snapshot($this->meta->compileDir);
 
-        $injector = (new MapContextProvider([
-            'prod' => FakeProdContext::class,
-        ]))->get($this->meta)->getInjectorInstance();
+        $injector = (new FakeProdContext($this->meta))->getInjectorInstance();
 
         static::assertInstanceOf(CompiledInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
@@ -97,9 +95,7 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
             "{$this->fixture->baseDir}/absent-tmp",
         );
 
-        $injector = (new MapContextProvider(['prod' => FakeProdContext::class]))->get(
-            $runtimeMeta,
-        )->getInjectorInstance();
+        $injector = (new FakeProdContext($runtimeMeta))->getInjectorInstance();
 
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
@@ -113,9 +109,7 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
         Fs::removeDir($this->meta->compileDir);
         $relocatedMeta = new AppMeta($this->meta->appDir, 'prod', $relocatedCompileDir, $this->meta->tmpDir);
 
-        $injector = (new MapContextProvider(['prod' => FakeProdContext::class]))->get(
-            $relocatedMeta,
-        )->getInjectorInstance();
+        $injector = (new FakeProdContext($relocatedMeta))->getInjectorInstance();
 
         static::assertInstanceOf(CompiledInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));

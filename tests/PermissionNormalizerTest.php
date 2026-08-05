@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace NaokiTsuchiya\RayDiContext;
 
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotFound;
+use NaokiTsuchiya\RayDiContext\Exception\CompileDirNotReadable;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Support\CompileDirFixture;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
+use NaokiTsuchiya\RayDiContext\Support\PermissionBits;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -85,6 +88,128 @@ final class PermissionNormalizerTest extends TestCase
 
         static::assertSame(0o700, Fs::mode($target));
         static::assertSame(0o600, Fs::mode("{$target}/script.php"));
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsAPathThatIsNotADirectory(): void
+    {
+        $script = "{$this->compileDir}/script.php";
+        copy(Fs::SCRIPT, $script);
+        chmod($script, permissions: 0o600);
+
+        try {
+            (new PermissionNormalizer())($script);
+            static::fail('CompileDirNotFound was not thrown');
+        } catch (CompileDirNotFound $e) {
+            static::assertStringContainsString($script, $e->getMessage());
+            static::assertSame(0o600, Fs::mode($script));
+            static::assertSame(0o700, Fs::mode($this->compileDir));
+        }
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsAMissingPath(): void
+    {
+        $missing = "{$this->compileDir}/absent";
+
+        try {
+            (new PermissionNormalizer())($missing);
+            static::fail('CompileDirNotFound was not thrown');
+        } catch (CompileDirNotFound $e) {
+            static::assertStringContainsString($missing, $e->getMessage());
+            static::assertFileDoesNotExist($missing);
+            static::assertSame(0o700, Fs::mode($this->compileDir));
+        }
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsACompileDirItCannotList(): void
+    {
+        PermissionBits::skipUnlessEnforced($this->fixture->baseDir);
+
+        chmod($this->compileDir, permissions: 0o005);
+
+        try {
+            (new PermissionNormalizer())($this->compileDir);
+            static::fail('CompileDirNotReadable was not thrown');
+        } catch (CompileDirNotReadable $e) {
+            static::assertStringContainsString($this->compileDir, $e->getMessage());
+        } finally {
+            chmod($this->compileDir, permissions: 0o700);
+        }
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsANestedDirectoryItCannotList(): void
+    {
+        PermissionBits::skipUnlessEnforced($this->fixture->baseDir);
+
+        $nested = "{$this->compileDir}/nested";
+        mkdir($nested, permissions: 0o700);
+        chmod($nested, permissions: 0o005);
+
+        try {
+            (new PermissionNormalizer())($this->compileDir);
+            static::fail('CompileDirNotReadable was not thrown');
+        } catch (CompileDirNotReadable $e) {
+            static::assertStringContainsString($nested, $e->getMessage());
+        } finally {
+            chmod($nested, permissions: 0o700);
+        }
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsACompileDirItCannotTraverse(): void
+    {
+        PermissionBits::skipUnlessEnforced($this->fixture->baseDir);
+
+        $script = "{$this->compileDir}/script.php";
+        copy(Fs::SCRIPT, $script);
+        chmod($script, permissions: 0o600);
+        chmod($this->compileDir, permissions: 0o405);
+
+        try {
+            (new PermissionNormalizer())($this->compileDir);
+            static::fail('CompileDirNotReadable was not thrown');
+        } catch (CompileDirNotReadable $e) {
+            static::assertStringContainsString($this->compileDir, $e->getMessage());
+        } finally {
+            chmod($this->compileDir, permissions: 0o700);
+        }
+
+        static::assertSame(0o600, Fs::mode($script));
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsANestedDirectoryItCannotTraverse(): void
+    {
+        PermissionBits::skipUnlessEnforced($this->fixture->baseDir);
+
+        $nested = "{$this->compileDir}/nested";
+        mkdir($nested, permissions: 0o700);
+        chmod($nested, permissions: 0o700);
+        $inner = "{$nested}/inner.php";
+        copy(Fs::SCRIPT, $inner);
+        chmod($inner, permissions: 0o600);
+        chmod($nested, permissions: 0o405);
+
+        try {
+            (new PermissionNormalizer())($this->compileDir);
+            static::fail('CompileDirNotReadable was not thrown');
+        } catch (CompileDirNotReadable $e) {
+            static::assertStringContainsString($nested, $e->getMessage());
+            static::assertSame(0o405, Fs::mode($nested));
+        } finally {
+            chmod($nested, permissions: 0o700);
+        }
+
+        static::assertSame(0o600, Fs::mode($inner));
     }
 
     /** Copies the fixture script in and gives it a mode the umask cannot narrow */

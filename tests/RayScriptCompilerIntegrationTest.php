@@ -17,7 +17,7 @@ use function uniqid;
 
 /** The bundled compiler writes where it is told */
 #[CoversClass(RayScriptCompiler::class)]
-final class RayScriptCompilerTest extends TestCase
+final class RayScriptCompilerIntegrationTest extends TestCase
 {
     /** @var non-empty-string Per-test working directory */
     private string $baseDir;

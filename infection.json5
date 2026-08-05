@@ -4,7 +4,7 @@
     },
     "mutators": {
         "@default": true,
-        // BakedPathScanner's scan offset: see docs/decisions.md "Why the MSI floor cannot be 100%".
+        // BakedPathScanner's scan offset: see docs/decisions.md "Why three mutants are ignored".
         "IncrementInteger": {
             "ignore": [
                 "NaokiTsuchiya\\RayDiContext\\BakedPathScanner::hasBakedPath",
@@ -12,14 +12,14 @@
             ],
         },
         // AbstractCompiledContext's unread DiCompileModule flag and Cli::write()'s suppressed
-        // warning: see docs/decisions.md "Why the MSI floor cannot be 100%".
+        // warning: see docs/decisions.md "Why three mutants are ignored".
         "TrueValue": {
             "ignore": [
                 "NaokiTsuchiya\\RayDiContext\\AbstractCompiledContext::__invoke",
                 "NaokiTsuchiya\\RayDiContext\\Cli::write",
             ],
         },
-        // Cli::write()'s try/finally: see docs/decisions.md "Why the MSI floor cannot be 100%".
+        // Cli::write()'s try/finally: see docs/decisions.md "Why three mutants are ignored".
         "UnwrapFinally": {
             "ignore": [
                 "NaokiTsuchiya\\RayDiContext\\Cli::write",

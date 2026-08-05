@@ -520,12 +520,14 @@ about. Any improvement to test quality here is a side effect, not the success cr
 Re-measuring was mandatory, not optional — the 86-mutant figure no longer describes this
 codebase.
 
-Current measurement (Linux/PHP 8.2.33/pcov, `infection/infection` 0.32.6, non-root, `@default`
-mutators, matching the dedicated CI job and verified identical across 5 independent,
+Measurement at adoption time (Linux/PHP 8.2.33/pcov, `infection/infection` 0.32.6, non-root,
+`@default` mutators, matching the dedicated CI job and verified identical across 5 independent,
 non-bind-mounted containers): 280 mutations, 242 killed, 34 escaped, 2 errors, 2 timed out, 100%
 mutation code coverage, `msi = coveredCodeMsi = 87.86`. `infection.json5`'s `minMsi`/
-`minCoveredMsi` are pinned to this measured value, not a round number chosen up front — the CI
-job only fails on a regression below it.
+`minCoveredMsi` were pinned to this measured value at the time, not a round number chosen up
+front — the CI job only failed on a regression below it. **Historical**: [#143][143] triaged every
+escaped mutant this measurement found and re-pinned the floor to `100.0` — see "Why three mutants
+are ignored" below for the current state and the up-to-date numbers.
 
 `infection/infection` is pinned to `0.32.6`, not the newest release (`0.34.1`, what [#16][16]
 used). Every release `>= 0.33` requires `"php": "^8.3"`; the `lint`/`dist` jobs and the `8.2` leg
@@ -538,17 +540,19 @@ pin installs cleanly across the whole matrix — the same convention `carthage-s
 **Would change it:** an Infection release declaring `"php": "^8.2"` (or wider) again, at which
 point the pin could move forward without losing the PHP 8.2 jobs.
 
-### Why the MSI floor cannot be 100%
+### Why three mutants are ignored
 
-Re-measured for [#143][143] on the CI environment (`ubuntu-latest`/PHP 8.2/pcov via
+[#143][143] re-measured on the CI environment (`ubuntu-latest`/PHP 8.2/pcov via
 `composer infection`) after the `tests/` reorg in [#142][142] changed which of [#16][16]'s
 original findings still escape. Four of the six reasons this section used to list no longer
 correspond to an escaped mutant — `Cleaner`'s `mkdir()` permission literal, its
 `@codeCoverageIgnore`d race branch, `BakedPathGuard::__invoke()`'s `continue`→`break`, and
 `PermissionNormalizer::normalizeContents()`'s non-directory `continue` are all killed by the
 current suite (checked twice, independently, on the CI-equivalent environment) — so none of them
-carries an `infection.json5` ignore entry any more. Three reasons remain or are newly found,
-covering every entry `infection.json5` ignores:
+carries an `infection.json5` ignore entry any more. Three reasons remain or are newly found, each
+naming a mutant Infection cannot be made to see without asserting behaviour this package does not
+promise; `infection.json5` ignores exactly these three (and nothing else), so the section below
+covers every entry `infection.json5` ignores, and vice versa:
 
 - `BakedPathScanner`'s `$offset = $position + 1` mutated to `+2` (`hasBakedPath()` and
   `compileDirRanges()`, both `IncrementInteger`) is an equivalent mutant: every needle passed to
@@ -576,6 +580,29 @@ covering every entry `infection.json5` ignores:
   (`UnwrapFinally`) is only distinguishable from the two statements run in sequence if
   `file_put_contents()` itself throws, which it never does — it reports failure through the
   warning above, not an exception.
+
+`infection.json5`'s `IncrementInteger`/`TrueValue`/`UnwrapFinally` ignore entries exclude these
+five methods (two for the `BakedPathScanner` bullet, one for `AbstractCompiledContext`, two for
+`Cli::write()`) from Infection's tested-mutant count entirely, not just from what fails the build.
+With them excluded, re-measuring on the same CI environment gives 275 mutations (280 minus the
+five ignored), 271 killed, 2 errors, 2 timed out, 0 escaped, 100% mutation code coverage,
+`msi = coveredCodeMsi = 100.0` — `infection.json5`'s `minMsi`/`minCoveredMsi` are pinned to this
+value, replacing the `87.86` recorded above.
+
+Separately, `infection.json5`'s `testFrameworkOptions: "--exclude-group=infection-excluded"` skips
+`tests/BinCompileIntegrationTest.php` (marked `#[Group('infection-excluded')]`) during Infection's
+own test runs. This is not a fourth ignored mutant — it drops a whole test file from every killer
+process's run, not an escaped mutant from the count. It costs nothing to drop: the file launches
+`bin/ray-di-compile` in a separate process via `Support\PhpProcess`, and pcov only instruments the
+parent process, so it was already contributing zero measured coverage or MSI before this change
+(the file was `BinCompileTest`/`BinCompileRejectionTest` when [#140][140] first measured this;
+[#142][142] merged both into today's `BinCompileIntegrationTest`). Re-confirmed for [#143][143]:
+`php -d pcov.enabled=1 vendor/bin/phpunit --coverage-text` and the same command with
+`--exclude-group=infection-excluded` report identical `Classes: 100.00% (12/12)` /
+`Methods: 100.00% (38/38)` / `Lines: 100.00% (330/330)` — excluding the file changes nothing
+Infection or Codecov can see, it only removes the one initial-suite run this file cost from every
+mutant's killer process. `composer test` and CI's `test` job are unaffected and still run it in
+full; only Infection's own invocation skips it.
 
 ## Possible, not done
 

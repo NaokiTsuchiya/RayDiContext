@@ -222,6 +222,54 @@ install has nothing to compare against. A repository ruleset targeting tags rest
 `deletion` across all of them, separately from the branch ruleset on `main`. A mistake in a
 published tag is fixed by the next patch version, never by moving the tag.
 
+### A compile-time validation extension point, preload generation, and an order-optimized autoloader — [#127][127]
+
+Three proposals from [#127][127], measured on `ray/di` 2.20.0 and 2.22.2, `ray/compiler` 1.14.0,
+PHP 8.4 (no behavioral difference between the two `ray/di` versions). All three declined.
+
+**Validation extension point** (something like a `CompiledGraphValidatorInterface`, mirroring
+`BakedPathGuardInterface`). Its motivating defect — a `MultiBinder` bound with `->to(FooA::class)`
+but missing the matching `$this->bind(FooA::class)` — is structurally uncatchable by brute-force
+instantiation over an app-owned index: the target lives under a `Map-` index, not a class index, so
+it is never enumerated, a consumer that only holds the `Map` compiles clean, and the miss surfaces
+only on the first iteration (measured: `pass=2 fail=0`). #127's own premise, "instantiability is
+already verified at compile success," was too strong: an `#[Set]` binding left entirely unregistered
+compiles clean and throws a `TypeError` from `MapProvider` at runtime, and a missing script (reached
+through a nested dependency) fails with a bare `Error` because `prototype()` `require`s it
+unchecked. What a validator *would* still catch — a Provider's `get()` body, `#[PostConstruct]`,
+`toInstance`'s `__wakeup`, artifact completeness — is obtainable from a build-stage script with zero
+new API surface ([#130][130]). The shape doesn't fit either: `Cli` never injects an extension point,
+so paired with a no-op default it would never fire on the canonical path
+(`bin/ray-di-compile`). BEAR.Package (1.21.0) has no dedicated validator part: its verification is a
+side effect of `CompilePreload::loadResources()` calling `getInstance()` on every resource, and
+`FakeRun` is a class-collection driver, not a validator (`Bootstrap` swallows every `Throwable` and
+discards the return value). Upstream is already moving in this space: ray-di/Ray.Di #337 and #338
+propose soft-deprecating JIT binding, citing `CompiledInjector`'s differing behavior as evidence;
+ray-di/Ray.Compiler #137 proposes generating a singleton manifest at compile time for a warmup API to
+consume.
+
+**Preload generation.** BEAR.Package derives its class list as a byproduct of a
+`spl_autoload_register` spy plus a fake request that calls `getInstance()` on every resource. This
+package is not a framework, so there is no fake request to run and no legitimate way to produce that
+list; substituting brute-force `getInstance()` misses classes reached only lazily (`Map` iteration,
+`#[Set]`'s deferred providers). An absolute-path `preload.php` written into `compileDir` is rejected
+by this package's own `BakedPathGuard` with `BakedPathFound` (measured) — not a false positive; BEAR
+itself writes its preload script with a `__DIR__`-relative path into `appDir` rather than baking an
+absolute path in. Following that convention would put the artifact outside this package's remit
+entirely. The static closure a preload script would need is already fully resolved by compile
+(`new \X(...)` inlined, AOP proxies materialized in `compileDir`, target strings serialized), so
+adding another compile output is upstream `ray/compiler`'s call, best folded into ray-di/Ray.Compiler #137.
+
+**Order-optimized autoloader** (an autoloader that `require`s classes in call order instead of on
+first use). #127's own skepticism held up: where preload is available it is moot, and where it isn't
+the only plausible saving is a realpath-cache miss — nowhere near preload's effect. Left undone
+unless a `composer dist` fixture benchmark justifies it.
+
+**Would change it:** upstream declining compile-time multibinding-target validation while real
+demand emerges for a side-effect-free validator. That would be revisited not as an extension point
+but as a separate bin (`ray-di-validate`; public contract limited to arguments and an exit-status
+table, implementation `@internal` like `Cli`).
+
 ## Declined for cost
 
 ### Release automation with release-drafter — [#26][26]
@@ -288,5 +336,7 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [86]: https://github.com/NaokiTsuchiya/RayDiContext/issues/86
 [116]: https://github.com/NaokiTsuchiya/RayDiContext/pull/116
 [119]: https://github.com/NaokiTsuchiya/RayDiContext/issues/119
+[127]: https://github.com/NaokiTsuchiya/RayDiContext/issues/127
+[130]: https://github.com/NaokiTsuchiya/RayDiContext/issues/130
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

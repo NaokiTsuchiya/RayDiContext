@@ -48,7 +48,10 @@ final class CompileDirGuardTest extends TestCase
     public function rejectsFilesystemRoot(): void
     {
         $this->expectException(UnsafeCompileDir::class);
-        $this->expectExceptionMessage('Refusing to empty the filesystem root');
+        $this->expectExceptionMessage(
+            'Refusing to empty the filesystem root as compile dir: /. '
+            . 'Pass a compile dir that holds nothing but compiled scripts.',
+        );
 
         ($this->guard)(new AppMeta('/app', 'prod', '/', '/tmp'));
     }
@@ -67,6 +70,10 @@ final class CompileDirGuardTest extends TestCase
     public function rejectsCompileDirEqualToAppDir(): void
     {
         $this->expectException(UnsafeCompileDir::class);
+        $this->expectExceptionMessage(
+            "Refusing to empty the app dir as compile dir: {$this->appDir}. "
+            . 'Pass a compile dir that holds nothing but compiled scripts.',
+        );
 
         ($this->guard)(new AppMeta($this->appDir, 'prod', $this->appDir, "{$this->appDir}/var/tmp"));
     }
@@ -76,6 +83,11 @@ final class CompileDirGuardTest extends TestCase
     public function rejectsCompileDirHoldingAppDir(): void
     {
         $this->expectException(UnsafeCompileDir::class);
+        $this->expectExceptionMessage(
+            "Refusing to empty a compile dir that holds the app dir: {$this->baseDir} "
+            . "would remove {$this->appDir}. "
+            . 'Pass a compile dir that holds nothing but compiled scripts.',
+        );
 
         ($this->guard)(new AppMeta($this->appDir, 'prod', $this->baseDir, "{$this->appDir}/var/tmp"));
     }

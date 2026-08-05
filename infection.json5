@@ -4,7 +4,31 @@
     },
     "mutators": {
         "@default": true,
+        // BakedPathScanner's scan offset: see docs/decisions.md "Why the MSI floor cannot be 100%".
+        "IncrementInteger": {
+            "ignore": [
+                "NaokiTsuchiya\\RayDiContext\\BakedPathScanner::hasBakedPath",
+                "NaokiTsuchiya\\RayDiContext\\BakedPathScanner::compileDirRanges",
+            ],
+        },
+        // AbstractCompiledContext's unread DiCompileModule flag and Cli::write()'s suppressed
+        // warning: see docs/decisions.md "Why the MSI floor cannot be 100%".
+        "TrueValue": {
+            "ignore": [
+                "NaokiTsuchiya\\RayDiContext\\AbstractCompiledContext::__invoke",
+                "NaokiTsuchiya\\RayDiContext\\Cli::write",
+            ],
+        },
+        // Cli::write()'s try/finally: see docs/decisions.md "Why the MSI floor cannot be 100%".
+        "UnwrapFinally": {
+            "ignore": [
+                "NaokiTsuchiya\\RayDiContext\\Cli::write",
+            ],
+        },
     },
-    "minMsi": 87.86,
-    "minCoveredMsi": 87.86,
+    // BinCompileIntegrationTest runs in a separate process and contributes zero measured
+    // coverage either way; composer test still runs it (see docs/decisions.md #140).
+    "testFrameworkOptions": "--exclude-group=infection-excluded",
+    "minMsi": 100.0,
+    "minCoveredMsi": 100.0,
 }

@@ -124,7 +124,10 @@ final class AppMetaTest extends TestCase
     public function rejectsCompileDirEqualToTmpDir(string $compileDir, string $tmpDir): void
     {
         $this->expectException(InvalidAppMeta::class);
-        $this->expectExceptionMessage('must be different directories');
+        $this->expectExceptionMessage(
+            'AppMeta::$compileDir and AppMeta::$tmpDir must be different directories, both are: "/opt/di". '
+            . 'The compile dir is read-only at runtime and cannot host the writable tmp dir.',
+        );
 
         new AppMeta('/path/to/app', 'prod', $compileDir, $tmpDir);
     }

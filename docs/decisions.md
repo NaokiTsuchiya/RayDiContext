@@ -540,37 +540,42 @@ point the pin could move forward without losing the PHP 8.2 jobs.
 
 ### Why the MSI floor cannot be 100%
 
-The same structural reasons [#16][16] already found are still present, plus one newly confirmed
-twin found while re-measuring:
+Re-measured for [#143][143] on the CI environment (`ubuntu-latest`/PHP 8.2/pcov via
+`composer infection`) after the `tests/` reorg in [#142][142] changed which of [#16][16]'s
+original findings still escape. Four of the six reasons this section used to list no longer
+correspond to an escaped mutant — `Cleaner`'s `mkdir()` permission literal, its
+`@codeCoverageIgnore`d race branch, `BakedPathGuard::__invoke()`'s `continue`→`break`, and
+`PermissionNormalizer::normalizeContents()`'s non-directory `continue` are all killed by the
+current suite (checked twice, independently, on the CI-equivalent environment) — so none of them
+carries an `infection.json5` ignore entry any more. Three reasons remain or are newly found,
+covering every entry `infection.json5` ignores:
 
-- `Cleaner`'s `mkdir()` permission literal (`0o755→0o754`) is umask-dependent and not portable to
-  assert exactly.
-- `Cleaner::removeContents()`'s `&&→||` on the race-only branch is already `@codeCoverageIgnore`d
-  — the code itself declares that path non-deterministic.
-- `BakedPathScanner`'s `$offset = $position + 1` mutated to `+2` is an equivalent mutant: every
-  needle passed to `hasBakedPath()`/`compileDirRanges()` is an absolute path, so the two byte
-  offsets can never produce an observable difference.
-- The same `+1` mutated the other way (`+0`/`-1`, mutators `DecrementInteger`/`Plus`) breaks the
-  loop instead of leaving it equivalent: the search offset stops advancing, and the mutant either
-  times out (`BakedPathScanner.php:50`, inside `hasBakedPath()`) or exhausts PHP's memory limit
-  building an ever-growing `$ranges` array (`BakedPathScanner.php:85`, inside
-  `compileDirRanges()`). Infection counts `errors` and `time outs` toward MSI the same as
-  `killed`, so these need no dedicated test — but they are not "killed by an assertion" either,
-  they crash instead.
-- `BakedPathGuard::__invoke()`'s `continue→break` (`RecursiveDirectoryIterator` enumeration
-  order) is the landmine [#16][16] already named: killing it deterministically depends on the
-  order the filesystem returns directory entries, which is not portable across OSes.
-- **Newly found**: `PermissionNormalizer::normalizeContents()` has the identical shape twice
-  (`continue` on a symlink entry at `PermissionNormalizer.php:68`, `continue` on a non-directory
-  entry at `PermissionNormalizer.php:76`), walking a `FilesystemIterator` the same way
-  `BakedPathGuard` walks a `RecursiveDirectoryIterator`. One of the two
-  (`PermissionNormalizer.php:76`) reproduces the exact cross-OS instability: killed on
-  macOS/APFS/PHP 8.5, escaped on Linux/ext4/PHP 8.2 in every one of the 5 measurement runs on the
-  CI-matching environment. It is left unkilled for the same reason as `BakedPathGuard`'s —
-  deliberately trying to kill it would make the CI-pinned MSI depend on directory enumeration
-  order, which this package cannot control. (The 5 repeated measurements on Linux/PHP 8.2 alone
-  were identical to each other; the instability is across OSes, not across runs of the same
-  environment — which is what the CI job's fixed MSI floor actually depends on.)
+- `BakedPathScanner`'s `$offset = $position + 1` mutated to `+2` (`hasBakedPath()` and
+  `compileDirRanges()`, both `IncrementInteger`) is an equivalent mutant: every needle passed to
+  either method is an absolute path, so the two byte offsets can never produce an observable
+  difference. The same `+1` mutated the other way (`DecrementInteger`/`Minus`) does not escape at
+  all — the search offset stops advancing, so the mutant either times out (`hasBakedPath()`) or
+  exhausts PHP's memory limit building an ever-growing `$ranges` array (`compileDirRanges()`).
+  Infection counts a time out or an error the same as killed, so only the `+2` direction needs an
+  ignore entry.
+- `AbstractCompiledContext::__invoke()`'s `DiCompileModule(true, ...)` mutated to `(false, ...)`
+  (`TrueValue`) is an equivalent mutant given how this package actually uses `ray/compiler`: the
+  flag is bound to `Ray\Compiler\Annotation\Compile` and read only by
+  `Ray\Compiler\InjectorFactory::getInstance()`, to choose between an in-memory and a compiled
+  injector. This package never calls that factory — compile time goes through
+  `RayScriptCompiler`→`Ray\Compiler\Compiler::compile()` directly, runtime goes through
+  `AbstractCompiledContext::getInjectorInstance()`→`new CompiledInjector(...)` directly — so the
+  flag's value never reaches anything this package's tests can observe.
+- `Cli::write()`'s error-suppression plumbing has two mutants that are unkillable without pinning
+  behaviour this package does not promise. `set_error_handler(static fn(): bool => true)` mutated
+  to `=> false` (`TrueValue`) changes only what happens to a `file_put_contents()` warning once
+  `write()`'s own handler declines it: PHP falls through to its *built-in* default handling for
+  that warning, not to any handler a test installs beforehand, and whether that becomes observable
+  depends on `display_errors`/`error_reporting`, which this package does not control or promise.
+  The surrounding `try { file_put_contents(...) } finally { restore_error_handler(); }`
+  (`UnwrapFinally`) is only distinguishable from the two statements run in sequence if
+  `file_put_contents()` itself throws, which it never does — it reports failure through the
+  warning above, not an exception.
 
 ## Possible, not done
 
@@ -609,6 +614,8 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [135]: https://github.com/NaokiTsuchiya/RayDiContext/issues/135
 [137]: https://github.com/NaokiTsuchiya/RayDiContext/issues/137
 [140]: https://github.com/NaokiTsuchiya/RayDiContext/issues/140
+[142]: https://github.com/NaokiTsuchiya/RayDiContext/issues/142
+[143]: https://github.com/NaokiTsuchiya/RayDiContext/issues/143
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95
 [888a9b1]: https://github.com/NaokiTsuchiya/RayDiContext/commit/888a9b1

@@ -44,6 +44,7 @@ final class CliTest extends TestCase
         static::assertSame(1, $status);
         static::assertStringContainsString('Unknown context "nosuch"', $this->fixture->stderr());
         static::assertStringNotContainsString('Stack trace', $this->fixture->stderr());
+        static::assertStringNotContainsString('UnknownContext', $this->fixture->stderr());
     }
 
     /** A throwable unrelated to this package's exception hierarchy is still reported as one line, not a trace */
@@ -137,5 +138,17 @@ final class CliTest extends TestCase
         static::assertSame(2, $status);
         static::assertStringContainsString('appDir does not exist or is not a directory', $this->fixture->stderr());
         static::assertStringContainsString($plainFile, $this->fixture->stderr());
+    }
+
+    /** An explicit compileDir/tmpDir pair that resolve to the same directory is a runtime failure, not a silent no-op */
+    #[Test]
+    public function reportsCompileDirEqualToTmpDirAsRuntimeFailure(): void
+    {
+        $shared = "{$this->fixture->baseDir}/shared";
+
+        $status = ($this->cli)(['bin', CliFixture::VALID, $this->fixture->appDir, 'prod', $shared, $shared]);
+
+        static::assertSame(1, $status);
+        static::assertStringContainsString('must be different directories', $this->fixture->stderr());
     }
 }

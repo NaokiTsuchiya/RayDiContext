@@ -341,6 +341,22 @@ exits 0 either way.
 **Would change it:** starting to use `mb_*`, `iconv`, `filter_var` or `token_get_all`, which can be
 disabled and so make a declaration enforceable.
 
+### Adopting `stolt/lean-package-validator` instead of a bespoke audit script — [#135][135]
+
+Rejected on the trade. Its `validate --validate-git-archive` does what `tests/gitattributes-check.sh`
+does — build a real `git archive` tarball from `HEAD` and check its contents — and supports both the
+`classic` and `negated` list styles. But it pulls in `symfony/console`, `symfony/finder`,
+`sebastian/diff`, `stolt/list-skills-command` and `laravel/agent-detector`; `require-dev` today is
+`carthage-software/mago` and `phpunit/phpunit` only, and none of those land in `vendor/`
+transitively. Its default `CommonPreset` also excludes `*.{md,MD}` and `LICENSE`, which would drop
+`README.md`, `CHANGELOG.md` and `LICENSE` from the distribution unless overridden with an `.lpv`
+file — writing that override is the same work as the expected list this issue already needs. The
+GitHub Action skips the composer dependency, but its default `lpv-version` is `4.4.4`, too old to
+run from `composer tests` locally.
+
+**Would change it:** a release whose default preset stops excluding Markdown/LICENSE, or a second,
+unrelated need for `symfony/console` that would already put it in `vendor/`.
+
 ## Possible, not done
 
 ### A CI check for comment length
@@ -374,5 +390,6 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [127]: https://github.com/NaokiTsuchiya/RayDiContext/issues/127
 [130]: https://github.com/NaokiTsuchiya/RayDiContext/issues/130
 [131]: https://github.com/NaokiTsuchiya/RayDiContext/issues/131
+[135]: https://github.com/NaokiTsuchiya/RayDiContext/issues/135
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95

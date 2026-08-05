@@ -37,13 +37,14 @@
     "scripts": {
         "test": "phpunit",
         "dist": "tests/dist-check.sh",
+        "gitattributes-check": "tests/gitattributes-check.sh",
         "lint": "mago lint --minimum-fail-level note",
         "analyze": "mago analyze",
         "guard": "mago guard",
         "fmt": ["mago fmt --check", "mago fmt --check bin/ray-di-compile"],
         "cs": ["@lint", "@fmt"],
         "sa": ["@analyze", "@guard"],
-        "tests": ["@cs", "@sa", "@test", "@dist"]
+        "tests": ["@cs", "@sa", "@test", "@dist", "@gitattributes-check"]
     },
     "config": {
         "sort-packages": true,

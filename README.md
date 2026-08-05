@@ -249,7 +249,7 @@ be rejected by `BakedPathGuard` if it were written into `compileDir` instead.
 
 Build the compiled scripts in a build stage, `COPY` only the result into the
 runtime image, and run as a non-root user with a read-only root filesystem.
-[`examples/docker/Dockerfile`](examples/docker/Dockerfile) is the full,
+[`examples/docker/Dockerfile`](https://github.com/NaokiTsuchiya/RayDiContext/blob/main/examples/docker/Dockerfile) is the full,
 buildable version — its comments cover the two non-obvious parts (installing
 `composer`/`unzip`, since `php:8.3-cli` ships neither; and why the compiled
 scripts need a *second* `COPY` into the runtime stage). It's built and run

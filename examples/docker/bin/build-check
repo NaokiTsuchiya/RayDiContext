@@ -1,0 +1,57 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Build-stage smoke check — see examples/docker/Dockerfile's build-stage RUN and README.md's
+ * "Verifying the compile" section. Resolves the compiled bindings for real, the same way
+ * examples/docker/bin/console does at container start, but from inside the build stage, so a
+ * broken binding fails `docker build` instead of only surfacing once the image is already
+ * running. Compiling only proves the binding graph is internally consistent; it never calls any
+ * of it.
+ */
+
+use NaokiTsuchiya\RayDiContext\AppMeta;
+
+require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/build-check-support.php';
+
+$loadedClasses = [];
+spl_autoload_register(
+    static function (string $class) use (&$loadedClasses): void {
+        $loadedClasses[] = $class;
+    },
+    true,
+    // Registered after vendor/autoload.php but still first in the queue: without prepend,
+    // Composer's own autoloader would resolve every classmap class first, and this would only
+    // ever see the classes Composer's classmap doesn't already cover.
+    true,
+);
+
+$provider = require __DIR__ . '/../bootstrap.php';
+
+// Deliberately not /app/var/tmp (the runtime value bin/console and the README use): /app is
+// COPY-ed wholesale into the final image, so anything getSavedSingleton() wrote into a tmpDir
+// under /app here would get baked in, defeating tmpDir's "never baked" invariant. This example
+// never writes into tmpDir, but a real one might.
+$meta = AppMeta::fromAppDir('/app', 'prod', '/app/var/di/prod', sys_get_temp_dir() . '/ray-di-context-build-check');
+
+try {
+    $context = $provider->get($meta);
+    $injector = $context->getInjectorInstance();
+
+    foreach ($context->getSavedSingleton() as $class) {
+        $injector->getInstance($class);
+    }
+
+    $greeter = $injector->getInstance(GreeterInterface::class);
+    fwrite(STDOUT, sprintf("build-check: resolved GreeterInterface: %s\n", $greeter->greet()));
+
+    writePreload($meta->compileDir, '/app', $loadedClasses);
+} catch (Throwable $e) {
+    fwrite(STDERR, sprintf("build-check: %s: %s\n", $e::class, $e->getMessage()));
+    exit(1);
+}
+
+exit(0);

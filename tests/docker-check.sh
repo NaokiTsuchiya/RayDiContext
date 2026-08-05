@@ -10,12 +10,23 @@ fail() {
     exit 1
 }
 
+# Docker-free check of examples/docker/bin/build-check-support.php's pure functions — see
+# tests/docker-check-probe.php for what it exercises and why.
+support="${example}/bin/build-check-support.php"
+probe_dir="$(mktemp -d)"
+php "${root}/tests/docker-check-probe.php" "${support}" "${probe_dir}" \
+    || fail "examples/docker/bin/build-check-support.php's pure functions failed synthetic verification"
+rm -rf "${probe_dir}"
+echo "docker-check: OK — filterCompileDirFiles()/relativePath() synthetic verification"
+
 command -v docker >/dev/null 2>&1 || fail "docker was not found on PATH"
 
 work="$(mktemp -d)"
 tag="ray-di-context-docker-example:check"
+broken_tag="ray-di-context-docker-example:check-broken"
 cleanup() {
     docker rmi -f "${tag}" >/dev/null 2>&1 || true
+    docker rmi -f "${broken_tag}" >/dev/null 2>&1 || true
     rm -rf "${work}"
 }
 trap cleanup EXIT
@@ -45,8 +56,13 @@ cat > "${work}/consumer/composer.json" <<'JSON'
 }
 JSON
 
-docker build -f "${work}/consumer/Dockerfile" -t "${tag}" "${work}/consumer" \
-    || fail "docker build failed"
+build_log="$(docker build -f "${work}/consumer/Dockerfile" -t "${tag}" "${work}/consumer" 2>&1)" \
+    || fail "docker build failed: ${build_log}"
+
+case "${build_log}" in
+    *"build-check: resolved GreeterInterface"*) ;;
+    *) fail "docker build succeeded but the build-stage check did not report success: ${build_log}" ;;
+esac
 
 docker run --rm --read-only --tmpfs /app/var/tmp --entrypoint sh "${tag}" \
     -c 'test "$(id -u)" -ne 0' \
@@ -61,3 +77,24 @@ case "${output}" in
 esac
 
 echo "docker-check: OK — ${output}"
+
+# Prove the build-stage check is load-bearing: break the one binding it resolves in a way the
+# compile step itself does not catch (nothing else references GreeterInterface as a constructor
+# argument, so ray-di-compile stays green) and confirm `docker build` — not just `docker run` —
+# now fails because of it.
+broken="${work}/consumer-broken"
+cp -R "${work}/consumer" "${broken}"
+sed -i.bak '/bind(GreeterInterface::class)->to(Greeter::class)/d' "${broken}/bootstrap.php"
+rm -f "${broken}/bootstrap.php.bak"
+grep -q 'bind(GreeterInterface::class)' "${broken}/bootstrap.php" \
+    && fail "sed did not remove the GreeterInterface binding from the broken fixture"
+
+broken_log="$(docker build -f "${broken}/Dockerfile" -t "${broken_tag}" "${broken}" 2>&1)" \
+    && fail "docker build succeeded with GreeterInterface unbound — the build-stage check did not catch it: ${broken_log}"
+
+case "${broken_log}" in
+    *"build-check:"*"Unbound"*) ;;
+    *) fail "docker build failed but not with the expected build-check/Unbound message: ${broken_log}" ;;
+esac
+
+echo "docker-check: OK — a broken binding correctly fails the build stage"

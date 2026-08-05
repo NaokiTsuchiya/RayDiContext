@@ -48,6 +48,11 @@ final class ExampleProdContext extends AbstractContext
     {
         return new CompiledInjector($this->meta->compileDir);
     }
+
+    public function getSavedSingleton(): array
+    {
+        return [GreeterInterface::class];
+    }
 }
 
 return new MapContextProvider(['prod' => ExampleProdContext::class]);

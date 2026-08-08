@@ -15,10 +15,4 @@ abstract class AbstractContext implements ContextInterface
     final public function __construct(
         protected readonly AppMeta $meta,
     ) {}
-
-    /** {@inheritDoc} */
-    public function getSavedSingleton(): array
-    {
-        return [];
-    }
 }

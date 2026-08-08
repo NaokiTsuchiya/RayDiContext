@@ -8,7 +8,6 @@ use FilesystemIterator;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCar;
 use NaokiTsuchiya\RayDiContext\Fake\FakeCarInterface;
-use NaokiTsuchiya\RayDiContext\Fake\FakeCompiledProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
@@ -23,11 +22,10 @@ use function dirname;
 use function hash_file;
 use function is_dir;
 use function ksort;
-use function mkdir;
 
 /** The compiled-context path, which needs a real compile to observe */
-#[CoversClass(AbstractCompiledContext::class)]
-final class AbstractCompiledContextIntegrationTest extends TestCase
+#[CoversClass(InjectorBuilder::class)]
+final class InjectorBuilderIntegrationTest extends TestCase
 {
     /** Working directory and meta shared by the resolution tests */
     private AppDirFixture $fixture;
@@ -35,11 +33,15 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
     /** Meta with conventional paths under the app dir */
     private AppMeta $meta;
 
+    /** System under test */
+    private InjectorBuilder $builder;
+
     /** @throws ExceptionInterface */
     protected function setUp(): void
     {
-        $this->fixture = new AppDirFixture('compiled_context_');
+        $this->fixture = new AppDirFixture('builder_integration_');
         $this->meta = $this->fixture->meta;
+        $this->builder = new InjectorBuilder();
         (new CompileRunner(new MapContextProvider(['prod' => FakeProdContext::class])))->run($this->meta);
     }
 
@@ -56,14 +58,9 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function getInjectorInstanceReturnsCompiledInjectorResolvingTheCompiledAppModule(): void
+    public function buildsACompiledInjectorResolvingTheCompiledAppModule(): void
     {
-        $meta = AppMeta::fromAppDir("{$this->fixture->baseDir}/solo/app", 'prod');
-        mkdir($meta->tmpDir, permissions: 0o755, recursive: true);
-        (new CompileRunner(new MapContextProvider(['prod' => FakeCompiledProdContext::class])))->run($meta);
-        $context = new FakeCompiledProdContext($meta);
-
-        $injector = $context->getInjectorInstance();
+        $injector = ($this->builder)(new FakeProdContext($this->meta), $this->meta);
 
         static::assertInstanceOf(CompiledInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
@@ -76,7 +73,7 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
         chmod($this->meta->compileDir, permissions: 0o555);
         $before = $this->snapshot($this->meta->compileDir);
 
-        $injector = (new FakeCompiledProdContext($this->meta))->getInjectorInstance();
+        $injector = ($this->builder)(new FakeProdContext($this->meta), $this->meta);
 
         static::assertInstanceOf(CompiledInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
@@ -95,7 +92,7 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
             "{$this->fixture->baseDir}/absent-tmp",
         );
 
-        $injector = (new FakeCompiledProdContext($runtimeMeta))->getInjectorInstance();
+        $injector = ($this->builder)(new FakeProdContext($runtimeMeta), $runtimeMeta);
 
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
@@ -109,7 +106,7 @@ final class AbstractCompiledContextIntegrationTest extends TestCase
         Fs::removeDir($this->meta->compileDir);
         $relocatedMeta = new AppMeta($this->meta->appDir, 'prod', $relocatedCompileDir, $this->meta->tmpDir);
 
-        $injector = (new FakeCompiledProdContext($relocatedMeta))->getInjectorInstance();
+        $injector = ($this->builder)(new FakeProdContext($relocatedMeta), $relocatedMeta);
 
         static::assertInstanceOf(CompiledInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));

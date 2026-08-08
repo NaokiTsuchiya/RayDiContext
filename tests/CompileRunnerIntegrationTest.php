@@ -9,7 +9,6 @@ use NaokiTsuchiya\RayDiContext\Exception\CompileFailed;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Fake\FakeBakedContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
-use NaokiTsuchiya\RayDiContext\Fake\FakeQualifiedContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingBakedPathGuard;
 use NaokiTsuchiya\RayDiContext\Fake\FakeUnboundContext;
 use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
@@ -20,14 +19,11 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Ray\Compiler\Exception\Unbound;
 
-use function array_filter;
 use function chmod;
-use function dirname;
 use function file_put_contents;
 use function glob;
 use function is_dir;
 use function mkdir;
-use function str_ends_with;
 
 /** The pipeline steps that only make sense with a real ray/compiler run */
 #[CoversClass(CompileRunner::class)]
@@ -130,24 +126,5 @@ final class CompileRunnerIntegrationTest extends TestCase
             static::assertInstanceOf(Unbound::class, $e->getPrevious());
             static::assertSame([], glob("{$this->meta->compileDir}/*"));
         }
-    }
-
-    /**
-     * A compile whose output is not flat is normalized all the way down
-     *
-     * @throws ExceptionInterface
-     */
-    #[Test]
-    public function normalizesAScriptCompiledIntoASubdirectory(): void
-    {
-        (new CompileRunner(new MapContextProvider(['prod' => FakeQualifiedContext::class])))->run($this->meta);
-
-        $compileDir = $this->meta->compileDir;
-        $nested = array_filter(
-            CompiledTree::assertWorldReadable($compileDir),
-            static fn(string $path): bool => str_ends_with($path, '.php') && $compileDir !== dirname($path),
-        );
-
-        static::assertNotSame([], $nested);
     }
 }

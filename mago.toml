@@ -117,13 +117,14 @@ must-implement = 'NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface'
 must-extend = 'RuntimeException'
 reason = "The base carries both the marker and the \\RuntimeException lineage every subclass relies on"
 
-# Root-namespace concrete classes are final; the Abstract* context bases are the sole exceptions.
+# Root-namespace concrete classes are final; AbstractContext and AbstractCompiledContext are the
+# sole abstract exceptions.
 [[guard.structural.rules]]
 on = 'NaokiTsuchiya\RayDiContext\*'
-not-on = 'NaokiTsuchiya\RayDiContext\Abstract{Context,CompiledContext,WarmCompiledContext}'
+not-on = 'NaokiTsuchiya\RayDiContext\Abstract{Context,CompiledContext}'
 target = "class"
 must-be-final = true
-reason = "Every concrete class in the root namespace is final except the Abstract* context bases, which exist to be extended"
+reason = "Every concrete class in the root namespace is final except AbstractContext and AbstractCompiledContext, which exist to be extended"
 
 # mago lint's class-name/interface-name rules only check PSR casing, not this package's *Interface suffix convention.
 [[guard.structural.rules]]

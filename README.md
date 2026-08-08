@@ -159,6 +159,7 @@ needing constructor dependencies beyond `AppMeta` (a secrets loader, a clock) im
 factories trade that up-front proof for the freedom to pass anything:
 
 ```php
+use NaokiTsuchiya\RayDiContext\AppMeta;
 use NaokiTsuchiya\RayDiContext\CallableContextProvider;
 
 return new CallableContextProvider([
@@ -209,6 +210,7 @@ to the CLI above — a mismatch means the running app looks for compiled scripts
 different place than they were baked into:
 
 ```php
+use NaokiTsuchiya\RayDiContext\AppMeta;
 use NaokiTsuchiya\RayDiContext\InjectorBuilder;
 use NaokiTsuchiya\RayDiContext\SingletonWarmer;
 
@@ -235,9 +237,11 @@ one instance up and then serving requests from another warms nothing.
 for one: a compiled injector never unserializes instances, so anything holding a runtime
 resource (a database connection, for example) won't exist until something happens to
 request it first, which under a coroutine runtime can be two requests at once. Call it at
-worker start under Swoole and friends; **skip it under PHP-FPM and short-lived CLI
-commands**, where the injector lives for one request and warming everything up front costs
-more than resolving lazily. The warmer leaves a runtime injector alone, and raises
+worker start under Swoole and friends; **skip it in a PHP-FPM or short-lived-CLI runtime
+bootstrap**, where the injector lives for one request and warming everything up front costs
+more than resolving lazily. A build-stage check is the deliberate exception: there the cost
+is the point — resolving every compiled singleton for real before the image ships is what
+catches a broken binding, which is exactly how `examples/docker/bin/build-check` uses it. The warmer leaves a runtime injector alone, and raises
 `Exception\WarmupNotCompiled` for compiled scripts carrying no singleton metadata rather
 than quietly warming nothing.
 

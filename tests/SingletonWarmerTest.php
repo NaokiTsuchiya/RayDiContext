@@ -6,7 +6,7 @@ namespace NaokiTsuchiya\RayDiContext;
 
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\WarmupNotCompiled;
-use NaokiTsuchiya\RayDiContext\Fake\FakeModule;
+use NaokiTsuchiya\RayDiContext\Fake\FakeWarmupModule;
 use NaokiTsuchiya\RayDiContext\Fake\FakeWarmupProbe;
 use NaokiTsuchiya\RayDiContext\Support\CompileDirFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -41,14 +41,14 @@ final class SingletonWarmerTest extends TestCase
     }
 
     /**
-     * A dev context's runtime injector compiles as it resolves, so it has nothing to warm
+     * A runtime injector compiles as it resolves, so even its singleton bindings are left cold
      *
      * @throws ExceptionInterface
      */
     #[Test]
     public function invokeLeavesAnInjectorThatCompilesAtRuntimeAlone(): void
     {
-        $injector = new Injector(new FakeModule(), $this->fixture->baseDir);
+        $injector = new Injector(new FakeWarmupModule(), $this->fixture->baseDir);
 
         ($this->warmer)($injector);
 

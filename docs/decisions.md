@@ -708,9 +708,9 @@ covers every entry `infection.json5` ignores, and vice versa:
   `file_put_contents()` itself throws, which it never does — it reports failure through the
   warning above, not an exception.
 
-`infection.json5`'s `IncrementInteger`/`TrueValue`/`UnwrapFinally` ignore entries exclude these
-four methods (two for the `BakedPathScanner` bullet, two for
-`Cli::write()`) from Infection's tested-mutant count entirely, not just from what fails the build.
+`infection.json5`'s `IncrementInteger`/`TrueValue`/`UnwrapFinally` ignore entries exclude four
+entries across three methods (two `BakedPathScanner` methods for the first bullet, `Cli::write()`
+twice for the second) from Infection's tested-mutant count entirely, not just from what fails the build.
 With them excluded, re-measuring on the same CI environment gives 275 mutations (280 minus the
 five ignored), 271 killed, 2 errors, 2 timed out, 0 escaped, 100% mutation code coverage,
 `msi = coveredCodeMsi = 100.0` — `infection.json5`'s `minMsi`/`minCoveredMsi` are pinned to this

@@ -9,7 +9,7 @@ declare(strict_types=1);
  * and runs it as-is.
  */
 
-use NaokiTsuchiya\RayDiContext\AbstractWarmCompiledContext;
+use NaokiTsuchiya\RayDiContext\AbstractCompiledContext;
 use NaokiTsuchiya\RayDiContext\MapContextProvider;
 use Ray\Di\AbstractModule;
 
@@ -34,7 +34,7 @@ final class GreeterModule extends AbstractModule
     }
 }
 
-final class ExampleProdContext extends AbstractWarmCompiledContext
+final class ExampleProdContext extends AbstractCompiledContext
 {
     protected function appModule(): AbstractModule
     {

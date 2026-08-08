@@ -11,17 +11,16 @@ README's Versioning section).
 
 ### Added
 
-- `WarmInjectorInterface`, an injector that can instantiate its singletons before anything asks for
-  one, and `CompiledWarmInjector`, its implementation over `ray/compiler`'s `CompiledInjector`.
-  `warmup()` instantiates every singleton the compile recorded in `singletons.json`, so a coroutine
-  runtime cannot race two requests into building the same singleton twice. A compile dir holding no
-  such metadata raises the new `Exception\WarmupNotCompiled` rather than silently doing nothing;
+- `SingletonWarmer`, which instantiates every singleton the compile recorded in `singletons.json`
+  before anything resolves one, so a coroutine runtime cannot race two requests into building the
+  same singleton twice. It takes any `Ray\Di\InjectorInterface` — an injector that compiles at
+  runtime has nothing to warm and is left alone — and raises the new `Exception\WarmupNotCompiled`
+  for compiled scripts that carry no such metadata rather than silently doing nothing;
   `ray/compiler`'s own `SingletonsFileNotFound` stays retrievable via `getPrevious()`.
-- `AbstractWarmCompiledContext`, the ahead-of-time compiled base context whose
-  `getInjectorInstance()` returns a `CompiledWarmInjector`. It supersedes `AbstractCompiledContext`
-  for new code; that class, `AbstractContext` and `ContextInterface` — including
-  `getSavedSingleton()`, the hand-written predecessor of `warmup()` — are unchanged, so an existing
-  context keeps working untouched and moves over by changing which base class it extends.
+  Nothing else changed to make this work: it is a standalone collaborator, on no interface and in
+  no inheritance chain, so an existing context warms up by adding one line to its bootstrap.
+  `ContextInterface::getSavedSingleton()`, the hand-written predecessor, is untouched and still
+  defaults to `[]`.
 - `Exception\CompileFailed`, thrown by `CompileRunner::run()` when the injected
   `ScriptCompilerInterface` throws while compiling the context module. Wraps the compiler's own
   exception (e.g. a missing binding surfacing as `ray/compiler`'s or `ray/di`'s own `Unbound`),

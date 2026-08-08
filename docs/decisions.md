@@ -148,35 +148,40 @@ arguments (layout, and create-or-not) whose only non-default caller is that one 
 
 **Would change it:** a second class needing the same non-default shape.
 
-### Adding `AbstractWarmCompiledContext` instead of warming up through the existing classes — [#148][148]
+### Reaching `warmup()` through a standalone `SingletonWarmer`, not the type system — [#148][148]
 
 `ray/compiler` 1.15.0 added `CompiledInjector::warmup()`, which instantiates every singleton the
 compile recorded in `singletons.json`. That supersedes `ContextInterface::getSavedSingleton()`
-outright: the hand-written list can omit a singleton, the compiler's cannot.
+outright: the hand-written list can omit a singleton, the compiler's cannot. Four ways to reach it
+were built or weighed, in order of how much of this package's surface they commit.
 
-Three ways to reach it were weighed. Narrowing `ContextInterface::getInjectorInstance()` to a
-`WarmInjectorInterface` is the end state — the caller writes `$injector->warmup()` with no
-`instanceof` — but it breaks every implementer at once. Changing
-`AbstractCompiledContext::getInjectorInstance()` to return the new decorator keeps the declared
-return type but silently changes the concrete class an existing context hands back. Both edit a
-class that already works.
+Narrowing `ContextInterface::getInjectorInstance()` to a `WarmInjectorInterface` reads best at the
+call site — `$injector->warmup()`, no `instanceof` — and breaks every implementer at once. Changing
+`AbstractCompiledContext::getInjectorInstance()` to return a warmable decorator keeps the declared
+return type but silently changes the concrete class an existing context hands back. A third,
+`AbstractWarmCompiledContext` extending `AbstractCompiledContext` and overriding only
+`getInjectorInstance()`, was written and then removed: it breaks nobody, but it answers "a new kind
+of injector" with "a new base class to extend", so the next one costs another, and consumers migrate
+by editing a class declaration.
 
-So the new behavior is a new class: `AbstractWarmCompiledContext` extends `AbstractCompiledContext`
-and overrides `getInjectorInstance()` alone, exactly what that class's docblock already says a
-subclass may do. `ContextInterface`, `AbstractContext` and `AbstractCompiledContext` are untouched,
-`getSavedSingleton()` still works and still defaults to `[]`, and a context moves over by changing
-which base class it extends. The cost is that `ContextProviderInterface::get()` still returns the
-wider `ContextInterface`, so the README's bootstrap keeps an `instanceof WarmInjectorInterface`
-around the `warmup()` call.
+The fourth commits nothing. `SingletonWarmer` is a `final` class on no interface and in no
+inheritance chain, shaped like `Cleaner` and `PermissionNormalizer` — `__invoke()` taking the
+injector. It cannot break an implementer because it has none, and an existing context warms up by
+adding a line to its bootstrap rather than changing what it extends. The three interface-and-
+inheritance options above all stay open on top of it, which is the point.
 
-`CompiledWarmInjector` is a decorator rather than a subclass because `Ray\Compiler\CompiledInjector`
-is `final`. Decorating puts `getInstance()` on a seam where `ray/compiler`'s `Unbound` could also be
-wrapped — the gap [#116][116] left open — but that changes an exception type callers already catch,
-so it is not taken here. One consequence is worth knowing: `getInstance(InjectorInterface::class)`
-returns the `CompiledInjector` underneath, which `warmup()` cannot be called on.
+Two consequences are deliberate. `instanceof CompiledInjector` moves inside `src/`, which already
+names `ray/compiler` classes; what [#119][119] was protecting is *consumer* code, and this removes an
+`instanceof` from there rather than adding one. And a runtime `Ray\Di\Injector` is a no-op, not a
+throw: it compiles as it resolves, so there is genuinely nothing to warm and no race to lose —
+unlike compiled scripts with no metadata, where `ray/compiler` throws for the same reason this
+package rethrows as `Exception\WarmupNotCompiled` (a silent success would claim protection that is
+not there).
 
-**Would change it:** the narrowing above, whenever a release can afford to break implementers.
-`getSavedSingleton()` would go in the same one.
+**Would change it:** a second collaborator wanting the same "can this injector be warmed" question
+answered — two `instanceof CompiledInjector` sites is when the type belongs in the type system.
+Narrowing `ContextInterface` and dropping `getSavedSingleton()` remain a later breaking release's
+work, and this does not block either.
 
 ### Producing a non-flat compile output with a fake compiler instead of a qualifier — [#148][148]
 

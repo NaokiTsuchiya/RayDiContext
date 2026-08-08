@@ -12,20 +12,20 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/** The injector the base class hands back, against scripts a real ray/compiler run produced */
-#[CoversClass(AbstractWarmCompiledContext::class)]
-final class AbstractWarmCompiledContextIntegrationTest extends TestCase
+/** What the warmer does to the injector an unmodified AbstractCompiledContext hands back */
+#[CoversClass(SingletonWarmer::class)]
+final class SingletonWarmerIntegrationTest extends TestCase
 {
     /** Working directory and meta shared by the tests in this class */
     private AppDirFixture $fixture;
 
-    /** System under test */
+    /** The injector a compiled context returns for the compiled scripts */
     private FakeWarmupContext $context;
 
     /** @throws ExceptionInterface */
     protected function setUp(): void
     {
-        $this->fixture = new AppDirFixture('warm_context_integration_');
+        $this->fixture = new AppDirFixture('warmer_integration_');
         (new CompileRunner(new MapContextProvider(['prod' => FakeWarmupContext::class])))->run($this->fixture->meta);
         $this->context = new FakeWarmupContext($this->fixture->meta);
         FakeWarmupProbe::reset();
@@ -38,18 +38,31 @@ final class AbstractWarmCompiledContextIntegrationTest extends TestCase
     }
 
     /**
-     * A line-coverage hit cannot tell a working injector from one that threw
+     * The whole point of warming up: the singleton exists before anything asks for it
      *
      * @throws ExceptionInterface
      */
     #[Test]
-    public function getInjectorInstanceReturnsAWarmInjectorResolvingTheCompiledAppModule(): void
+    public function invokeInstantiatesTheSingletonBeforeAnythingResolvesIt(): void
     {
         $injector = $this->context->getInjectorInstance();
+        static::assertSame(0, FakeWarmupProbe::constructed());
 
-        $injector->warmup();
+        (new SingletonWarmer())($injector);
 
         static::assertSame(1, FakeWarmupProbe::constructed());
-        static::assertInstanceOf(FakeWarmupProbe::class, $injector->getInstance(FakeWarmupProbe::class));
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function invokeLeavesTheWarmedSingletonCachedForLaterResolution(): void
+    {
+        $injector = $this->context->getInjectorInstance();
+        (new SingletonWarmer())($injector);
+
+        $resolved = $injector->getInstance(FakeWarmupProbe::class);
+
+        static::assertInstanceOf(FakeWarmupProbe::class, $resolved);
+        static::assertSame(1, FakeWarmupProbe::constructed());
     }
 }

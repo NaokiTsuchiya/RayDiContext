@@ -80,29 +80,27 @@ execute it opens fine and every per-entry `stat()` fails instead, leaking one wa
 At runtime the application never touches `Cleaner`, `BakedPathGuard` or the compiler. It builds an
 `AppMeta` with the *same* `compileDir`/`tmpDir` used at compile time, looks up the `ContextInterface`
 through its own `ContextProviderInterface`, and calls `getInjectorInstance()`. A production context
-extending `AbstractWarmCompiledContext` returns `CompiledWarmInjector($meta->compileDir)`, a
-decorator over `Ray\Compiler\CompiledInjector` adding `warmup()`; `AbstractCompiledContext` returns
-that `CompiledInjector` directly. Either only reads, and the call lives in the base class, not
-application code. Getting the two directories out of sync between compile time and runtime is the
-main way to misuse this package.
+extending `AbstractCompiledContext` returns `Ray\Compiler\CompiledInjector($meta->compileDir)`,
+which only reads; that call lives in the base class, not application code. Getting the two
+directories out of sync between compile time and runtime is the main way to misuse this package.
 
-`warmup()` instantiates every dependency `ray/compiler` recorded in `singletons.json` at compile
-time — every singleton it can build without a caller, which excludes an injection-point-dependent
-provider (rejected at compile time) and the AOP `MethodInvocation` binding. Doing that at boot is
-what keeps two concurrent requests under a coroutine runtime from each building the same singleton.
-A compile dir without that file raises `Exception\WarmupNotCompiled` instead of quietly warming
-nothing.
+`SingletonWarmer` is the optional second step, and the only part of this package a runtime bootstrap
+constructs itself. It instantiates every dependency `ray/compiler` recorded in `singletons.json` at
+compile time — every singleton it can build without a caller, which excludes an
+injection-point-dependent provider (rejected at compile time) and the AOP `MethodInvocation`
+binding. Doing that at boot is what keeps two concurrent requests under a coroutine runtime from
+each building the same singleton. It takes any `InjectorInterface`, leaves one that compiles at
+runtime alone, and raises `Exception\WarmupNotCompiled` for compiled scripts carrying no such
+metadata rather than quietly warming nothing.
 
 ## Extension points applications implement
 
 - **`ContextInterface`** — one per environment. Extend `AbstractContext`, whose constructor is
   `final` so `MapContextProvider`'s `new $class($meta)` stays valid for every subclass. See the
   interface's docblocks for the injector and `getSavedSingleton()` contracts.
-  For the ahead-of-time compiled production shape, extend `AbstractWarmCompiledContext` instead
-  and implement only `appModule()` — it composes `DiCompileModule`/`CompiledWarmInjector` so the
-  consumer never imports those class names, and the injector it returns can `warmup()` the
-  compiled singletons before anything resolves one. `AbstractCompiledContext` is the same shape
-  without the warmup, returning `Ray\Compiler\CompiledInjector` directly.
+  For the ahead-of-time compiled production shape, extend `AbstractCompiledContext` instead and
+  implement only `appModule()` — it composes `DiCompileModule`/`CompiledInjector` so the consumer
+  never imports those class names.
 - **`ContextProviderInterface`** — maps an `AppMeta` to a `ContextInterface`. `MapContextProvider`
   is the bundled name→class-string implementation, and a bootstrap file returns one of these; it
   validates the whole map at construction (see its docblock).

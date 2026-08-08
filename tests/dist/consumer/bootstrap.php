@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use NaokiTsuchiya\RayDiContext\AbstractWarmCompiledContext;
+use NaokiTsuchiya\RayDiContext\AbstractCompiledContext;
 use NaokiTsuchiya\RayDiContext\MapContextProvider;
 use Ray\Di\AbstractModule;
 
@@ -22,7 +22,7 @@ final class ConsumerModule extends AbstractModule
     }
 }
 
-final class ConsumerProdContext extends AbstractWarmCompiledContext
+final class ConsumerProdContext extends AbstractCompiledContext
 {
     protected function appModule(): AbstractModule
     {

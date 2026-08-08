@@ -4,6 +4,7 @@
 declare(strict_types=1);
 
 use NaokiTsuchiya\RayDiContext\AppMeta;
+use NaokiTsuchiya\RayDiContext\SingletonWarmer;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -13,7 +14,7 @@ $meta = AppMeta::fromAppDir('/app', 'prod', '/app/var/di/prod', '/app/var/tmp');
 try {
     $context = $provider->get($meta);
     $injector = $context->getInjectorInstance();
-    $injector->warmup();
+    (new SingletonWarmer())($injector);
     $greeter = $injector->getInstance(GreeterInterface::class);
     fwrite(STDOUT, sprintf("resolved GreeterInterface: %s\n", $greeter->greet()));
     exit(0);

@@ -34,7 +34,7 @@ trap cleanup EXIT
 mkdir "${work}/consumer" "${work}/consumer/package"
 cp -R "${example}/." "${work}/consumer/"
 cp "${root}/composer.json" "${work}/consumer/package/composer.json"
-cp -R "${root}/src" "${root}/bin" "${work}/consumer/package/"
+cp -R "${root}/src" "${root}/src-deprecated" "${root}/bin" "${work}/consumer/package/"
 
 cat > "${work}/consumer/composer.json" <<'JSON'
 {

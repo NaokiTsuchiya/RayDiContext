@@ -168,8 +168,12 @@ reports `ContextInterface`'s `extends` clause as using a deprecated type — cor
 here it flags the one structure the directory exists to support. The method is also the more
 accurate target: the contract is what callers should stop using.
 
-Two places outside `composer.json` need the directory too: `mago.toml`'s `[source] paths`, and
-`tests/gitattributes-check.sh`'s `top_level_dirs`, which pins exactly what a release archive ships.
+Three places outside `composer.json` need the directory too, and the first PR missed the last of
+them: `mago.toml`'s `[source] paths`; `tests/gitattributes-check.sh`'s `top_level_dirs`, which pins
+exactly what a release archive ships; and `tests/docker-check.sh`'s `cp -R`, which assembles the
+package the example installs. A PSR-4 path with nothing behind it fails only where that assembly
+happens — `docker build`, not the unit suite — so adding a directory here means grepping for the
+others.
 
 ### Reaching `warmup()` through a standalone `SingletonWarmer`, not the type system — [#148][148]
 

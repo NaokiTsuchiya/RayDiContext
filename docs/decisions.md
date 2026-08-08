@@ -148,6 +148,27 @@ arguments (layout, and create-or-not) whose only non-default caller is that one 
 
 **Would change it:** a second class needing the same non-default shape.
 
+### Producing a non-flat compile output with a fake compiler instead of a qualifier — [#148][148]
+
+`PermissionNormalizer` and `Support\CompiledTree` both recurse, and one test covered that recursion:
+`FakeQualifiedModule` bound `annotatedWith('a.php/b')`, so `ray/compiler` wrote a script into a
+directory named `a.php` under the compile dir — a real compile whose output was not flat.
+
+`ray/compiler` 1.15.0 removed that shape. Its `ScriptName` rejects a dependency index carrying a
+byte outside `[A-Za-z0-9_.-]` with `InvalidQualifier`, because a qualifier is arbitrary
+`->annotatedWith()` input that otherwise reaches the filesystem and the generated code raw — the
+same class of concern `BakedPathGuard` exists for, fixed one layer down. `composer.lock` is
+gitignored and the constraint is a caret, so this arrived on `main` the day 1.15.0 was released.
+
+Nesting is now reachable only through a `ScriptCompilerInterface` an application supplies, so
+`FakeNestingCompiler` writes `nested/compiled.php` at `0o700`/`0o600` and the test moved to
+`CompileRunnerTest` — it no longer needs a real compile, which is the whole of what puts a test in
+the integration tier ([#140][140]). It keeps its teeth: dropping `normalizeContents()`'s recursive
+call fails it on the nested script's mode.
+
+**Would change it:** `ray/compiler` emitting nested output on its own again, which would put a real
+compile back within reach of the integration tier.
+
 ### Pinning a runtime dependency to a minor so Renovate reports it — [#116][116]
 
 Rejected for both, after being tried on each. `rangeStrategy: "widen"` does not look at the semver
@@ -643,6 +664,7 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [140]: https://github.com/NaokiTsuchiya/RayDiContext/issues/140
 [142]: https://github.com/NaokiTsuchiya/RayDiContext/issues/142
 [143]: https://github.com/NaokiTsuchiya/RayDiContext/issues/143
+[148]: https://github.com/NaokiTsuchiya/RayDiContext/pull/148
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95
 [888a9b1]: https://github.com/NaokiTsuchiya/RayDiContext/commit/888a9b1

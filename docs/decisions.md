@@ -158,15 +158,31 @@ there.
 The first tenant is `getSavedSingleton()`, superseded by `SingletonWarmer`. It could not move as a
 file — it was a method on `ContextInterface`, which is not going anywhere — so it moved as
 `SavedSingletonInterface`, which `ContextInterface` extends. That is invisible to an implementer: it
-still has exactly one method to write. Removing it later is one file and one `extends` clause.
-`AbstractContext` keeps the three-line `[]` default; moving that too would need a trait, which buys
-nothing (`AbstractContext` would still name the deprecated thing, via `use` instead of a method
-body) and would be this codebase's only trait.
+still has exactly one method to write.
 
-The `@deprecated` tag sits on the *method*, not the interface. On the interface, `mago analyze`
-reports `ContextInterface`'s `extends` clause as using a deprecated type — correct in general, and
-here it flags the one structure the directory exists to support. The method is also the more
-accurate target: the contract is what callers should stop using.
+`AbstractContext`'s three-line `[]` default followed as `SavedSingletonTrait` — this codebase's only
+trait, and the only way to move a concrete method out of a class that is itself going nowhere.
+Weighed alone the trait buys little: `AbstractContext` still names the deprecated thing, via `use`
+instead of a method body. What it buys is the invariant — every deprecated line under one directory,
+and `grep getSavedSingleton src/` coming back empty. Removing the whole thing later is that
+directory, one `extends` and one `use`.
+
+`AbstractContext` itself cannot be deprecated. Nothing supersedes it, `MapContextProvider` requires
+every mapped class to extend it, and it carries the `final` constructor [#71][71] pinned in
+`CLAUDE.md`. Both of those outlive `getSavedSingleton()`.
+
+Where the `@deprecated` tag sits took three attempts, all reported by `mago analyze`:
+
+- On `SavedSingletonInterface` itself: `ContextInterface`'s `extends` clause is flagged as using a
+  deprecated type. Correct in general, and here it flags the one structure the directory exists to
+  support.
+- On the trait's method as well as the interface's: every existing caller is flagged, including the
+  tests that must keep exercising it while it still works.
+- Inside a prose sentence in the trait's docblock, mentioning the tag rather than applying it:
+  parsed as the tag, so the `use` clause is flagged. That prose belonged in this file anyway.
+
+It ends up on the interface's *method* alone. That is also the accurate target — the contract is
+what a caller should stop using, and the trait is only how the default arrives.
 
 Three places outside `composer.json` need the directory too, and the first PR missed the last of
 them: `mago.toml`'s `[source] paths`; `tests/gitattributes-check.sh`'s `top_level_dirs`, which pins

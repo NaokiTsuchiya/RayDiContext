@@ -11,14 +11,10 @@ namespace NaokiTsuchiya\RayDiContext;
  */
 abstract class AbstractContext implements ContextInterface
 {
+    use SavedSingletonTrait;
+
     /** @param AppMeta $meta Application metadata */
     final public function __construct(
         protected readonly AppMeta $meta,
     ) {}
-
-    /** {@inheritDoc} */
-    public function getSavedSingleton(): array
-    {
-        return [];
-    }
 }

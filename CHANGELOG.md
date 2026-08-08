@@ -30,9 +30,10 @@ README's Versioning section).
 
 - `getSavedSingleton()`, superseded by `SingletonWarmer`. Its declaration moved off
   `ContextInterface` onto a new `SavedSingletonInterface` that `ContextInterface` extends, in a new
-  `src-deprecated/` directory autoloaded under the same namespace — so no application code changes,
-  and what a later release removes is one file and one `extends`. `AbstractContext` still provides
-  the `[]` default.
+  `src-deprecated/` directory autoloaded under the same namespace, and `AbstractContext`'s `[]`
+  default followed as `SavedSingletonTrait`. No application code changes — a context still extends
+  `AbstractContext` and still has the same one method to write — and what a later release removes is
+  that directory plus one `extends` and one `use`.
 
 ### Changed
 

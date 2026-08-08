@@ -27,7 +27,10 @@
     ],
     "autoload": {
         "psr-4": {
-            "NaokiTsuchiya\\RayDiContext\\": "src/"
+            "NaokiTsuchiya\\RayDiContext\\": [
+                "src/",
+                "src-deprecated/"
+            ]
         }
     },
     "autoload-dev": {

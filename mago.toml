@@ -6,7 +6,7 @@
 php-version = "8.2"
 
 [source]
-paths = ["src", "tests"]
+paths = ["src", "src-deprecated", "tests"]
 includes = ["vendor"]
 excludes = ["tests/tmp", "tests/Fixture", "tests/dist", "tests/docker-check-probe.php", "tests/lowest-bound-check.php"]
 

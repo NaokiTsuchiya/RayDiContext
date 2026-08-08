@@ -224,10 +224,12 @@ leaves it alone; a compiled injector whose scripts carry no singleton metadata �
 by something other than `ray/compiler` 1.15+ — raises `Exception\WarmupNotCompiled`
 rather than quietly warming nothing.
 
-`ContextInterface::getSavedSingleton()` is the predecessor this supersedes: it named the
-classes to instantiate by hand, where the warmer reads what the compiler recorded and
-cannot miss one. It is untouched — it still works and still defaults to `[]` — and a
-context can use either.
+`getSavedSingleton()` is the predecessor this supersedes: it named the classes to
+instantiate by hand, where the warmer reads what the compiler recorded and cannot miss
+one. It still works and still defaults to `[]`, so a context can use either, but its
+declaration has moved to `SavedSingletonInterface` under `src-deprecated/` — same
+namespace, and `ContextInterface` extends it, so nothing an application wrote changes.
+That directory holds what a later release removes.
 
 ### Verifying the compile
 

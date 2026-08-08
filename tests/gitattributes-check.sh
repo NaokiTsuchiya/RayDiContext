@@ -11,7 +11,7 @@ fail() {
 }
 
 top_level_files=(CHANGELOG.md LICENSE README.md composer.json)
-top_level_dirs=(bin src)
+top_level_dirs=(bin src src-deprecated)
 
 expected="$(mktemp)"
 actual="$(mktemp)"

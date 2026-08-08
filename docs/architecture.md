@@ -97,7 +97,9 @@ metadata rather than quietly warming nothing.
 
 - **`ContextInterface`** — one per environment. Extend `AbstractContext`, whose constructor is
   `final` so `MapContextProvider`'s `new $class($meta)` stays valid for every subclass. See the
-  interface's docblocks for the injector and `getSavedSingleton()` contracts.
+  interface's docblock for the injector contract. It also extends `SavedSingletonInterface`,
+  which lives in `src-deprecated/` — same namespace, autoloaded the same way, holding what a
+  later release removes.
   For the ahead-of-time compiled production shape, extend `AbstractCompiledContext` instead and
   implement only `appModule()` — it composes `DiCompileModule`/`CompiledInjector` so the consumer
   never imports those class names.

@@ -19,13 +19,20 @@ README's Versioning section).
   `ray/compiler`'s own `SingletonsFileNotFound` stays retrievable via `getPrevious()`.
   Nothing else changed to make this work: it is a standalone collaborator, on no interface and in
   no inheritance chain, so an existing context warms up by adding one line to its bootstrap.
-  `ContextInterface::getSavedSingleton()`, the hand-written predecessor, is untouched and still
-  defaults to `[]`.
+  `getSavedSingleton()`, the hand-written predecessor, still works and still defaults to `[]`.
 - `Exception\CompileFailed`, thrown by `CompileRunner::run()` when the injected
   `ScriptCompilerInterface` throws while compiling the context module. Wraps the compiler's own
   exception (e.g. a missing binding surfacing as `ray/compiler`'s or `ray/di`'s own `Unbound`),
   retrievable via `getPrevious()`, so a `CompileRunner::run()` caller no longer needs to catch a
   `ray/compiler`/`ray/di` exception type directly.
+
+### Deprecated
+
+- `getSavedSingleton()`, superseded by `SingletonWarmer`. Its declaration moved off
+  `ContextInterface` onto a new `SavedSingletonInterface` that `ContextInterface` extends, in a new
+  `src-deprecated/` directory autoloaded under the same namespace — so no application code changes,
+  and what a later release removes is one file and one `extends`. `AbstractContext` still provides
+  the `[]` default.
 
 ### Changed
 

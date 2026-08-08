@@ -148,6 +148,29 @@ arguments (layout, and create-or-not) whose only non-default caller is that one 
 
 **Would change it:** a second class needing the same non-default shape.
 
+### A `src-deprecated/` directory for what a later release removes — [#148][148]
+
+`ray/compiler`'s own convention, adopted here for the same reason: what is on its way out is
+visible from the file tree rather than from a tag someone has to open a file to see. Same namespace,
+listed as a second PSR-4 path, so nothing an application wrote changes when a declaration moves
+there.
+
+The first tenant is `getSavedSingleton()`, superseded by `SingletonWarmer`. It could not move as a
+file — it was a method on `ContextInterface`, which is not going anywhere — so it moved as
+`SavedSingletonInterface`, which `ContextInterface` extends. That is invisible to an implementer: it
+still has exactly one method to write. Removing it later is one file and one `extends` clause.
+`AbstractContext` keeps the three-line `[]` default; moving that too would need a trait, which buys
+nothing (`AbstractContext` would still name the deprecated thing, via `use` instead of a method
+body) and would be this codebase's only trait.
+
+The `@deprecated` tag sits on the *method*, not the interface. On the interface, `mago analyze`
+reports `ContextInterface`'s `extends` clause as using a deprecated type — correct in general, and
+here it flags the one structure the directory exists to support. The method is also the more
+accurate target: the contract is what callers should stop using.
+
+Two places outside `composer.json` need the directory too: `mago.toml`'s `[source] paths`, and
+`tests/gitattributes-check.sh`'s `top_level_dirs`, which pins exactly what a release archive ships.
+
 ### Reaching `warmup()` through a standalone `SingletonWarmer`, not the type system — [#148][148]
 
 `ray/compiler` 1.15.0 added `CompiledInjector::warmup()`, which instantiates every singleton the

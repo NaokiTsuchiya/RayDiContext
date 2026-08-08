@@ -11,7 +11,9 @@ $meta = AppMeta::fromAppDir(__DIR__, 'prod');
 
 try {
     $context = $provider->get($meta);
-    $car = $context->getInjectorInstance()->getInstance(ConsumerCarInterface::class);
+    $injector = $context->getInjectorInstance();
+    $injector->warmup();
+    $car = $injector->getInstance(ConsumerCarInterface::class);
 } catch (Throwable $e) {
     fwrite(STDERR, sprintf("%s: %s\n", $e::class, $e->getMessage()));
 

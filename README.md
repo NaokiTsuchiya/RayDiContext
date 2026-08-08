@@ -114,13 +114,13 @@ composer require naoki-tsuchiya/ray-di-context
 ## Usage
 
 ```php
-use NaokiTsuchiya\RayDiContext\AbstractCompiledContext;
 use NaokiTsuchiya\RayDiContext\AbstractContext;
+use NaokiTsuchiya\RayDiContext\AbstractWarmCompiledContext;
 use Ray\Di\AbstractModule;
 use Ray\Di\Injector;
 use Ray\Di\InjectorInterface;
 
-final class ProdContext extends AbstractCompiledContext
+final class ProdContext extends AbstractWarmCompiledContext
 {
     protected function appModule(): AbstractModule
     {
@@ -206,17 +206,29 @@ $meta = AppMeta::fromAppDir(
 $context = $provider->get($meta);
 $injector = $context->getInjectorInstance();
 
-foreach ($context->getSavedSingleton() as $class) {
-    $injector->getInstance($class);
+if ($injector instanceof WarmInjectorInterface) {
+    $injector->warmup();
 }
 ```
 
 `getInjectorInstance()` is called once and the result reused above — see the
 docblock on `ContextInterface::getInjectorInstance()` for why that matters.
-`getSavedSingleton()` names classes to instantiate once, right after boot: a
+`warmup()` instantiates every singleton the compile recorded, right after boot: a
 compiled injector never unserializes instances, so anything holding a runtime
-resource (a database connection, for example) needs this explicit warmup, or it
-won't exist until something happens to request it first.
+resource (a database connection, for example) won't exist until something happens
+to request it first, which under a coroutine runtime can be two requests at once.
+
+A `ProdContext` extending `AbstractWarmCompiledContext` returns a `CompiledWarmInjector`,
+so the `instanceof` above is only there because `ContextProviderInterface::get()` returns
+the wider `ContextInterface` — a `DevContext` returning a plain `Ray\Di\Injector` has
+nothing to warm and is skipped, as is a context still on `AbstractCompiledContext`.
+Narrowing `ContextInterface::getInjectorInstance()` to `WarmInjectorInterface`, which
+would remove the check, is left to a later release.
+
+`ContextInterface::getSavedSingleton()` is the predecessor `warmup()` supersedes: it
+named the classes to instantiate by hand, where `warmup()` reads what the compiler
+recorded and cannot miss one. It is untouched — it still works and still defaults to
+`[]` — and a context can use either.
 
 ### Verifying the compile
 
@@ -228,8 +240,8 @@ at whatever point your running app first asks for the binding.
 
 Catch that where the compile is caught: resolve the compiled result for real, in the build stage,
 before the image exists.
-[`examples/docker/bin/build-check`](examples/docker/bin/build-check) does this — it walks
-`getSavedSingleton()` and resolves the app's own entry point through the compiled injector, the
+[`examples/docker/bin/build-check`](examples/docker/bin/build-check) does this — it calls
+`warmup()` and resolves the app's own entry point through the compiled injector, the
 same way `bin/console` does at container start (above), except a failure here fails `docker build`
 instead of only surfacing once the image is already running.
 [`examples/docker/Dockerfile`](examples/docker/Dockerfile)'s build stage runs it with a `RUN` step

@@ -15,7 +15,7 @@
     "require": {
         "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
         "ray/di": "^2.19",
-        "ray/compiler": "^1.14"
+        "ray/compiler": "^1.15"
     },
     "require-dev": {
         "carthage-software/mago": "1.45.0",

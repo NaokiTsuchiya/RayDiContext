@@ -9,12 +9,9 @@ declare(strict_types=1);
  * and runs it as-is.
  */
 
-use NaokiTsuchiya\RayDiContext\AbstractContext;
+use NaokiTsuchiya\RayDiContext\AbstractWarmCompiledContext;
 use NaokiTsuchiya\RayDiContext\MapContextProvider;
-use Ray\Compiler\CompiledInjector;
-use Ray\Compiler\DiCompileModule;
 use Ray\Di\AbstractModule;
-use Ray\Di\InjectorInterface;
 
 interface GreeterInterface
 {
@@ -37,21 +34,11 @@ final class GreeterModule extends AbstractModule
     }
 }
 
-final class ExampleProdContext extends AbstractContext
+final class ExampleProdContext extends AbstractWarmCompiledContext
 {
-    public function __invoke(): AbstractModule
+    protected function appModule(): AbstractModule
     {
-        return new DiCompileModule(true, new GreeterModule());
-    }
-
-    public function getInjectorInstance(): InjectorInterface
-    {
-        return new CompiledInjector($this->meta->compileDir);
-    }
-
-    public function getSavedSingleton(): array
-    {
-        return [GreeterInterface::class];
+        return new GreeterModule();
     }
 }
 

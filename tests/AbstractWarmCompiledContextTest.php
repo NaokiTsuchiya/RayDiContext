@@ -11,9 +11,8 @@ use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Ray\Compiler\DiCompileModule;
 
-/** What the base class returns without a real compile; the resolution it produces is covered by CompiledWarmInjectorIntegrationTest */
+/** Behaviour that does not need a real compile; AbstractWarmCompiledContextIntegrationTest covers the compiled path */
 #[CoversClass(AbstractWarmCompiledContext::class)]
 final class AbstractWarmCompiledContextTest extends TestCase
 {
@@ -34,13 +33,6 @@ final class AbstractWarmCompiledContextTest extends TestCase
     protected function tearDown(): void
     {
         $this->fixture->remove();
-    }
-
-    /** @throws ExceptionInterface */
-    #[Test]
-    public function invokeComposesTheCompileModuleAroundTheAppModule(): void
-    {
-        static::assertInstanceOf(DiCompileModule::class, ($this->context)());
     }
 
     /** @throws ExceptionInterface */

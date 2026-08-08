@@ -148,6 +148,36 @@ arguments (layout, and create-or-not) whose only non-default caller is that one 
 
 **Would change it:** a second class needing the same non-default shape.
 
+### Adding `AbstractWarmCompiledContext` instead of warming up through the existing classes — [#148][148]
+
+`ray/compiler` 1.15.0 added `CompiledInjector::warmup()`, which instantiates every singleton the
+compile recorded in `singletons.json`. That supersedes `ContextInterface::getSavedSingleton()`
+outright: the hand-written list can omit a singleton, the compiler's cannot.
+
+Three ways to reach it were weighed. Narrowing `ContextInterface::getInjectorInstance()` to a
+`WarmInjectorInterface` is the end state — the caller writes `$injector->warmup()` with no
+`instanceof` — but it breaks every implementer at once. Changing
+`AbstractCompiledContext::getInjectorInstance()` to return the new decorator keeps the declared
+return type but silently changes the concrete class an existing context hands back. Both edit a
+class that already works.
+
+So the new behavior is a new class: `AbstractWarmCompiledContext` extends `AbstractCompiledContext`
+and overrides `getInjectorInstance()` alone, exactly what that class's docblock already says a
+subclass may do. `ContextInterface`, `AbstractContext` and `AbstractCompiledContext` are untouched,
+`getSavedSingleton()` still works and still defaults to `[]`, and a context moves over by changing
+which base class it extends. The cost is that `ContextProviderInterface::get()` still returns the
+wider `ContextInterface`, so the README's bootstrap keeps an `instanceof WarmInjectorInterface`
+around the `warmup()` call.
+
+`CompiledWarmInjector` is a decorator rather than a subclass because `Ray\Compiler\CompiledInjector`
+is `final`. Decorating puts `getInstance()` on a seam where `ray/compiler`'s `Unbound` could also be
+wrapped — the gap [#116][116] left open — but that changes an exception type callers already catch,
+so it is not taken here. One consequence is worth knowing: `getInstance(InjectorInterface::class)`
+returns the `CompiledInjector` underneath, which `warmup()` cannot be called on.
+
+**Would change it:** the narrowing above, whenever a release can afford to break implementers.
+`getSavedSingleton()` would go in the same one.
+
 ### Producing a non-flat compile output with a fake compiler instead of a qualifier — [#148][148]
 
 `PermissionNormalizer` and `Support\CompiledTree` both recurse, and one test covered that recursion:

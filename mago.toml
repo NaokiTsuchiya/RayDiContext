@@ -6,7 +6,7 @@
 php-version = "8.2"
 
 [source]
-paths = ["src", "src-deprecated", "tests"]
+paths = ["src", "tests"]
 includes = ["vendor"]
 excludes = ["tests/tmp", "tests/Fixture", "tests/dist", "tests/docker-check-probe.php", "tests/lowest-bound-check.php"]
 
@@ -117,14 +117,13 @@ must-implement = 'NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface'
 must-extend = 'RuntimeException'
 reason = "The base carries both the marker and the \\RuntimeException lineage every subclass relies on"
 
-# Root-namespace concrete classes are final; AbstractContext and AbstractCompiledContext are the
-# sole abstract exceptions.
+# Root-namespace concrete classes are final; AbstractContext is the sole abstract exception.
 [[guard.structural.rules]]
 on = 'NaokiTsuchiya\RayDiContext\*'
-not-on = 'NaokiTsuchiya\RayDiContext\Abstract{Context,CompiledContext}'
+not-on = 'NaokiTsuchiya\RayDiContext\AbstractContext'
 target = "class"
 must-be-final = true
-reason = "Every concrete class in the root namespace is final except AbstractContext and AbstractCompiledContext, which exist to be extended"
+reason = "Every concrete class in the root namespace is final except AbstractContext, which exists to be extended"
 
 # mago lint's class-name/interface-name rules only check PSR casing, not this package's *Interface suffix convention.
 [[guard.structural.rules]]

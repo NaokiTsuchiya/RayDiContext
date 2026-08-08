@@ -12,14 +12,14 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-/** What the warmer does to the injector an unmodified AbstractCompiledContext hands back */
+/** What the warmer does to the injector the builder hands back for a compiled context */
 #[CoversClass(SingletonWarmer::class)]
 final class SingletonWarmerIntegrationTest extends TestCase
 {
     /** Working directory and meta shared by the tests in this class */
     private AppDirFixture $fixture;
 
-    /** The injector a compiled context returns for the compiled scripts */
+    /** The compiled context whose scripts the warmer runs against */
     private FakeWarmupContext $context;
 
     /** @throws ExceptionInterface */
@@ -45,7 +45,7 @@ final class SingletonWarmerIntegrationTest extends TestCase
     #[Test]
     public function invokeInstantiatesTheSingletonBeforeAnythingResolvesIt(): void
     {
-        $injector = $this->context->getInjectorInstance();
+        $injector = (new InjectorBuilder())($this->context, $this->fixture->meta);
         static::assertSame(0, FakeWarmupProbe::constructed());
 
         (new SingletonWarmer())($injector);
@@ -57,7 +57,7 @@ final class SingletonWarmerIntegrationTest extends TestCase
     #[Test]
     public function invokeLeavesTheWarmedSingletonCachedForLaterResolution(): void
     {
-        $injector = $this->context->getInjectorInstance();
+        $injector = (new InjectorBuilder())($this->context, $this->fixture->meta);
         (new SingletonWarmer())($injector);
 
         $resolved = $injector->getInstance(FakeWarmupProbe::class);

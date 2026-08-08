@@ -9,7 +9,8 @@ declare(strict_types=1);
  * and runs it as-is.
  */
 
-use NaokiTsuchiya\RayDiContext\AbstractCompiledContext;
+use NaokiTsuchiya\RayDiContext\AbstractContext;
+use NaokiTsuchiya\RayDiContext\CompiledContextInterface;
 use NaokiTsuchiya\RayDiContext\MapContextProvider;
 use Ray\Di\AbstractModule;
 
@@ -34,9 +35,9 @@ final class GreeterModule extends AbstractModule
     }
 }
 
-final class ExampleProdContext extends AbstractCompiledContext
+final class ExampleProdContext extends AbstractContext implements CompiledContextInterface
 {
-    protected function appModule(): AbstractModule
+    public function __invoke(): AbstractModule
     {
         return new GreeterModule();
     }

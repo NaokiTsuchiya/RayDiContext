@@ -2,7 +2,13 @@
     "name": "naoki-tsuchiya/ray-di-context",
     "description": "Context, meta, and compile management for Ray.Di applications with separated read-only compile dir and writable tmp dir",
     "license": "MIT",
-    "keywords": ["di", "ray.di", "dependency-injection", "compiler", "context"],
+    "keywords": [
+        "di",
+        "ray.di",
+        "dependency-injection",
+        "compiler",
+        "context"
+    ],
     "authors": [
         {
             "name": "Naoki Tsuchiya"
@@ -27,10 +33,7 @@
     ],
     "autoload": {
         "psr-4": {
-            "NaokiTsuchiya\\RayDiContext\\": [
-                "src/",
-                "src-deprecated/"
-            ]
+            "NaokiTsuchiya\\RayDiContext\\": "src/"
         }
     },
     "autoload-dev": {
@@ -47,10 +50,26 @@
         "lint": "mago lint --minimum-fail-level note",
         "analyze": "mago analyze",
         "guard": "mago guard",
-        "fmt": ["mago fmt --check", "mago fmt --check bin/ray-di-compile"],
-        "cs": ["@lint", "@fmt"],
-        "sa": ["@analyze", "@guard"],
-        "tests": ["@cs", "@sa", "@test", "@dist", "@gitattributes-check", "@ci-matrix-check"],
+        "fmt": [
+            "mago fmt --check",
+            "mago fmt --check bin/ray-di-compile"
+        ],
+        "cs": [
+            "@lint",
+            "@fmt"
+        ],
+        "sa": [
+            "@analyze",
+            "@guard"
+        ],
+        "tests": [
+            "@cs",
+            "@sa",
+            "@test",
+            "@dist",
+            "@gitattributes-check",
+            "@ci-matrix-check"
+        ],
         "infection": "infection --no-progress"
     },
     "config": {

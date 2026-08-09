@@ -8,7 +8,6 @@ use NaokiTsuchiya\RayDiContext\Exception\CompileDirUnavailable;
 use Ray\Compiler\CompiledInjector;
 use Ray\Compiler\Exception\ScriptDirNotReadable;
 use Ray\Di\Injector;
-use Ray\Di\InjectorInterface;
 
 use function sprintf;
 
@@ -17,9 +16,10 @@ use function sprintf;
  *
  * A context carrying CompiledContextInterface gets a CompiledInjector over the read-only
  * $meta->compileDir; any other context gets a runtime injector compiling into
- * $meta->tmpDir as it resolves. Build once per process and reuse the result: singletons
- * are cached per instance, so warming one injector up and serving requests from another
- * warms nothing.
+ * $meta->tmpDir as it resolves. Which branch was taken travels with the result as its
+ * concrete class, so warmup() needs no runtime check anywhere. Build once per process and
+ * reuse the result: singletons are cached per instance, so warming one injector up and
+ * serving requests from another warms nothing.
  *
  * @api
  */
@@ -33,15 +33,15 @@ final class InjectorBuilder
      *         not exist or is not readable. Wraps ray/compiler's own ScriptDirNotReadable,
      *         retrievable via getPrevious().
      */
-    public function __invoke(ContextInterface $context, AppMeta $meta): InjectorInterface
+    public function __invoke(ContextInterface $context, AppMeta $meta): WarmableInjectorInterface
     {
         $isCompiled = $context instanceof CompiledContextInterface;
         if (!$isCompiled) {
-            return new Injector($context(), $meta->tmpDir);
+            return new RuntimeWarmableInjector(new Injector($context(), $meta->tmpDir));
         }
 
         try {
-            return new CompiledInjector($meta->compileDir);
+            return new CompiledWarmableInjector(new CompiledInjector($meta->compileDir));
         } catch (ScriptDirNotReadable $e) {
             throw new CompileDirUnavailable(
                 sprintf('Compile dir does not exist or is not readable: "%s"', $meta->compileDir),

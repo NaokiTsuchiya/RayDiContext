@@ -93,14 +93,18 @@ and the same `singletons.json` (only the `_bindings.log` debug text differs), be
 `Compiler::compile()` installs its own `CompilerModule`, which binds the `Compile` flag itself. A
 context therefore returns its bare application module, for every environment.
 
-`SingletonWarmer` is the optional second step, and the only part of this package a runtime bootstrap
-constructs itself. It instantiates every dependency `ray/compiler` recorded in `singletons.json` at
-compile time — every singleton it can build without a caller, which excludes an
-injection-point-dependent provider (rejected at compile time) and the AOP `MethodInvocation`
-binding. Doing that at boot is what keeps two concurrent requests under a coroutine runtime from
-each building the same singleton. It takes any `InjectorInterface`, leaves one that compiles at
-runtime alone, and raises `Exception\WarmupNotCompiled` for compiled scripts carrying no such
-metadata rather than quietly warming nothing.
+What the builder returns is a `WarmableInjectorInterface`, and the branch it took travels with the
+result as its concrete class: `CompiledWarmableInjector` wraps the `CompiledInjector` and its
+`warmup()` instantiates every dependency `ray/compiler` recorded in `singletons.json` at compile
+time — every singleton it can build without a caller, which excludes an injection-point-dependent
+provider (rejected at compile time) and the AOP `MethodInvocation` binding — rethrowing
+`ray/compiler`'s missing-metadata failure as `Exception\WarmupNotCompiled`;
+`RuntimeWarmableInjector` wraps the runtime injector, whose `warmup()` has nothing to do and
+returns quietly. Warming at boot is what keeps two concurrent requests under a coroutine runtime
+from each building the same singleton, and it stays a call the bootstrap makes by hand because
+whether to warm belongs to the runtime model (worker vs per-request), not to the context.
+Resolving `InjectorInterface` through the container returns the underlying injector, not the
+wrapper — warm the instance the builder returned.
 
 ## Extension points applications implement
 

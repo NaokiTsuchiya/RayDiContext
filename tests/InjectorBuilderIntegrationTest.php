@@ -14,7 +14,6 @@ use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Ray\Compiler\CompiledInjector;
 use SplFileInfo;
 
 use function chmod;
@@ -58,11 +57,11 @@ final class InjectorBuilderIntegrationTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function buildsACompiledInjectorResolvingTheCompiledAppModule(): void
+    public function buildsACompiledWarmableInjectorResolvingTheCompiledAppModule(): void
     {
         $injector = ($this->builder)(new FakeProdContext($this->meta), $this->meta);
 
-        static::assertInstanceOf(CompiledInjector::class, $injector);
+        static::assertInstanceOf(CompiledWarmableInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
 
@@ -75,7 +74,7 @@ final class InjectorBuilderIntegrationTest extends TestCase
 
         $injector = ($this->builder)(new FakeProdContext($this->meta), $this->meta);
 
-        static::assertInstanceOf(CompiledInjector::class, $injector);
+        static::assertInstanceOf(CompiledWarmableInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
         static::assertSame($before, $this->snapshot($this->meta->compileDir));
     }
@@ -108,7 +107,7 @@ final class InjectorBuilderIntegrationTest extends TestCase
 
         $injector = ($this->builder)(new FakeProdContext($relocatedMeta), $relocatedMeta);
 
-        static::assertInstanceOf(CompiledInjector::class, $injector);
+        static::assertInstanceOf(CompiledWarmableInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
 

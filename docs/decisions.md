@@ -180,7 +180,7 @@ need them:
 **Would change it:** a deprecation on a >=1.0 release line, where a consumer contract makes the
 two-step migration the point rather than overhead.
 
-### Reaching `warmup()` through a standalone `SingletonWarmer`, not the type system — [#148][148]
+### Reaching `warmup()` through a standalone `SingletonWarmer` — built in [#148][148], then moved onto the builder's return type
 
 `ray/compiler` 1.15.0 added `CompiledInjector::warmup()`, which instantiates every singleton the
 compile recorded in `singletons.json`. That supersedes `ContextInterface::getSavedSingleton()`
@@ -210,17 +210,30 @@ unlike compiled scripts with no metadata, where `ray/compiler` throws for the sa
 package rethrows as `Exception\WarmupNotCompiled` (a silent success would claim protection that is
 not there).
 
-The warmer also survived the [#148][148] break that removed `getInjectorInstance()` unchanged, for
-a reason found while designing that break: whether to warm is a property of the runtime model, not
-of the context. `CompiledInjector` caches singletons per *instance*, so a worker runtime (Swoole)
-warms once per process and every request benefits, while PHP-FPM rebuilds the injector per request
-and warming everything up front costs more than resolving lazily. Any design that welds warmup to
-the context or to injector construction — the decorator above, or `InjectorBuilder` warming
-automatically — gets prod-under-FPM wrong. Only a call the bootstrap makes by hand can sit on the
-correct axis.
+One reason found here outlives every later reshaping: whether to warm is a property of the runtime
+model, not of the context. `CompiledInjector` caches singletons per *instance*, so a worker runtime
+(Swoole) warms once per process and every request benefits, while PHP-FPM rebuilds the injector per
+request and warming everything up front costs more than resolving lazily. Any design that welds
+warmup to the context or to *automatic* injector construction gets prod-under-FPM wrong; warmup has
+to stay a call the bootstrap makes by hand.
 
-**Would change it:** a second collaborator wanting the same "can this injector be warmed" question
-answered — two `instanceof CompiledInjector` sites is when the type belongs in the type system.
+The standalone warmer itself did not survive [#148][148]'s later rounds. Once the same PR removed
+`getInjectorInstance()` and made `InjectorBuilder` own construction, the decorator's two original
+sins — the context returned it, and the widened `ContextInterface` return type hid `warmup()` —
+were both gone: the builder's return type is this package's to declare. `warmup()` moved onto that
+return type as `WarmableInjectorInterface`, with the branch the builder took travelling as the
+concrete class — `CompiledWarmableInjector` (delegate, rethrow missing metadata as
+`WarmupNotCompiled`) or `RuntimeWarmableInjector` (nothing to warm, returns quietly). Two classes
+rather than one with an `instanceof` inside, because the builder already knows the branch at
+construction; re-deriving it at warm time would repeat the exact mistake this entry's own
+"Would change it" line warned about — and with the split, no `instanceof` against an injector type
+remains anywhere. The costs accepted: one delegation hop per resolution, and
+`getInstance(InjectorInterface::class)` returning the underlying injector rather than the wrapper
+(documented on the interface; warmup is a boot operation, so nothing sensible calls it on a
+container-resolved injector).
+
+**Would change it:** an application implementing `WarmableInjectorInterface` itself and being
+broken by a method addition — the interface is kept to `warmup()` alone for that reason.
 
 ### The context stops carrying the injector — a marker interface and `InjectorBuilder`, not an enum or a factory method — [#148][148]
 
@@ -230,9 +243,9 @@ from runtime everywhere else, and the fusion had a documented failure mode — `
 warned that a subclass overriding one method but not the other loses the guarantee the two agree.
 The break removes `getInjectorInstance()`; a context supplies its module and declares one bit,
 "resolved from the compiled scripts", by implementing the `CompiledContextInterface` marker.
-`InjectorBuilder` — a standalone collaborator like `SingletonWarmer` — turns `(context, meta)` into
-the injector and owns the `CompileDirUnavailable` bracketing, which previously protected only
-contexts extending `AbstractCompiledContext`, not hand-written ones.
+`InjectorBuilder` turns `(context, meta)` into a `WarmableInjectorInterface` and owns the
+`CompileDirUnavailable` bracketing, which previously protected only contexts extending
+`AbstractCompiledContext`, not hand-written ones.
 
 Two shapes for declaring the bit were rejected first. An `injectorKind(): InjectorKind` enum method
 adds a method every implementer must answer and closes the set of strategies in a package that

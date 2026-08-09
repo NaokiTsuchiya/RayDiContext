@@ -212,7 +212,6 @@ different place than they were baked into:
 ```php
 use NaokiTsuchiya\RayDiContext\AppMeta;
 use NaokiTsuchiya\RayDiContext\InjectorBuilder;
-use NaokiTsuchiya\RayDiContext\SingletonWarmer;
 
 $provider = require 'bootstrap.php';
 $meta = AppMeta::fromAppDir(
@@ -224,26 +223,30 @@ $meta = AppMeta::fromAppDir(
 $context = $provider->get($meta);
 $injector = (new InjectorBuilder())($context, $meta);
 
-(new SingletonWarmer())($injector);
+$injector->warmup();
 ```
 
 `InjectorBuilder` reads one thing: whether the context carries `CompiledContextInterface`.
 A marked context gets a read-only `CompiledInjector` over `compileDir`; any other context
-gets a runtime `Ray\Di\Injector` that compiles into `tmpDir` as it resolves. Build once
-per process and reuse the result — singletons are cached per injector instance, so warming
-one instance up and then serving requests from another warms nothing.
+gets a runtime `Ray\Di\Injector` that compiles into `tmpDir` as it resolves. The result is
+a `WarmableInjectorInterface` carrying that decision as its concrete class —
+`CompiledWarmableInjector` or `RuntimeWarmableInjector` — so `warmup()` needs no runtime
+check anywhere. Build once per process and reuse the result: singletons are cached per
+injector instance, so warming one instance up and then serving requests from another warms
+nothing.
 
-`SingletonWarmer` instantiates every singleton the compile recorded, before anything asks
-for one: a compiled injector never unserializes instances, so anything holding a runtime
+`warmup()` instantiates every singleton the compile recorded, before anything asks for
+one: a compiled injector never unserializes instances, so anything holding a runtime
 resource (a database connection, for example) won't exist until something happens to
 request it first, which under a coroutine runtime can be two requests at once. Call it at
 worker start under Swoole and friends; **skip it in a PHP-FPM or short-lived-CLI runtime
 bootstrap**, where the injector lives for one request and warming everything up front costs
 more than resolving lazily. A build-stage check is the deliberate exception: there the cost
 is the point — resolving every compiled singleton for real before the image ships is what
-catches a broken binding, which is exactly how `examples/docker/bin/build-check` uses it. The warmer leaves a runtime injector alone, and raises
-`Exception\WarmupNotCompiled` for compiled scripts carrying no singleton metadata rather
-than quietly warming nothing.
+catches a broken binding, which is exactly how `examples/docker/bin/build-check` uses it.
+A runtime injector compiles as it resolves, so its `warmup()` has nothing to do and returns
+quietly — one bootstrap serves every environment; compiled scripts carrying no singleton
+metadata raise `Exception\WarmupNotCompiled` rather than quietly warming nothing.
 
 ### Verifying the compile
 
@@ -255,8 +258,8 @@ at whatever point your running app first asks for the binding.
 
 Catch that where the compile is caught: resolve the compiled result for real, in the build stage,
 before the image exists.
-[`examples/docker/bin/build-check`](examples/docker/bin/build-check) does this — it runs the
-`SingletonWarmer` and resolves the app's own entry point through the compiled injector, the
+[`examples/docker/bin/build-check`](examples/docker/bin/build-check) does this — it calls
+`warmup()` and resolves the app's own entry point through the compiled injector, the
 same way `bin/console` does at container start (above), except a failure here fails `docker build`
 instead of only surfacing once the image is already running.
 [`examples/docker/Dockerfile`](examples/docker/Dockerfile)'s build stage runs it with a `RUN` step

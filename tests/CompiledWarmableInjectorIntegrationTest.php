@@ -11,23 +11,24 @@ use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Ray\Compiler\CompiledInjector;
 
-/** What the warmer does to the injector the builder hands back for a compiled context */
-#[CoversClass(SingletonWarmer::class)]
-final class SingletonWarmerIntegrationTest extends TestCase
+/** What the wrapper does against scripts a real ray/compiler run produced */
+#[CoversClass(CompiledWarmableInjector::class)]
+final class CompiledWarmableInjectorIntegrationTest extends TestCase
 {
     /** Working directory and meta shared by the tests in this class */
     private AppDirFixture $fixture;
 
-    /** The compiled context whose scripts the warmer runs against */
-    private FakeWarmupContext $context;
+    /** System under test, over a freshly compiled dir carrying one singleton */
+    private CompiledWarmableInjector $injector;
 
     /** @throws ExceptionInterface */
     protected function setUp(): void
     {
-        $this->fixture = new AppDirFixture('warmer_integration_');
+        $this->fixture = new AppDirFixture('compiled_warmable_integration_');
         (new CompileRunner(new MapContextProvider(['prod' => FakeWarmupContext::class])))->run($this->fixture->meta);
-        $this->context = new FakeWarmupContext($this->fixture->meta);
+        $this->injector = new CompiledWarmableInjector(new CompiledInjector($this->fixture->meta->compileDir));
         FakeWarmupProbe::reset();
     }
 
@@ -43,24 +44,22 @@ final class SingletonWarmerIntegrationTest extends TestCase
      * @throws ExceptionInterface
      */
     #[Test]
-    public function invokeInstantiatesTheSingletonBeforeAnythingResolvesIt(): void
+    public function warmupInstantiatesTheSingletonBeforeAnythingResolvesIt(): void
     {
-        $injector = (new InjectorBuilder())($this->context, $this->fixture->meta);
         static::assertSame(0, FakeWarmupProbe::constructed());
 
-        (new SingletonWarmer())($injector);
+        $this->injector->warmup();
 
         static::assertSame(1, FakeWarmupProbe::constructed());
     }
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function invokeLeavesTheWarmedSingletonCachedForLaterResolution(): void
+    public function getInstanceResolvesTheWarmedSingletonFromTheCache(): void
     {
-        $injector = (new InjectorBuilder())($this->context, $this->fixture->meta);
-        (new SingletonWarmer())($injector);
+        $this->injector->warmup();
 
-        $resolved = $injector->getInstance(FakeWarmupProbe::class);
+        $resolved = $this->injector->getInstance(FakeWarmupProbe::class);
 
         static::assertInstanceOf(FakeWarmupProbe::class, $resolved);
         static::assertSame(1, FakeWarmupProbe::constructed());

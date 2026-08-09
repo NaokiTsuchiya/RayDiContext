@@ -15,7 +15,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Ray\Compiler\Exception\ScriptDirNotReadable;
-use Ray\Di\Injector;
 
 /** What the builder does without a real compile; InjectorBuilderIntegrationTest covers the compiled path */
 #[CoversClass(InjectorBuilder::class)]
@@ -42,13 +41,13 @@ final class InjectorBuilderTest extends TestCase
 
     /** @throws ExceptionInterface */
     #[Test]
-    public function buildsARuntimeInjectorForAContextWithoutTheCompiledMarker(): void
+    public function buildsARuntimeWarmableInjectorForAContextWithoutTheCompiledMarker(): void
     {
         $context = new FakeDevContext($this->fixture->meta);
 
         $injector = ($this->builder)($context, $this->fixture->meta);
 
-        static::assertInstanceOf(Injector::class, $injector);
+        static::assertInstanceOf(RuntimeWarmableInjector::class, $injector);
         static::assertInstanceOf(FakeCar::class, $injector->getInstance(FakeCarInterface::class));
     }
 

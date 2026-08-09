@@ -282,11 +282,11 @@ every mapped environment instantiable at map construction without running a cons
 **Would change it:** nothing identified; the open questions are additive (a second bundled injector
 strategy would extend `InjectorBuilder`, not reshape the context).
 
-### Producing a non-flat compile output with a fake compiler instead of a qualifier — [#148][148]
+### Dropping the non-flat compile-output test rather than rebuilding it — [#148][148]
 
-`PermissionNormalizer` and `Support\CompiledTree` both recurse, and one test covered that recursion:
+`PermissionNormalizer` recurses, and one test covered that recursion through a real compile:
 `FakeQualifiedModule` bound `annotatedWith('a.php/b')`, so `ray/compiler` wrote a script into a
-directory named `a.php` under the compile dir — a real compile whose output was not flat.
+directory named `a.php` under the compile dir.
 
 `ray/compiler` 1.15.0 removed that shape. Its `ScriptName` rejects a dependency index carrying a
 byte outside `[A-Za-z0-9_.-]` with `InvalidQualifier`, because a qualifier is arbitrary
@@ -294,14 +294,18 @@ byte outside `[A-Za-z0-9_.-]` with `InvalidQualifier`, because a qualifier is ar
 same class of concern `BakedPathGuard` exists for, fixed one layer down. `composer.lock` is
 gitignored and the constraint is a caret, so this arrived on `main` the day 1.15.0 was released.
 
-Nesting is now reachable only through a `ScriptCompilerInterface` an application supplies, so
-`FakeNestingCompiler` writes `nested/compiled.php` at `0o700`/`0o600` and the test moved to
-`CompileRunnerTest` — it no longer needs a real compile, which is the whole of what puts a test in
-the integration tier ([#140][140]). It keeps its teeth: dropping `normalizeContents()`'s recursive
-call fails it on the nested script's mode.
+Nesting became reachable only through an injected `ScriptCompilerInterface`, so the test was first
+rebuilt on a `FakeNestingCompiler` writing `nested/compiled.php` at `0o700`/`0o600`. That
+replacement was then deleted: it detected nothing its neighbours did not. Removing
+`normalizeContents()`'s recursive call fails `PermissionNormalizerTest::normalizesFilesAndDirectories`
+on its own (asserting `0o644`/`0o755` exactly, against the rebuilt test's weaker "some nested
+`*.php` is world-readable"), and `CompileRunnerIntegrationTest` already pins that a real `run()`
+leaves a world-readable tree. The rebuilt test asserted only the conjunction of two facts already
+held separately, at the cost of a fake whose job was to fabricate an output shape the compiler can
+no longer produce.
 
-**Would change it:** `ray/compiler` emitting nested output on its own again, which would put a real
-compile back within reach of the integration tier.
+**Would change it:** `ray/compiler` emitting nested output on its own again — a real compile would
+then cover the composition without a fake.
 
 ### Pinning a runtime dependency to a minor so Renovate reports it — [#116][116]
 

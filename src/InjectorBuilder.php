@@ -16,10 +16,7 @@ use function sprintf;
  *
  * A context carrying CompiledContextInterface gets a CompiledInjector over the read-only
  * $meta->compileDir; any other context gets a runtime injector compiling into
- * $meta->tmpDir as it resolves. Which branch was taken travels with the result as its
- * concrete class, so warmup() needs no runtime check anywhere. Build once per process and
- * reuse the result: singletons are cached per instance, so warming one injector up and
- * serving requests from another warms nothing.
+ * $meta->tmpDir as it resolves.
  *
  * @api
  */
@@ -29,9 +26,8 @@ final class InjectorBuilder
      * @param ContextInterface $context The context this process serves
      * @param AppMeta          $meta    Application metadata naming the directories
      *
-     * @throws CompileDirUnavailable When the context is compiled and $meta->compileDir does
-     *         not exist or is not readable. Wraps ray/compiler's own ScriptDirNotReadable,
-     *         retrievable via getPrevious().
+     * @throws CompileDirUnavailable When a compiled context's $meta->compileDir is missing or
+     *         unreadable.
      */
     public function __invoke(ContextInterface $context, AppMeta $meta): WarmableInjectorInterface
     {

@@ -8,24 +8,19 @@ use NaokiTsuchiya\RayDiContext\Exception\CompileFailed;
 use NaokiTsuchiya\RayDiContext\Exception\ExceptionInterface;
 use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 use NaokiTsuchiya\RayDiContext\Exception\UnsafeCompileDir;
-use NaokiTsuchiya\RayDiContext\Fake\FakeNestingCompiler;
 use NaokiTsuchiya\RayDiContext\Fake\FakeProdContext;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRecordingCompiler;
 use NaokiTsuchiya\RayDiContext\Fake\FakeRejectingGuard;
 use NaokiTsuchiya\RayDiContext\Fake\FakeThrowingCompiler;
 use NaokiTsuchiya\RayDiContext\Fake\FakeThrowingContext;
 use NaokiTsuchiya\RayDiContext\Support\AppDirFixture;
-use NaokiTsuchiya\RayDiContext\Support\CompiledTree;
 use NaokiTsuchiya\RayDiContext\Support\Fs;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
-use function array_filter;
-use function dirname;
 use function glob;
-use function str_ends_with;
 
 /** Steps run() takes without ever reaching a real compile; CompileRunnerIntegrationTest covers the rest */
 #[CoversClass(CompileRunner::class)]
@@ -171,29 +166,6 @@ final class CompileRunnerTest extends TestCase
         } catch (UnsafeCompileDir) {
             static::assertSame([], glob("{$this->meta->compileDir}/*"));
         }
-    }
-
-    /**
-     * A compile whose output is not flat is normalized all the way down
-     *
-     * @throws ExceptionInterface
-     */
-    #[Test]
-    public function runNormalizesAScriptCompiledIntoASubdirectory(): void
-    {
-        $runner = new CompileRunner(new MapContextProvider([
-            'prod' => FakeProdContext::class,
-        ]), compiler: new FakeNestingCompiler());
-
-        $runner->run($this->meta);
-
-        $compileDir = $this->meta->compileDir;
-        $nested = array_filter(
-            CompiledTree::assertWorldReadable($compileDir),
-            static fn(string $path): bool => str_ends_with($path, '.php') && $compileDir !== dirname($path),
-        );
-
-        static::assertNotSame([], $nested);
     }
 
     /** Seeds a stale script only the ordering-sensitive tests need, so it cannot bias the others */

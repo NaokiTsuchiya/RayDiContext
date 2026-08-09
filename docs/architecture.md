@@ -104,7 +104,9 @@ returns quietly. Warming at boot is what keeps two concurrent requests under a c
 from each building the same singleton, and it stays a call the bootstrap makes by hand because
 whether to warm belongs to the runtime model (worker vs per-request), not to the context.
 Resolving `InjectorInterface` through the container returns the underlying injector, not the
-wrapper — warm the instance the builder returned.
+wrapper — warm the instance the builder returned. Build once per process and reuse the result:
+`CompiledInjector` caches singletons in an instance property, so warming one injector and serving
+requests from another warms nothing.
 
 ## Extension points applications implement
 

@@ -79,22 +79,47 @@ execute it opens fine and every per-entry `stat()` fails instead, leaking one wa
 
 At runtime the application never touches `Cleaner`, `BakedPathGuard` or the compiler. It builds an
 `AppMeta` with the *same* `compileDir`/`tmpDir` used at compile time, looks up the `ContextInterface`
-through its own `ContextProviderInterface`, and calls `getInjectorInstance()`. A production context
-extending `AbstractCompiledContext` returns `Ray\Compiler\CompiledInjector($meta->compileDir)`,
-which only reads; that call lives in the base class, not application code. Getting the two
-directories out of sync between compile time and runtime is the main way to misuse this package.
+through its own `ContextProviderInterface`, and hands both to `InjectorBuilder`. The builder reads
+one thing — whether the context carries `CompiledContextInterface` — and returns a read-only
+`Ray\Compiler\CompiledInjector($meta->compileDir)` for a marked context or a runtime
+`Ray\Di\Injector($context(), $meta->tmpDir)` otherwise, rethrowing ray/compiler's own
+directory-check failure as `Exception\CompileDirUnavailable` on the marked path. No `Ray\Compiler`
+class name reaches application code. Getting the two directories out of sync between compile time and
+runtime is the main way to misuse this package.
+
+The compile side never wraps the module in `DiCompileModule`: measured against `ray/compiler`
+1.15.0, the wrapped and unwrapped compiles of the same module produce byte-identical script trees
+and the same `singletons.json` (only the `_bindings.log` debug text differs), because
+`Compiler::compile()` installs its own `CompilerModule`, which binds the `Compile` flag itself. A
+context therefore returns its bare application module, for every environment.
+
+What the builder returns is a `WarmableInjectorInterface`, and the branch it took travels with the
+result as its concrete class: `CompiledWarmableInjector` wraps the `CompiledInjector` and its
+`warmup()` instantiates every dependency `ray/compiler` recorded in `singletons.json` at compile
+time — every singleton it can build without a caller, which excludes an injection-point-dependent
+provider (rejected at compile time) and the AOP `MethodInvocation` binding — rethrowing
+`ray/compiler`'s missing-metadata failure as `Exception\WarmupNotCompiled`;
+`RuntimeWarmableInjector` wraps the runtime injector, whose `warmup()` has nothing to do and
+returns quietly. Warming at boot is what keeps two concurrent requests under a coroutine runtime
+from each building the same singleton, and it stays a call the bootstrap makes by hand because
+whether to warm belongs to the runtime model (worker vs per-request), not to the context.
+Resolving `InjectorInterface` through the container returns the underlying injector, not the
+wrapper — warm the instance the builder returned. Build once per process and reuse the result:
+`CompiledInjector` caches singletons in an instance property, so warming one injector and serving
+requests from another warms nothing.
 
 ## Extension points applications implement
 
-- **`ContextInterface`** — one per environment. Extend `AbstractContext`, whose constructor is
-  `final` so `MapContextProvider`'s `new $class($meta)` stays valid for every subclass. See the
-  interface's docblocks for the injector and `getSavedSingleton()` contracts.
-  For the ahead-of-time compiled production shape, extend `AbstractCompiledContext` instead and
-  implement only `appModule()` — it composes `DiCompileModule`/`CompiledInjector` so the consumer
-  never imports those class names.
+- **`ContextInterface`** — one per environment, and one method: `__invoke(): AbstractModule`.
+  Extend `AbstractContext`, whose constructor is `final` so `MapContextProvider`'s
+  `new $class($meta)` stays valid for every subclass. For the ahead-of-time compiled production
+  shape, additionally implement the `CompiledContextInterface` marker — that `implements` clause
+  is the entire difference between a dev context and a prod context.
 - **`ContextProviderInterface`** — maps an `AppMeta` to a `ContextInterface`. `MapContextProvider`
   is the bundled name→class-string implementation, and a bootstrap file returns one of these; it
-  validates the whole map at construction (see its docblock).
+  validates the whole map at construction (see its docblock). A context whose constructor takes
+  more than `AppMeta` does not fit that map — the application implements this interface directly
+  (a `match` over `$meta->context`), keeping every construction a statically checked call.
 - **`CompileDirGuardInterface`** — only needed when the bundled guard's two checks (filesystem root,
   compile dir containing the app dir) are not strict enough for an app's layout.
 - **`BakedPathGuardInterface`** — the same idea on the verification side. For the common case pass

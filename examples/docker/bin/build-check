@@ -13,6 +13,7 @@ declare(strict_types=1);
  */
 
 use NaokiTsuchiya\RayDiContext\AppMeta;
+use NaokiTsuchiya\RayDiContext\InjectorBuilder;
 
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/build-check-support.php';
@@ -32,18 +33,15 @@ spl_autoload_register(
 $provider = require __DIR__ . '/../bootstrap.php';
 
 // Deliberately not /app/var/tmp (the runtime value bin/console and the README use): /app is
-// COPY-ed wholesale into the final image, so anything getSavedSingleton() wrote into a tmpDir
+// COPY-ed wholesale into the final image, so anything the warmup wrote into a tmpDir
 // under /app here would get baked in, defeating tmpDir's "never baked" invariant. This example
 // never writes into tmpDir, but a real one might.
 $meta = AppMeta::fromAppDir('/app', 'prod', '/app/var/di/prod', sys_get_temp_dir() . '/ray-di-context-build-check');
 
 try {
     $context = $provider->get($meta);
-    $injector = $context->getInjectorInstance();
-
-    foreach ($context->getSavedSingleton() as $class) {
-        $injector->getInstance($class);
-    }
+    $injector = (new InjectorBuilder())($context, $meta);
+    $injector->warmup();
 
     $greeter = $injector->getInstance(GreeterInterface::class);
     fwrite(STDOUT, sprintf("build-check: resolved GreeterInterface: %s\n", $greeter->greet()));

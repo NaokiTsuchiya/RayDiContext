@@ -31,7 +31,7 @@ via `Support\PermissionBits`, which measures the capability rather than reading 
 therefore skips them, a non-root run skips nothing. CI is non-root on purpose — don't move the
 `test` job into a `container:`.
 
-`MapContextProviderResolutionTest::resolvesFromReadOnlyCompileDir` is the opposite case and must
+`InjectorBuilderIntegrationTest::resolvesFromReadOnlyCompileDir` is the opposite case and must
 **not** skip: its assertion is a per-file `sha256` snapshot that never depended on the mode.
 
 `composer dist` is the only test that exercises the package as a consumer does, through Composer's

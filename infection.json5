@@ -4,22 +4,21 @@
     },
     "mutators": {
         "@default": true,
-        // BakedPathScanner's scan offset: see docs/decisions.md "Why three mutants are ignored".
+        // BakedPathScanner's scan offset: see docs/decisions.md "Why two kinds of mutants are ignored".
         "IncrementInteger": {
             "ignore": [
                 "NaokiTsuchiya\\RayDiContext\\BakedPathScanner::hasBakedPath",
                 "NaokiTsuchiya\\RayDiContext\\BakedPathScanner::compileDirRanges",
             ],
         },
-        // AbstractCompiledContext's unread DiCompileModule flag and Cli::write()'s suppressed
-        // warning: see docs/decisions.md "Why three mutants are ignored".
+        // Cli::write()'s suppressed warning: see docs/decisions.md "Why two kinds of mutants
+        // are ignored".
         "TrueValue": {
             "ignore": [
-                "NaokiTsuchiya\\RayDiContext\\AbstractCompiledContext::__invoke",
                 "NaokiTsuchiya\\RayDiContext\\Cli::write",
             ],
         },
-        // Cli::write()'s try/finally: see docs/decisions.md "Why three mutants are ignored".
+        // Cli::write()'s try/finally: see docs/decisions.md "Why two kinds of mutants are ignored".
         "UnwrapFinally": {
             "ignore": [
                 "NaokiTsuchiya\\RayDiContext\\Cli::write",

@@ -114,15 +114,13 @@ composer require naoki-tsuchiya/ray-di-context
 ## Usage
 
 ```php
-use NaokiTsuchiya\RayDiContext\AbstractCompiledContext;
 use NaokiTsuchiya\RayDiContext\AbstractContext;
+use NaokiTsuchiya\RayDiContext\CompiledContextInterface;
 use Ray\Di\AbstractModule;
-use Ray\Di\Injector;
-use Ray\Di\InjectorInterface;
 
-final class ProdContext extends AbstractCompiledContext
+final class ProdContext extends AbstractContext implements CompiledContextInterface
 {
-    protected function appModule(): AbstractModule
+    public function __invoke(): AbstractModule
     {
         return new AppModule();
     }
@@ -134,13 +132,12 @@ final class DevContext extends AbstractContext
     {
         return new AppModule();
     }
-
-    public function getInjectorInstance(): InjectorInterface
-    {
-        return new Injector($this(), $this->meta->tmpDir);
-    }
 }
 ```
+
+A context supplies its module, and nothing else. The two classes above differ only in the
+`implements` clause: `CompiledContextInterface` is a marker, and it is the single place
+where "this environment resolves from the ahead-of-time compiled scripts" is stated.
 
 Compile ahead of time with the bundled `bin/ray-di-compile` CLI. It takes a
 *bootstrap* file that returns your `ContextProviderInterface`, the app dir, the
@@ -152,6 +149,41 @@ use NaokiTsuchiya\RayDiContext\MapContextProvider;
 
 return new MapContextProvider(['prod' => ProdContext::class, 'dev' => DevContext::class]);
 ```
+
+`MapContextProvider` proves at construction that every mapped class exists, is
+instantiable, and extends `AbstractContext` — a typo in an environment nobody has compiled
+yet fails the moment the map is built. That validation is possible because the map holds
+class names, which also means every context is built as `new $class($meta)`: a context
+needing constructor dependencies beyond `AppMeta` (a secrets loader, a clock) implements
+`ContextInterface` directly, and the bootstrap implements `ContextProviderInterface` itself
+instead of using the map — a `match` keeps every construction a statically checked call:
+
+```php
+use NaokiTsuchiya\RayDiContext\AppMeta;
+use NaokiTsuchiya\RayDiContext\ContextInterface;
+use NaokiTsuchiya\RayDiContext\ContextProviderInterface;
+use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
+
+final class AppContextProvider implements ContextProviderInterface
+{
+    public function __construct(private readonly SecretsLoader $secrets)
+    {
+    }
+
+    public function get(AppMeta $meta): ContextInterface
+    {
+        return match ($meta->context) {
+            'prod' => new SecretAwareProdContext($meta, $this->secrets),
+            'dev' => new DevContext($meta),
+            default => throw new UnknownContext(sprintf('Unknown context "%s"', $meta->context)),
+        };
+    }
+}
+```
+
+`SecretAwareProdContext` here implements `ContextInterface` directly, its constructor taking the
+`AppMeta` and the loader — unlike the `ProdContext` above, whose `AbstractContext` constructor
+takes `AppMeta` alone.
 
 ```
 php vendor/bin/ray-di-compile bootstrap.php "$(pwd)" prod
@@ -196,6 +228,9 @@ to the CLI above — a mismatch means the running app looks for compiled scripts
 different place than they were baked into:
 
 ```php
+use NaokiTsuchiya\RayDiContext\AppMeta;
+use NaokiTsuchiya\RayDiContext\InjectorBuilder;
+
 $provider = require 'bootstrap.php';
 $meta = AppMeta::fromAppDir(
     dirname(__DIR__),
@@ -204,19 +239,32 @@ $meta = AppMeta::fromAppDir(
     getenv('APP_TMP_DIR') ?: null,
 );
 $context = $provider->get($meta);
-$injector = $context->getInjectorInstance();
+$injector = (new InjectorBuilder())($context, $meta);
 
-foreach ($context->getSavedSingleton() as $class) {
-    $injector->getInstance($class);
-}
+$injector->warmup();
 ```
 
-`getInjectorInstance()` is called once and the result reused above — see the
-docblock on `ContextInterface::getInjectorInstance()` for why that matters.
-`getSavedSingleton()` names classes to instantiate once, right after boot: a
-compiled injector never unserializes instances, so anything holding a runtime
-resource (a database connection, for example) needs this explicit warmup, or it
-won't exist until something happens to request it first.
+`InjectorBuilder` reads one thing: whether the context carries `CompiledContextInterface`.
+A marked context gets a read-only `CompiledInjector` over `compileDir`; any other context
+gets a runtime `Ray\Di\Injector` that compiles into `tmpDir` as it resolves. The result is
+a `WarmableInjectorInterface` carrying that decision as its concrete class —
+`CompiledWarmableInjector` or `RuntimeWarmableInjector` — so `warmup()` needs no runtime
+check anywhere. Build once per process and reuse the result: singletons are cached per
+injector instance, so warming one instance up and then serving requests from another warms
+nothing.
+
+`warmup()` instantiates every singleton the compile recorded, before anything asks for
+one: a compiled injector never unserializes instances, so anything holding a runtime
+resource (a database connection, for example) won't exist until something happens to
+request it first, which under a coroutine runtime can be two requests at once. Call it at
+worker start under Swoole and friends; **skip it in a PHP-FPM or short-lived-CLI runtime
+bootstrap**, where the injector lives for one request and warming everything up front costs
+more than resolving lazily. A build-stage check is the deliberate exception: there the cost
+is the point — resolving every compiled singleton for real before the image ships is what
+catches a broken binding, which is exactly how `examples/docker/bin/build-check` uses it.
+A runtime injector compiles as it resolves, so its `warmup()` has nothing to do and returns
+quietly — one bootstrap serves every environment; compiled scripts carrying no singleton
+metadata raise `Exception\WarmupNotCompiled` rather than quietly warming nothing.
 
 ### Verifying the compile
 
@@ -228,8 +276,8 @@ at whatever point your running app first asks for the binding.
 
 Catch that where the compile is caught: resolve the compiled result for real, in the build stage,
 before the image exists.
-[`examples/docker/bin/build-check`](examples/docker/bin/build-check) does this — it walks
-`getSavedSingleton()` and resolves the app's own entry point through the compiled injector, the
+[`examples/docker/bin/build-check`](examples/docker/bin/build-check) does this — it calls
+`warmup()` and resolves the app's own entry point through the compiled injector, the
 same way `bin/console` does at container start (above), except a failure here fails `docker build`
 instead of only surfacing once the image is already running.
 [`examples/docker/Dockerfile`](examples/docker/Dockerfile)'s build stage runs it with a `RUN` step

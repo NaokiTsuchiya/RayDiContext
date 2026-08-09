@@ -4,6 +4,7 @@
 declare(strict_types=1);
 
 use NaokiTsuchiya\RayDiContext\AppMeta;
+use NaokiTsuchiya\RayDiContext\InjectorBuilder;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -12,7 +13,9 @@ $meta = AppMeta::fromAppDir('/app', 'prod', '/app/var/di/prod', '/app/var/tmp');
 
 try {
     $context = $provider->get($meta);
-    $greeter = $context->getInjectorInstance()->getInstance(GreeterInterface::class);
+    $injector = (new InjectorBuilder())($context, $meta);
+    $injector->warmup();
+    $greeter = $injector->getInstance(GreeterInterface::class);
     fwrite(STDOUT, sprintf("resolved GreeterInterface: %s\n", $greeter->greet()));
     exit(0);
 } catch (Throwable $e) {

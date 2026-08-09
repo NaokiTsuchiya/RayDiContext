@@ -87,7 +87,9 @@ A second `not-on` entry landed in [#119][119]: `not-on = 'NaokiTsuchiya\RayDiCon
 (the brace form, since `mago.toml` rejects a TOML array here). The exemption still names exactly two
 classes — `Abstract*` was rejected because it would also exempt any concrete class spelled `Abstract…`
 and the abstract `TestCase` this entry exists to keep out. An abstract `TestCase` placed in the root
-namespace still fails the same way; only `AbstractContext` and `AbstractCompiledContext` are exempt.
+namespace still fails the same way; only `AbstractContext` and `AbstractCompiledContext` were exempt.
+[#148][148] deleted `AbstractCompiledContext`, so the `not-on` names `AbstractContext` alone now —
+the reasoning against `Abstract*` is unchanged.
 
 ## Deliberate direction — do not reverse
 
@@ -148,6 +150,163 @@ arguments (layout, and create-or-not) whose only non-default caller is that one 
 
 **Would change it:** a second class needing the same non-default shape.
 
+### Staging removals through a `src-deprecated/` directory — built in [#148][148], then dropped for a one-shot break
+
+`ray/compiler`'s convention: a second PSR-4 path under the same namespace, so what is on its way
+out is visible from the file tree and removal is deleting a directory. It was fully built for
+`getSavedSingleton()` — extracted as a `SavedSingletonInterface` that `ContextInterface` extended,
+with `AbstractContext`'s `[]` default following as a trait — and then dropped in the same PR: on
+0.x, where the README's versioning policy lets a minor break compatibility, staging bought a second
+migration for consumers (adopt the deprecation, then survive the removal) and bought this package
+nothing. `getSavedSingleton()` and `getInjectorInstance()` were removed outright instead.
+
+The mechanics are recorded because they worked and are non-obvious, should a post-1.0 removal ever
+need them:
+
+- A method on a living interface cannot move as a file; it moves by extracting a parent interface
+  the living one extends. Invisible to implementers. A concrete default on a living class moves
+  only as a trait.
+- The `@deprecated` tag's placement took three attempts, each reported by `mago analyze`: on the
+  extracted interface it flags the living interface's `extends` clause; on the trait's method too
+  it flags every existing caller, including tests that must keep exercising the method; mentioned
+  in prose inside a docblock it is parsed as the tag anyway. It works only on the extracted
+  interface's *method*.
+- Four places enumerate shipped directories, and the PR missed the last: `composer.json`,
+  `mago.toml`'s `[source] paths`, `tests/gitattributes-check.sh`'s `top_level_dirs`, and
+  `tests/docker-check.sh`'s `cp -R`, which assembles the package the docker example installs. A
+  PSR-4 path with nothing behind it fails only where that assembly happens — `docker build`, not
+  the unit suite.
+
+**Would change it:** a deprecation on a >=1.0 release line, where a consumer contract makes the
+two-step migration the point rather than overhead.
+
+### Reaching `warmup()` through a standalone `SingletonWarmer` — built in [#148][148], then moved onto the builder's return type
+
+`ray/compiler` 1.15.0 added `CompiledInjector::warmup()`, which instantiates every singleton the
+compile recorded in `singletons.json`. That supersedes `ContextInterface::getSavedSingleton()`
+outright: the hand-written list can omit a singleton, the compiler's cannot. Four ways to reach it
+were built or weighed, in order of how much of this package's surface they commit.
+
+Narrowing `ContextInterface::getInjectorInstance()` to a `WarmInjectorInterface` reads best at the
+call site — `$injector->warmup()`, no `instanceof` — and breaks every implementer at once. Changing
+`AbstractCompiledContext::getInjectorInstance()` to return a warmable decorator keeps the declared
+return type but silently changes the concrete class an existing context hands back. A third,
+`AbstractWarmCompiledContext` extending `AbstractCompiledContext` and overriding only
+`getInjectorInstance()`, was written and then removed: it breaks nobody, but it answers "a new kind
+of injector" with "a new base class to extend", so the next one costs another, and consumers migrate
+by editing a class declaration.
+
+The fourth commits nothing. `SingletonWarmer` is a `final` class on no interface and in no
+inheritance chain, shaped like `Cleaner` and `PermissionNormalizer` — `__invoke()` taking the
+injector. It cannot break an implementer because it has none, and an existing context warms up by
+adding a line to its bootstrap rather than changing what it extends. The three interface-and-
+inheritance options above all stay open on top of it, which is the point.
+
+Two consequences are deliberate. `instanceof CompiledInjector` moves inside `src/`, which already
+names `ray/compiler` classes; what [#119][119] was protecting is *consumer* code, and this removes an
+`instanceof` from there rather than adding one. And a runtime `Ray\Di\Injector` is a no-op, not a
+throw: it compiles as it resolves, so there is genuinely nothing to warm and no race to lose —
+unlike compiled scripts with no metadata, where `ray/compiler` throws for the same reason this
+package rethrows as `Exception\WarmupNotCompiled` (a silent success would claim protection that is
+not there).
+
+One reason found here outlives every later reshaping: whether to warm is a property of the runtime
+model, not of the context. `CompiledInjector` caches singletons per *instance*, so a worker runtime
+(Swoole) warms once per process and every request benefits, while PHP-FPM rebuilds the injector per
+request and warming everything up front costs more than resolving lazily. Any design that welds
+warmup to the context or to *automatic* injector construction gets prod-under-FPM wrong; warmup has
+to stay a call the bootstrap makes by hand.
+
+The standalone warmer itself did not survive [#148][148]'s later rounds. Once the same PR removed
+`getInjectorInstance()` and made `InjectorBuilder` own construction, the decorator's two original
+sins — the context returned it, and the widened `ContextInterface` return type hid `warmup()` —
+were both gone: the builder's return type is this package's to declare. `warmup()` moved onto that
+return type as `WarmableInjectorInterface`, with the branch the builder took travelling as the
+concrete class — `CompiledWarmableInjector` (delegate, rethrow missing metadata as
+`WarmupNotCompiled`) or `RuntimeWarmableInjector` (nothing to warm, returns quietly). Two classes
+rather than one with an `instanceof` inside, because the builder already knows the branch at
+construction; re-deriving it at warm time would repeat the exact mistake this entry's own
+"Would change it" line warned about — and with the split, no `instanceof` against an injector type
+remains anywhere. The costs accepted: one delegation hop per resolution, and
+`getInstance(InjectorInterface::class)` returning the underlying injector rather than the wrapper
+(documented on the interface; warmup is a boot operation, so nothing sensible calls it on a
+container-resolved injector).
+
+**Would change it:** an application implementing `WarmableInjectorInterface` itself and being
+broken by a method addition — the interface is kept to `warmup()` alone for that reason.
+
+### The context stops carrying the injector — a marker interface and `InjectorBuilder`, not an enum or a factory method — [#148][148]
+
+`ContextInterface` fused two lifecycles: `__invoke()` feeds the compile and also supplies the
+module when a runtime injector is built; `getInjectorInstance()` runs at runtime and never at
+compile. The package separates compile time
+from runtime everywhere else, and the fusion had a documented failure mode — `AbstractCompiledContext`
+warned that a subclass overriding one method but not the other loses the guarantee the two agree.
+The break removes `getInjectorInstance()`; a context supplies its module and declares one bit,
+"resolved from the compiled scripts", by implementing the `CompiledContextInterface` marker.
+`InjectorBuilder` turns `(context, meta)` into a `WarmableInjectorInterface` and owns the
+`CompileDirUnavailable` bracketing, which previously protected only contexts extending
+`AbstractCompiledContext`, not hand-written ones.
+
+Two shapes for declaring the bit were rejected first. An `injectorKind(): InjectorKind` enum method
+adds a method every implementer must answer and closes the set of strategies in a package that
+deliberately keeps `ScriptCompilerInterface` open — and once the enum grows an escape hatch it
+degenerates into factories. A `(context class, factory class)` pair map keeps strategies open but
+mints an `@api` factory interface whose implementers then constrain every future change. The marker
+adds no method, no hierarchy, and costs one `instanceof` inside `src/`; an application needing an
+injector the builder cannot make simply does not call the builder.
+
+The measurement that let `AbstractCompiledContext` be deleted rather than slimmed: compiling the
+same module bare and wrapped in `DiCompileModule(true, ...)` against `ray/compiler` 1.15.0 produces
+byte-identical script trees and identical `singletons.json` — only the `_bindings.log` debug text
+differs — because `Compiler::compile()` installs `CompilerModule`, which binds the `Compile` flag
+itself, and `DiCompileModule::configure()` binds nothing else. With the wrap inert and the injector
+gone, nothing remained for a compiled base class to do: a dev context and a prod context now differ
+by one `implements` clause. This also retired the `TrueValue` equivalent-mutant ignore that the
+wrap's unread flag used to need.
+
+A `CallableContextProvider` — a name→factory map for the gap `MapContextProvider` cannot close,
+a context whose constructor takes more than `AppMeta` (it cannot extend `AbstractContext`, whose
+constructor is `final` for `new $class($meta)`) — was built on this branch and dropped before
+release. PHP cannot type a callable's signature, so the class ran on four `@var` assertions and
+runtime checks that were shallower than they read: `is_callable()` proves nothing about
+parameters, so a factory with the wrong signature passed construction and surfaced at `get()` as
+a raw `TypeError` outside `ExceptionInterface`, and the return type was only checked on first
+request. Closing those holes meant minting an `@api` factory interface plus a class per factory —
+at which point the map carried no weight over the application implementing
+`ContextProviderInterface` itself with a `match`, every arm an engine-checked constructor call
+and no new package surface. The README documents that pattern where the class used to be.
+`MapContextProvider` keeps its place because class-strings support what factories cannot: proving
+every mapped environment instantiable at map construction without running a constructor.
+
+**Would change it:** nothing identified; the open questions are additive (a second bundled injector
+strategy would extend `InjectorBuilder`, not reshape the context).
+
+### Dropping the non-flat compile-output test rather than rebuilding it — [#148][148]
+
+`PermissionNormalizer` recurses, and one test covered that recursion through a real compile:
+`FakeQualifiedModule` bound `annotatedWith('a.php/b')`, so `ray/compiler` wrote a script into a
+directory named `a.php` under the compile dir.
+
+`ray/compiler` 1.15.0 removed that shape. Its `ScriptName` rejects a dependency index carrying a
+byte outside `[A-Za-z0-9_.-]` with `InvalidQualifier`, because a qualifier is arbitrary
+`->annotatedWith()` input that otherwise reaches the filesystem and the generated code raw — the
+same class of concern `BakedPathGuard` exists for, fixed one layer down. `composer.lock` is
+gitignored and the constraint is a caret, so this arrived on `main` the day 1.15.0 was released.
+
+Nesting became reachable only through an injected `ScriptCompilerInterface`, so the test was first
+rebuilt on a `FakeNestingCompiler` writing `nested/compiled.php` at `0o700`/`0o600`. That
+replacement was then deleted: it detected nothing its neighbours did not. Removing
+`normalizeContents()`'s recursive call fails `PermissionNormalizerTest::normalizesFilesAndDirectories`
+on its own (asserting `0o644`/`0o755` exactly, against the rebuilt test's weaker "some nested
+`*.php` is world-readable"), and `CompileRunnerIntegrationTest` already pins that a real `run()`
+leaves a world-readable tree. The rebuilt test asserted only the conjunction of two facts already
+held separately, at the cost of a fake whose job was to fabricate an output shape the compiler can
+no longer produce.
+
+**Would change it:** `ray/compiler` emitting nested output on its own again — a real compile would
+then cover the composition without a fake.
+
 ### Pinning a runtime dependency to a minor so Renovate reports it — [#116][116]
 
 Rejected for both, after being tried on each. `rangeStrategy: "widen"` does not look at the semver
@@ -188,13 +347,11 @@ coupled to it than this package is, declares `ray/di ^2.19` itself.
 
 **Would change it:** a runtime dependency this package brackets completely, with no class name of
 its reaching consumer code — for that one, gating would cost nothing and the pin would be right.
-[#119][119] closed the two class names above: `AbstractCompiledContext` now composes
-`DiCompileModule`/`CompiledInjector` internally, so the README's usage example and
-`tests/dist/consumer/bootstrap.php` extend it and implement only `appModule()`; and
-`getInjectorInstance()` now catches `ScriptDirNotReadable` and rethrows this package's own
-`Exception\CompileDirUnavailable`, the original retrievable via `getPrevious()`. For the documented
-path (extend `AbstractCompiledContext`, catch this package's `ExceptionInterface`), the condition is
-met. It is not met completely: `CompiledInjector::getInstance()` can still throw
+[#119][119] closed the two class names above with `AbstractCompiledContext`, which composed
+`DiCompileModule`/`CompiledInjector` internally and rethrew `ScriptDirNotReadable` as this package's
+own `Exception\CompileDirUnavailable`; [#148][148] moved that bracketing into `InjectorBuilder`
+(and dropped the `DiCompileModule` wrap as measurably inert), so the condition [#119][119]
+established still holds — consumer code names no `Ray\Compiler` class. It is not met completely: `CompiledInjector::getInstance()` can still throw
 `Ray\Compiler\Exception\Unbound` for a missing binding, unwrapped, and `ScriptCompilerInterface`
 remains an explicit escape hatch onto `ray/compiler` for an app that replaces the bundled compiler
 (see `src/ScriptCompilerInterface.php`'s docblock and `src/RayScriptCompiler.php`). Whether those two
@@ -208,8 +365,9 @@ left to a later issue.
 Three options, continuing the compile-side half of what the `#116` entry above left open after
 [#119][119] closed the runtime half: leave `$this->compiler->compile(...)`'s exceptions raw (status
 quo), document the gap in `ScriptCompilerInterface`'s docblock without changing behavior, or catch
-and wrap them the way `AbstractCompiledContext::getInjectorInstance()` already wraps
-`ScriptDirNotReadable` into `Exception\CompileDirUnavailable`. Wrapping was chosen.
+and wrap them the way the runtime side already wrapped `ScriptDirNotReadable` into
+`Exception\CompileDirUnavailable` (then in `AbstractCompiledContext`, now in `InjectorBuilder`).
+Wrapping was chosen.
 
 Leaving it raw costs nothing at `bin/ray-di-compile`'s boundary — `Cli::compile()`'s
 `catch (Throwable $e)` already turns any exception into exit status `1` — but leaves a consumer
@@ -540,7 +698,7 @@ pin installs cleanly across the whole matrix — the same convention `carthage-s
 **Would change it:** an Infection release declaring `"php": "^8.2"` (or wider) again, at which
 point the pin could move forward without losing the PHP 8.2 jobs.
 
-### Why three mutants are ignored
+### Why two kinds of mutants are ignored
 
 [#143][143] re-measured on the CI environment (`ubuntu-latest`/PHP 8.2/pcov via
 `composer infection`) after the `tests/` reorg in [#142][142] changed which of [#16][16]'s
@@ -562,14 +720,6 @@ covers every entry `infection.json5` ignores, and vice versa:
   exhausts PHP's memory limit building an ever-growing `$ranges` array (`compileDirRanges()`).
   Infection counts a time out or an error the same as killed, so only the `+2` direction needs an
   ignore entry.
-- `AbstractCompiledContext::__invoke()`'s `DiCompileModule(true, ...)` mutated to `(false, ...)`
-  (`TrueValue`) is an equivalent mutant given how this package actually uses `ray/compiler`: the
-  flag is bound to `Ray\Compiler\Annotation\Compile` and read only by
-  `Ray\Compiler\InjectorFactory::getInstance()`, to choose between an in-memory and a compiled
-  injector. This package never calls that factory — compile time goes through
-  `RayScriptCompiler`→`Ray\Compiler\Compiler::compile()` directly, runtime goes through
-  `AbstractCompiledContext::getInjectorInstance()`→`new CompiledInjector(...)` directly — so the
-  flag's value never reaches anything this package's tests can observe.
 - `Cli::write()`'s error-suppression plumbing has two mutants that are unkillable without pinning
   behaviour this package does not promise. `set_error_handler(static fn(): bool => true)` mutated
   to `=> false` (`TrueValue`) changes only what happens to a `file_put_contents()` warning once
@@ -581,9 +731,9 @@ covers every entry `infection.json5` ignores, and vice versa:
   `file_put_contents()` itself throws, which it never does — it reports failure through the
   warning above, not an exception.
 
-`infection.json5`'s `IncrementInteger`/`TrueValue`/`UnwrapFinally` ignore entries exclude these
-five methods (two for the `BakedPathScanner` bullet, one for `AbstractCompiledContext`, two for
-`Cli::write()`) from Infection's tested-mutant count entirely, not just from what fails the build.
+`infection.json5`'s `IncrementInteger`/`TrueValue`/`UnwrapFinally` ignore entries exclude four
+entries across three methods (two `BakedPathScanner` methods for the first bullet, `Cli::write()`
+twice for the second) from Infection's tested-mutant count entirely, not just from what fails the build.
 With them excluded, re-measuring on the same CI environment gives 275 mutations (280 minus the
 five ignored), 271 killed, 2 errors, 2 timed out, 0 escaped, 100% mutation code coverage,
 `msi = coveredCodeMsi = 100.0` — `infection.json5`'s `minMsi`/`minCoveredMsi` are pinned to this
@@ -643,6 +793,7 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [140]: https://github.com/NaokiTsuchiya/RayDiContext/issues/140
 [142]: https://github.com/NaokiTsuchiya/RayDiContext/issues/142
 [143]: https://github.com/NaokiTsuchiya/RayDiContext/issues/143
+[148]: https://github.com/NaokiTsuchiya/RayDiContext/pull/148
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95
 [888a9b1]: https://github.com/NaokiTsuchiya/RayDiContext/commit/888a9b1

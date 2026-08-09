@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-use NaokiTsuchiya\RayDiContext\AbstractCompiledContext;
+use NaokiTsuchiya\RayDiContext\AbstractContext;
+use NaokiTsuchiya\RayDiContext\CompiledContextInterface;
 use NaokiTsuchiya\RayDiContext\MapContextProvider;
 use Ray\Di\AbstractModule;
 
@@ -22,9 +23,9 @@ final class ConsumerModule extends AbstractModule
     }
 }
 
-final class ConsumerProdContext extends AbstractCompiledContext
+final class ConsumerProdContext extends AbstractContext implements CompiledContextInterface
 {
-    protected function appModule(): AbstractModule
+    public function __invoke(): AbstractModule
     {
         return new ConsumerModule();
     }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use NaokiTsuchiya\RayDiContext\AppMeta;
+use NaokiTsuchiya\RayDiContext\InjectorBuilder;
 
 require __DIR__ . '/vendor/autoload.php';
 
@@ -11,7 +12,9 @@ $meta = AppMeta::fromAppDir(__DIR__, 'prod');
 
 try {
     $context = $provider->get($meta);
-    $car = $context->getInjectorInstance()->getInstance(ConsumerCarInterface::class);
+    $injector = (new InjectorBuilder())($context, $meta);
+    $injector->warmup();
+    $car = $injector->getInstance(ConsumerCarInterface::class);
 } catch (Throwable $e) {
     fwrite(STDERR, sprintf("%s: %s\n", $e::class, $e->getMessage()));
 

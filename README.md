@@ -162,10 +162,16 @@ factories trade that up-front proof for the freedom to pass anything:
 use NaokiTsuchiya\RayDiContext\AppMeta;
 use NaokiTsuchiya\RayDiContext\CallableContextProvider;
 
+$secrets = SecretsLoader::fromFile('/etc/app/secrets.json');
+
 return new CallableContextProvider([
-    'prod' => static fn (AppMeta $meta) => new ProdContext($meta, $secrets),
+    'prod' => static fn (AppMeta $meta) => new SecretAwareProdContext($meta, $secrets),
 ]);
 ```
+
+`SecretAwareProdContext` here implements `ContextInterface` directly, its constructor taking the
+`AppMeta` and the loader — unlike the `ProdContext` above, whose `AbstractContext` constructor
+takes `AppMeta` alone.
 
 ```
 php vendor/bin/ray-di-compile bootstrap.php "$(pwd)" prod

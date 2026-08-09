@@ -237,8 +237,9 @@ broken by a method addition — the interface is kept to `warmup()` alone for th
 
 ### The context stops carrying the injector — a marker interface and `InjectorBuilder`, not an enum or a factory method — [#148][148]
 
-`ContextInterface` fused two lifecycles: `__invoke()` feeds the compile and never runs at runtime;
-`getInjectorInstance()` runs at runtime and never at compile. The package separates compile time
+`ContextInterface` fused two lifecycles: `__invoke()` feeds the compile and also supplies the
+module when a runtime injector is built; `getInjectorInstance()` runs at runtime and never at
+compile. The package separates compile time
 from runtime everywhere else, and the fusion had a documented failure mode — `AbstractCompiledContext`
 warned that a subclass overriding one method but not the other loses the guarantee the two agree.
 The break removes `getInjectorInstance()`; a context supplies its module and declares one bit,

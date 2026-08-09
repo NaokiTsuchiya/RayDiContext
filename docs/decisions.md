@@ -265,14 +265,19 @@ gone, nothing remained for a compiled base class to do: a dev context and a prod
 by one `implements` clause. This also retired the `TrueValue` equivalent-mutant ignore that the
 wrap's unread flag used to need.
 
-`CallableContextProvider` rides the same release for the gap `MapContextProvider` cannot close: a
-context whose constructor takes more than `AppMeta` cannot extend `AbstractContext` (whose
-constructor is `final` for `new $class($meta)`), so it implements `ContextInterface` directly and
-is mapped as a factory. The two providers stay separate because their guarantees conflict —
-class-strings can be proven instantiable at map construction, while invoking a factory for an
-environment nobody requested would run constructors whose dependencies may have side effects, so a
-factory is only provable callable. Merging them into one map would quietly demote every entry to
-the weaker guarantee.
+A `CallableContextProvider` — a name→factory map for the gap `MapContextProvider` cannot close,
+a context whose constructor takes more than `AppMeta` (it cannot extend `AbstractContext`, whose
+constructor is `final` for `new $class($meta)`) — was built on this branch and dropped before
+release. PHP cannot type a callable's signature, so the class ran on four `@var` assertions and
+runtime checks that were shallower than they read: `is_callable()` proves nothing about
+parameters, so a factory with the wrong signature passed construction and surfaced at `get()` as
+a raw `TypeError` outside `ExceptionInterface`, and the return type was only checked on first
+request. Closing those holes meant minting an `@api` factory interface plus a class per factory —
+at which point the map carried no weight over the application implementing
+`ContextProviderInterface` itself with a `match`, every arm an engine-checked constructor call
+and no new package surface. The README documents that pattern where the class used to be.
+`MapContextProvider` keeps its place because class-strings support what factories cannot: proving
+every mapped environment instantiable at map construction without running a constructor.
 
 **Would change it:** nothing identified; the open questions are additive (a second bundled injector
 strategy would extend `InjectorBuilder`, not reshape the context).

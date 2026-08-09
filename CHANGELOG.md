@@ -31,10 +31,6 @@ README's Versioning section).
   `Exception\WarmupNotCompiled` for scripts carrying no singleton metadata rather than silently
   doing nothing — `ray/compiler`'s own `SingletonsFileNotFound` stays retrievable via
   `getPrevious()`.
-- `CallableContextProvider` and `Exception\InvalidContextFactory`, for contexts whose constructors
-  take more than `AppMeta` and therefore cannot extend `AbstractContext`: the map holds factories
-  instead of class names, trading `MapContextProvider`'s construction-time validation for the
-  freedom to inject anything.
 - `Exception\CompileFailed`, thrown by `CompileRunner::run()` when the injected
   `ScriptCompilerInterface` throws while compiling the context module. Wraps the compiler's own
   exception (e.g. a missing binding surfacing as `ray/compiler`'s or `ray/di`'s own `Unbound`),

@@ -155,18 +155,30 @@ instantiable, and extends `AbstractContext` — a typo in an environment nobody 
 yet fails the moment the map is built. That validation is possible because the map holds
 class names, which also means every context is built as `new $class($meta)`: a context
 needing constructor dependencies beyond `AppMeta` (a secrets loader, a clock) implements
-`ContextInterface` directly and is mapped through `CallableContextProvider` instead, whose
-factories trade that up-front proof for the freedom to pass anything:
+`ContextInterface` directly, and the bootstrap implements `ContextProviderInterface` itself
+instead of using the map — a `match` keeps every construction a statically checked call:
 
 ```php
 use NaokiTsuchiya\RayDiContext\AppMeta;
-use NaokiTsuchiya\RayDiContext\CallableContextProvider;
+use NaokiTsuchiya\RayDiContext\ContextInterface;
+use NaokiTsuchiya\RayDiContext\ContextProviderInterface;
+use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
 
-$secrets = SecretsLoader::fromFile('/etc/app/secrets.json');
+final class AppContextProvider implements ContextProviderInterface
+{
+    public function __construct(private readonly SecretsLoader $secrets)
+    {
+    }
 
-return new CallableContextProvider([
-    'prod' => static fn (AppMeta $meta) => new SecretAwareProdContext($meta, $secrets),
-]);
+    public function get(AppMeta $meta): ContextInterface
+    {
+        return match ($meta->context) {
+            'prod' => new SecretAwareProdContext($meta, $this->secrets),
+            'dev' => new DevContext($meta),
+            default => throw new UnknownContext(sprintf('Unknown context "%s"', $meta->context)),
+        };
+    }
+}
 ```
 
 `SecretAwareProdContext` here implements `ContextInterface` directly, its constructor taking the

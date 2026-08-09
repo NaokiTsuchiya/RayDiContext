@@ -115,10 +115,9 @@ wrapper — warm the instance the builder returned.
   is the entire difference between a dev context and a prod context.
 - **`ContextProviderInterface`** — maps an `AppMeta` to a `ContextInterface`. `MapContextProvider`
   is the bundled name→class-string implementation, and a bootstrap file returns one of these; it
-  validates the whole map at construction (see its docblock). `CallableContextProvider` is the
-  name→factory alternative for contexts whose constructors take more than `AppMeta` — it trades
-  that construction-time validation for the freedom to inject anything (its docblock has why the
-  two cannot be one map).
+  validates the whole map at construction (see its docblock). A context whose constructor takes
+  more than `AppMeta` does not fit that map — the application implements this interface directly
+  (a `match` over `$meta->context`), keeping every construction a statically checked call.
 - **`CompileDirGuardInterface`** — only needed when the bundled guard's two checks (filesystem root,
   compile dir containing the app dir) are not strict enough for an app's layout.
 - **`BakedPathGuardInterface`** — the same idea on the verification side. For the common case pass

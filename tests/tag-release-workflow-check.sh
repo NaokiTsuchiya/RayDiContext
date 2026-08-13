@@ -20,6 +20,12 @@ top_permissions="$(yq -o=json '.permissions' "${wf}")"
 writers="$(yq '.jobs | to_entries | .[] | select(.value.permissions.contents == "write") | .key' "${wf}")"
 [ "${writers}" = "tag" ] || fail "expected only the 'tag' job to hold contents: write, got: '${writers}'"
 
+# workflow_dispatch can target any ref; validate must refuse anything but main so a tag can
+# never be resolved (or pushed) for a non-main commit.
+validate_if="$(yq '.jobs.validate.if' "${wf}")"
+echo "${validate_if}" | grep -qF "github.ref == 'refs/heads/main'" \
+    || fail "jobs.validate.if does not look like it restricts to refs/heads/main (got: ${validate_if})"
+
 triggers="$(yq '.on | keys | .[]' "${wf}")"
 echo "${triggers}" | grep -qx "workflow_dispatch" || fail "workflow_dispatch trigger missing"
 echo "${triggers}" | grep -qx "push" && fail "a push trigger is present — a tag push must not auto-run this workflow (that's #155's job)"

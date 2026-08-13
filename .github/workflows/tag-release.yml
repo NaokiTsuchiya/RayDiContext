@@ -19,6 +19,8 @@ permissions: {}
 jobs:
   validate:
     name: validate
+    # workflow_dispatch can target any ref; a tag must only ever be resolved and pushed for main.
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -348,7 +348,7 @@ scripts `BakedPathGuard` scans, either.
 
 ## Requirements
 
-PHP 8.2 – 8.5, ray/di ^2.19, ray/compiler ^1.14
+PHP 8.2 – 8.5, ray/di ^2.19, ray/compiler ^1.15
 
 ## Development
 
@@ -391,6 +391,11 @@ next patch version.
 While on 0.x, minor releases may include backwards-incompatible changes.
 v1.0.0 will be tagged once the package has run in a real production
 application. From v1.0.0 on, semantic versioning applies strictly.
+
+## Upgrading
+
+Breaking changes are listed under a version's `### Removed` heading in
+[`CHANGELOG.md`](CHANGELOG.md), each entry documenting how to migrate off it.
 
 ## License
 

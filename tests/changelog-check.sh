@@ -25,7 +25,8 @@ cli_out="$(php "${cli}" "${expected}" "${changelog}")" \
     || fail "resolve-release-tag.php failed for the current CHANGELOG.md's own latest version"
 [ "${cli_out}" = "${expected}" ] || fail "resolve-release-tag.php printed '${cli_out}', expected '${expected}'"
 
-php "${cli}" "9.9.9" "${changelog}" >/dev/null 2>&1 \
-    && fail "resolve-release-tag.php accepted a version that does not match CHANGELOG.md" || true
+if php "${cli}" "9.9.9" "${changelog}" >/dev/null 2>&1; then
+    fail "resolve-release-tag.php accepted a version that does not match CHANGELOG.md"
+fi
 
 echo "changelog-check: OK — latestReleasedVersion()/resolveReleaseTag() and the CLI agree with CHANGELOG.md (${expected})"

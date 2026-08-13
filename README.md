@@ -375,9 +375,16 @@ changelog entry has to be right the first time.
 Tags carry no `v` prefix — `0.1.0`, not `v0.1.0`. Composer accepts either, so
 the only thing that matters is not mixing the two.
 
+Once the CHANGELOG PR is merged, run the "Tag release" workflow
+(`.github/workflows/tag-release.yml`) from the Actions tab, or with
+`gh workflow run`, passing the version you just confirmed. It refuses to push
+a tag that does not match `CHANGELOG.md`'s latest confirmed section, refuses
+a `v`-prefixed input, and refuses to push if main's `ci` job is not green for
+the commit being tagged. Pass `dry_run=true` to run every check and see the
+tag name it would push, without pushing it.
+
 ```bash
-git tag -a 0.1.0 -m 'Initial release'
-git push origin 0.1.0
+gh workflow run tag-release.yml -f version=0.1.0
 gh release create 0.1.0 --generate-notes
 ```
 

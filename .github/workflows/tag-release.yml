@@ -36,8 +36,10 @@ jobs:
           coverage: none
 
       - id: resolve
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          tag="$(php .github/scripts/resolve-release-tag.php "${{ inputs.version }}" CHANGELOG.md)"
+          tag="$(php .github/scripts/resolve-release-tag.php "${VERSION_INPUT}" CHANGELOG.md)"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
       - name: Verify main's ci aggregate job is green for this commit
@@ -59,11 +61,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - run: |
+      - env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git tag -a "${{ needs.validate.outputs.tag }}" -m "Release ${{ needs.validate.outputs.tag }}"
-          git push origin "${{ needs.validate.outputs.tag }}"
+          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
+          git push origin "${RELEASE_TAG}"
 
   dry-run-summary:
     name: dry-run-summary
@@ -72,4 +76,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - run: echo "Would push tag \`${{ needs.validate.outputs.tag }}\` (dry run — not pushed)." >> "$GITHUB_STEP_SUMMARY"
+      - env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: echo "Would push tag \`${RELEASE_TAG}\` (dry run — not pushed)." >> "$GITHUB_STEP_SUMMARY"

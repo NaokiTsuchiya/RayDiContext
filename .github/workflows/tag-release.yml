@@ -44,7 +44,7 @@ jobs:
         run: |
           conclusion="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
             --jq '[.check_runs[] | select(.name == "ci")][0].conclusion // ""')"
-          php .github/scripts/require-ci-success.php "${conclusion}"
+          .github/scripts/require-ci-success.sh "${conclusion}"
 
   # Pushes the tag, so this is the only job in the workflow allowed to write to the repo.
   tag:

@@ -69,8 +69,10 @@ giving a test helper a dependency on the hierarchy it exists to stay outside of.
 ### An abstract base `TestCase` to share test setup — [#79][79]
 
 Test classes live in the root namespace, which is exactly what `mago.toml`'s `must-be-final` rule
-covers, and its `not-on` names `AbstractContext` and `AbstractCompiledContext` — no other abstract
-class. An abstract class placed there anyway fails:
+covers. An abstract class placed there anyway fails. The message below is from [#119][119], when
+`not-on` still named both `AbstractContext` and `AbstractCompiledContext`; [#148][148] later deleted
+`AbstractCompiledContext`, and today's `mago.toml` reason string names `AbstractContext` alone (see
+below):
 
 ```text
 tests/ProbeRoot.php:8:16: error[must-be-final]: Structural flaw in `NaokiTsuchiya\RayDiContext\AbstractProbeRoot`
@@ -137,16 +139,18 @@ without it the suite depends on the umask of whoever runs it.
 
 ### Folding `BakedPathGuardRejectionTest` into `Support\SeparatedDirFixture` — [#86][86]
 
-Its `setUp()` looks close to the other `BakedPathGuard` test classes' at a glance, which is why the
-fold keeps being proposed — measured, it isn't. Of the other five, three (`BakedPathGuardTest`,
-`BakedPathGuardBoundaryTest`, `BakedPathGuardDirectoryEntryTest`) share the same three lines
-(`SeparatedDirFixture` + `$this->meta` + `$this->guard`) up to the `uniqid()` prefix;
-`BakedPathGuardExtraNeedleTest`'s is two lines (no `$this->guard` assignment); and
-`BakedPathGuardInvalidNeedleTest` has no `setUp()` at all. It does not fit: the fixture's
-defining act is creating the compile dir, and that class exists to assert what the guard does when
-the compile dir is *missing*, is a *file*, or carries a mode it cannot list — so it puts the compile
-dir at `{baseDir}/di` and creates nothing. Sharing the fixture would mean two more constructor
-arguments (layout, and create-or-not) whose only non-default caller is that one file.
+Measured against the six-file `BakedPathGuard` split that existed at the time — since folded into a
+single `tests/BakedPathGuardTest.php` by the `tests/` reorg in commit `5ddb371` ([#140][140]/[#142][142]):
+`BakedPathGuardRejectionTest`'s `setUp()` looked close to the other `BakedPathGuard` test classes' at
+a glance, which is why the fold kept being proposed — measured, it wasn't. Of the other five, three
+(`BakedPathGuardTest`, `BakedPathGuardBoundaryTest`, `BakedPathGuardDirectoryEntryTest`) shared the
+same three lines (`SeparatedDirFixture` + `$this->meta` + `$this->guard`) up to the `uniqid()`
+prefix; `BakedPathGuardExtraNeedleTest`'s was two lines (no `$this->guard` assignment); and
+`BakedPathGuardInvalidNeedleTest` had no `setUp()` at all. It did not fit: the fixture's defining act
+is creating the compile dir, and `BakedPathGuardRejectionTest` existed to assert what the guard did
+when the compile dir was *missing*, was a *file*, or carried a mode it could not list — so it put the
+compile dir at `{baseDir}/di` and created nothing. Sharing the fixture would have meant two more
+constructor arguments (layout, and create-or-not) whose only non-default caller was that one file.
 
 **Would change it:** a second class needing the same non-default shape.
 
@@ -491,18 +495,20 @@ counting `#[Test]` methods per file; `tests/*.php`, excluding the non-test
 
 No file names this split, so a class with more than one file has been getting there by an
 unwritten rule every time. Reading the six `BakedPathGuard` files and the four `CompileRunner`
-files shows the rule was already, in practice, `#[CoversClass]` crossed with one more axis:
-whether the test starts a separate process (`Support\PhpProcess`, `BinCompile*Test`) or runs the
-real `ray/compiler` (not `CompileRunnerOrderingTest`, which passes a `FakeRecordingCompiler` via
-the named `compiler:` argument — that one test needed reading, not grepping, since a
-`ScriptCompilerInterface` fake is invisible to a pattern match on class names). Three more facts
-argue for writing the rule down rather than leaving it implicit:
+files (as they stood at `a5c448e`) showed the rule was already, in practice, `#[CoversClass]`
+crossed with one more axis: whether the test starts a separate process (`Support\PhpProcess`,
+`BinCompile*Test`) or runs the real `ray/compiler` (not `CompileRunnerOrderingTest`, which passed a
+`FakeRecordingCompiler` via the named `compiler:` argument — that one test needed reading, not
+grepping, since a `ScriptCompilerInterface` fake is invisible to a pattern match on class names;
+commit `5ddb371` later folded `CompileRunnerOrderingTest` into `tests/CompileRunnerTest.php`).
+Three more facts argue for writing the rule down rather than leaving it implicit:
 
 - **Method count is not a reliable third axis.** `mago.toml` had no `too-many-methods` entry, so
   the default threshold (`mago config`'s resolved value: `10`) was doing unrecorded, silent work.
-  `AppMetaFromAppDirTest` sits at exactly 10 methods (`setUp`, `tearDown`, 8 `#[Test]`) and passes
-  only because it's at the limit, not under it — one more scenario would have forced a split for a
-  reason nobody wrote down. Commit [888a9b1][888a9b1] hit this directly: both `CleanerTest` and
+  `AppMetaFromAppDirTest` (folded into today's `AppMetaTest` by commit `5ddb371`) sat at exactly 10
+  methods (`setUp`, `tearDown`, 8 `#[Test]`) and passed only because it was at the limit, not under
+  it — one more scenario would have forced a split for a reason nobody wrote down. Commit
+  [888a9b1][888a9b1] hit this directly: both `CleanerTest` and
   `BinCompileTest` were split because a merge would have crossed the (unconfigured, undocumented)
   threshold, recording the choice as "どちらも分割で too-many-methods に触れたので、mago.toml は
   緩めず既存パターンで分けた" (both splits touched `too-many-methods`, so `mago.toml` was left
@@ -510,19 +516,23 @@ argue for writing the rule down rather than leaving it implicit:
   methods` is now off for `tests/` (see `mago.toml`), so a future test-count trigger like the one
   `888a9b1` hit is no longer a reason to split — only `#[CoversClass]` and the integration axis
   are.
-- **`Rejection` names two unrelated things.** `CleanerRejectionTest`/`PermissionNormalizerRejectionTest`/
-  `BakedPathGuardRejectionTest` group tests that hit `Support\PermissionBits::skipUnlessEnforced()`
-  (root-ignores-permission-bits skips); `CliRejectionTest`/`BinCompileRejectionTest` group the
-  exit-status-2 contract instead. `CleanerGuardTest` is a rejection test in the first sense with
+- **`Rejection` named two unrelated things, in the `a5c448e` snapshot** (none of the files below
+  exist any more — commit `5ddb371` folded all of them into today's `{CoversClass}Test.php`/
+  `{CoversClass}IntegrationTest.php` pairs). `CleanerRejectionTest`/`PermissionNormalizerRejectionTest`/
+  `BakedPathGuardRejectionTest` grouped tests that hit `Support\PermissionBits::skipUnlessEnforced()`
+  (root-ignores-permission-bits skips); `CliRejectionTest`/`BinCompileRejectionTest` grouped the
+  exit-status-2 contract instead. `CleanerGuardTest` was a rejection test in the first sense with
   neither the name nor the grouping.
-- **`#[CoversClass]` can drift from what's asserted.** `MapContextProviderResolutionTest`'s three
-  tests all call `(new MapContextProvider(...))->get($meta)->getInjectorInstance()` and assert on
-  `getInjectorInstance()`'s return value and the resolution it produces —
-  `MapContextProvider::get()` is a pass-through step on the way there, already independently
-  covered by `MapContextProviderTest::getReturnsMappedContext`. Commit [a788e2e][a788e2e] moved
+- **`#[CoversClass]` could drift from what's asserted, in the `a5c448e` snapshot.**
+  `MapContextProviderResolutionTest`'s three tests all called
+  `(new MapContextProvider(...))->get($meta)->getInjectorInstance()` and asserted on
+  `getInjectorInstance()`'s return value and the resolution it produced —
+  `MapContextProvider::get()` was a pass-through step on the way there, already independently
+  covered by `MapContextProviderTest::getReturnsMappedContext`. Commit [a788e2e][a788e2e] had moved
   these three tests out of `CompileRunnerTest`/`CompileRunnerRelocationTest` (which is why the file
-  itself is named after `MapContextProvider`) without revisiting the attribute against what the
-  assertions actually target.
+  itself was named after `MapContextProvider`) without revisiting the attribute against what the
+  assertions actually targeted. Commit `5ddb371` retired the file by re-covering those tests against
+  `AbstractCompiledContext` (itself deleted by [#148][148] shortly after).
 
 **Convention:** split a `#[CoversClass]`-covered class's tests on exactly two axes —
 `#[CoversClass]` itself (first tier: one `{CoversClass}Test.php`) and, within that, integration
@@ -534,19 +544,20 @@ to pass through.
 `#[CoversNothing]` sits outside that naming rule — it takes no class parameter, so neither
 `{CoversClass}Test.php` nor the "must name the class actually targeted" requirement applies to it.
 Use it only for a classless integration test that exercises something outside any `src/` class as
-a black box; today that means exactly `BinCompileTest`/`BinCompileRejectionTest`, which run
-`bin/ray-di-compile` in a separate process via `Support\PhpProcess` and are named after what they
-test (`BinCompile`), not after a covered class.
+a black box; today that means exactly `BinCompileIntegrationTest` (folded from the separate
+`BinCompileTest`/`BinCompileRejectionTest` files by commit `5ddb371`), which runs
+`bin/ray-di-compile` in a separate process via `Support\PhpProcess` and is named after what it
+tests (`BinCompile`), not after a covered class.
 
 `too-many-methods` is disabled for `tests/` (`mago.toml`) so size is never a third reason to
 split, for either case. A `setUp()` that can't be shared across files in the same pair becomes a
 `private` helper method, not a reason to split further.
 
-**Out of scope here, left to a follow-up issue:** the actual 28-to-~14 file reorg, fixing
-`MapContextProviderResolutionTest`'s `#[CoversClass]`, and unit-izing the one line of
+**Was out of scope here, left to a follow-up issue ([#142][142]):** the actual 28-to-~14 file
+reorg, fixing `MapContextProviderResolutionTest`'s `#[CoversClass]`, and unit-izing the one line of
 `CompileRunner::run()`'s cleanup `finally` block that the next entry identifies as
-unit-testable (via `tests/Fake/FakeRejectingGuard.php`) — all three touch `tests/`, which this
-issue does not.
+unit-testable (via `tests/Fake/FakeRejectingGuard.php`) — all three touched `tests/`, which this
+issue did not. Commit `5ddb371` completed all three.
 
 ### Measuring coverage and MSI over the whole suite, including integration — [#140][140]
 
@@ -559,16 +570,17 @@ Measured on `a5c448e` (`php -d pcov.enabled=1 vendor/bin/phpunit --coverage-text
 pcov, `<source>` = `src/` per `phpunit.xml.dist`):
 
 - The full suite: `Classes: 100.00% (12/12)`, `Lines: 100.00% (330/330)`.
-- Excluding only `BinCompileTest`/`BinCompileRejectionTest` (the two tests that launch a separate
-  process via `Support\PhpProcess` to exercise `bin/ray-di-compile`): unchanged,
+- Excluding only `BinCompileTest`/`BinCompileRejectionTest` (the two tests that, at the time,
+  launched a separate process via `Support\PhpProcess` to exercise `bin/ray-di-compile`; commit
+  `5ddb371` later folded both into today's single `BinCompileIntegrationTest`): unchanged,
   `Classes: 100.00% (12/12)`, `Lines: 100.00% (330/330)`. Pcov only instruments the parent process,
-  so these two files contribute zero measured coverage regardless of how thoroughly they exercise
-  the binary — Infection's covered-MSI mode is the same story, since a mutant in code a separate
-  process runs is never seen as executed either. Keeping them out of the suite `phpunit.xml.dist`
-  runs would cost real verification (they're the only tests that go through the actual CLI
-  entrypoint) for zero coverage or MSI benefit either way — the two metrics simply cannot see them,
-  which is a reason to run them for their own sake, not a reason to also budget for their absence
-  from the numbers.
+  so a separate-process test contributes zero measured coverage regardless of how thoroughly it
+  exercises the binary — Infection's covered-MSI mode is the same story, since a mutant in code a
+  separate process runs is never seen as executed either. Keeping such a test out of the suite
+  `phpunit.xml.dist` runs would cost real verification (it is the only kind of test that goes
+  through the actual CLI entrypoint) for zero coverage or MSI benefit either way — the two metrics
+  simply cannot see it, which is a reason to run it for its own sake, not a reason to also budget
+  for its absence from the numbers.
 - Further excluding every test method that actually runs the real `ray/compiler` (not just the
   files that contain one — `CompileRunnerContextResolutionTest`'s one test throws inside the
   context provider before `$this->compiler->compile(...)` is ever reached, so despite living
@@ -577,27 +589,28 @@ pcov, `<source>` = `src/` per `phpunit.xml.dist`):
   (its one line, `(new Compiler())->compile(...)`, is unreached without a real compile); no other
   class drops at all. In particular, `CompileRunner` stays at `100.00% (22/22)`: the
   `finally`-block `$cleaner($meta);` line noted above as the one unit-convertible case is *already*
-  reached today, by `CompileRunnerContextResolutionTest`'s own (non-integration) test — any
-  exception inside `run()`'s `try` block hits that cleanup, including a context-provider failure
-  that never gets near the compiler, so the line was never integration-only to begin with. This
-  sharpens rather than weakens the reason coverage alone is not the whole gate for the two classes
-  that *don't* show up as dropping: pcov marks a line "covered" once any test reaches it, whether
-  the call it makes succeeds or fails, so `AbstractCompiledContext::getInjectorInstance()`'s `new
-  CompiledInjector(...)` reads as covered from the existing missing-compile-dir failure test
-  alone — a line-coverage number cannot tell "this ran and produced a working injector" apart from
-  "this ran and immediately threw." Verifying the success path (a `CompiledInjector` that actually
-  resolves a real compiled binding) needs the real dependency to run; no unit rewrite reaches that
-  without becoming a test of the fake instead. `RayScriptCompiler` needs no such argument — its
-  drop to 0% under this exclusion is the coverage tool agreeing outright that only integration
-  verifies it.
+  reached at the time, by `CompileRunnerContextResolutionTest`'s own (non-integration) test — any
+  exception inside `run()`'s `try` block hit that cleanup, including a context-provider failure
+  that never got near the compiler, so the line was never integration-only to begin with. This
+  sharpened rather than weakened the reason coverage alone was not the whole gate for the two
+  classes that *didn't* show up as dropping: pcov marked a line "covered" once any test reached it,
+  whether the call it made succeeded or failed, so `AbstractCompiledContext::getInjectorInstance()`'s
+  `new CompiledInjector(...)` read as covered from the existing missing-compile-dir failure test
+  alone (`AbstractCompiledContext` was deleted by [#148][148]) — a line-coverage number could not
+  tell "this ran and produced a working injector" apart from "this ran and immediately threw."
+  Verifying the success path (a `CompiledInjector` that actually resolved a real compiled binding)
+  needed the real dependency to run; no unit rewrite reached that without becoming a test of the
+  fake instead. `RayScriptCompiler` needed no such argument — its drop to 0% under this exclusion
+  was the coverage tool agreeing outright that only integration verified it.
 
-None of this is `@codeCoverageIgnore`d — not `RayScriptCompiler`'s one line (measurably reachable
-only by integration), not `AbstractCompiledContext`'s success-path body (line coverage happens not
-to show the gap, but the gap is real: only integration verifies it *meaningfully*), and not
-`BinCompile*`'s two files. All of it is reachable; only integration reaches it in a way that
-actually verifies anything. `codecov.yml`'s own stated policy is to ignore what's unreachable and
-keep the floor at the real 100% otherwise — an `@codeCoverageIgnore` here would misstate why a line
-isn't independently unit-covered as "unreachable," which it is not.
+None of this was `@codeCoverageIgnore`d at the time — not `RayScriptCompiler`'s one line
+(measurably reachable only by integration), not `AbstractCompiledContext`'s success-path body (line
+coverage did not show the gap, but the gap was real: only integration verified it *meaningfully*),
+and not `BinCompileTest`/`BinCompileRejectionTest`'s two files (since folded into
+`BinCompileIntegrationTest`). All of it was reachable; only integration reached it in a way that
+actually verified anything. `codecov.yml`'s stated policy is still to ignore what's unreachable and
+keep the floor at the real 100% otherwise — an `@codeCoverageIgnore` there would have misstated why
+a line wasn't independently unit-covered as "unreachable," which it was not.
 
 **MSI floor ratchets, coverage floor does not move.** `infection.json5`'s `minMsi`/
 `minCoveredMsi` are pinned to a measured value ([#137][137]: `87.86`), not a target chosen up

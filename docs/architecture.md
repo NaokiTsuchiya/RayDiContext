@@ -37,16 +37,18 @@ AppMeta::fromAppDir(appDir, context, compileDir?, tmpDir?)
 1. **`provider->get($meta)`** resolves the context strictly before `Cleaner` runs, not alongside it.
    `Cleaner` deletes `compileDir`'s contents without inspecting them, so this order is the only
    thing standing between an unknown context and an emptied `compileDir` — an `UnknownContext`
-   aborts `run()` before step 2 starts. Swapping the two lines still passes every assertion in
-   `CompileRunnerTest`; `CompileRunnerOrderingTest` pins the order directly for that reason.
+   aborts `run()` before step 2 starts. Swapping the two lines still passes every other assertion in
+   `CompileRunnerTest`; `CompileRunnerTest::resolvesTheContextBeforeEmptyingTheCompileDir` pins the
+   order directly for that reason.
 2. **`Cleaner`** empties `compileDir` (or creates it) before every compile, so stale scripts from
    renamed or removed classes never survive a recompile. It asks a `CompileDirGuardInterface`
    first — this is what stops an `APP_COMPILE_DIR` typo from recursively deleting the app directory
    or the filesystem root. An app that knows more about its own layout can inject a stricter guard.
 3. **`ScriptCompilerInterface`** (default `RayScriptCompiler`) compiles the context's module into
    `compileDir`. `RayScriptCompiler` is a one-line delegate to `ray/compiler`; the seam exists so
-   the pipeline's *ordering* can be asserted directly (`tests/CompileRunnerOrderingTest.php`)
-   instead of inferred from a real compile. `CompileRunner::run()` wraps anything `compile()` throws
+   the pipeline's *ordering* can be asserted directly
+   (`tests/CompileRunnerTest.php::resolvesTheContextBeforeEmptyingTheCompileDir`) instead of
+   inferred from a real compile. `CompileRunner::run()` wraps anything `compile()` throws
    in `Exception\CompileFailed` (original retrievable via `getPrevious()`); an app calling
    `compile()` directly through the interface still sees the implementation's own exception type,
    unwrapped, per its docblock.

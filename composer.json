@@ -47,6 +47,9 @@
         "gitattributes-check": "tests/gitattributes-check.sh",
         "lowest-check": "@php tests/lowest-bound-check.php",
         "ci-matrix-check": "tests/ci-matrix-check.sh",
+        "changelog-check": "tests/changelog-check.sh",
+        "ci-status-check": "tests/ci-status-check.sh",
+        "tag-release-workflow-check": "tests/tag-release-workflow-check.sh",
         "lint": "mago lint --minimum-fail-level note",
         "analyze": "mago analyze",
         "guard": "mago guard",
@@ -68,7 +71,10 @@
             "@test",
             "@dist",
             "@gitattributes-check",
-            "@ci-matrix-check"
+            "@ci-matrix-check",
+            "@changelog-check",
+            "@ci-status-check",
+            "@tag-release-workflow-check"
         ],
         "infection": "infection --no-progress"
     },

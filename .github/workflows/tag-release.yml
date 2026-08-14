@@ -1,0 +1,84 @@
+name: Tag release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag (must match CHANGELOG.md''s latest confirmed section, no "v" prefix)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Validate only — do not push the tag'
+        required: false
+        type: boolean
+        default: false
+
+# Only the tag job needs to write to the repo; everything else only reads.
+permissions: {}
+
+jobs:
+  validate:
+    name: validate
+    # workflow_dispatch can target any ref; a tag must only ever be resolved and pushed for main.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: read # to read the "ci" check run's conclusion for this commit
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - id: resolve
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          tag="$(php .github/scripts/resolve-release-tag.php "${VERSION_INPUT}" CHANGELOG.md)"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify main's ci aggregate job is green for this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          conclusion="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
+            --jq '[.check_runs[] | select(.name == "ci")][0].conclusion // ""')"
+          .github/scripts/require-ci-success.sh "${conclusion}"
+
+  # Pushes the tag, so this is the only job in the workflow allowed to write to the repo.
+  # Gated behind the "tag" environment: workflow_dispatch can be triggered by API, so the
+  # environment's required reviewers are the only backstop against an accidental push.
+  tag:
+    name: tag
+    needs: validate
+    if: ${{ inputs.dry_run != true }}
+    runs-on: ubuntu-latest
+    environment: tag
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
+          git push origin "${RELEASE_TAG}"
+
+  dry-run-summary:
+    name: dry-run-summary
+    needs: validate
+    if: ${{ inputs.dry_run == true }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: echo "Would push tag \`${RELEASE_TAG}\` (dry run — not pushed)." >> "$GITHUB_STEP_SUMMARY"

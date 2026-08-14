@@ -51,11 +51,14 @@ jobs:
           .github/scripts/require-ci-success.sh "${conclusion}"
 
   # Pushes the tag, so this is the only job in the workflow allowed to write to the repo.
+  # Gated behind the "tag" environment: workflow_dispatch can be triggered by API, so the
+  # environment's required reviewers are the only backstop against an accidental push.
   tag:
     name: tag
     needs: validate
     if: ${{ inputs.dry_run != true }}
     runs-on: ubuntu-latest
+    environment: tag
     permissions:
       contents: write
     steps:

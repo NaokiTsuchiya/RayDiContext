@@ -37,23 +37,8 @@ cp "${root}/composer.json" "${work}/consumer/package/composer.json"
 cp -R "${root}/src" "${root}/bin" "${work}/consumer/package/"
 
 pkg_version="0.3.0"
-php -r '
-$path = $argv[1];
-$json = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
-$json["repositories"] = [
-    [
-        "type" => "path",
-        "url" => "./package",
-        "options" => [
-            "symlink" => false,
-            "versions" => [
-                "naoki-tsuchiya/ray-di-context" => $argv[2],
-            ],
-        ],
-    ],
-];
-file_put_contents($path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
-' "${work}/consumer/composer.json" "${pkg_version}"
+php "${root}/tests/docker-check-manifest.php" "${work}/consumer/composer.json" "${pkg_version}" \
+    || fail "failed to configure path repository in ${work}/consumer/composer.json"
 
 build_log="$(docker build -f "${work}/consumer/Dockerfile" -t "${tag}" "${work}/consumer" 2>&1)" \
     || fail "docker build failed: ${build_log}"

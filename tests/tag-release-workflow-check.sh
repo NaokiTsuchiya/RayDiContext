@@ -136,4 +136,53 @@ done <<<"${invocation_lines}"
 [ "${recovery_count}" = "1" ] \
     || fail "expected exactly 1 invocation matching the recovery command, found ${recovery_count}"
 
-echo "tag-release-workflow-check: OK — validate/tag/dry-run-summary permissions match exactly, tag holds contents: write behind environment: tag and needs: validate, trigger is exactly workflow_dispatch, if: conditions match exactly, exactly 2 'gh release create' invocations in the whole workflow match the two expected commands"
+# The approval-preview step (validate job, unconditional) is what makes the resolved tag, mode,
+# and release notes visible on the run page before the tag job's environment: tag approval gate —
+# see docs/decisions.md. Its existence, env wiring, and use of GITHUB_STEP_SUMMARY/RELEASE_BODY
+# are pinned so deleting or defanging it does not silently pass.
+summary_step_name='Summarize the resolved tag, mode, and release notes'
+summary_step_count="$(yq ".jobs.validate.steps | map(select(.name == \"${summary_step_name}\")) | length" "${wf}")"
+[ "${summary_step_count}" = "1" ] \
+    || fail "expected exactly one jobs.validate step named \"${summary_step_name}\", found ${summary_step_count}"
+
+summary_step_if="$(yq ".jobs.validate.steps[] | select(.name == \"${summary_step_name}\") | .if" "${wf}")"
+[ "${summary_step_if}" = "null" ] \
+    || fail "\"${summary_step_name}\" step has an if: condition (got: ${summary_step_if}) — it must run unconditionally to preview real (non-dry-run) approvals"
+
+summary_step_env="$(yq -o=json -I=0 ".jobs.validate.steps[] | select(.name == \"${summary_step_name}\") | .env" "${wf}")"
+expected_summary_step_env='{"RELEASE_TAG":"${{ steps.resolve.outputs.tag || steps.resolve-recovery.outputs.tag }}","RELEASE_MODE":"${{ steps.mode.outputs.mode }}","RELEASE_BODY":"${{ steps.extract-new.outputs.body || steps.extract-recovery.outputs.body }}","DRY_RUN":"${{ inputs.dry_run }}"}'
+[ "${summary_step_env}" = "${expected_summary_step_env}" ] \
+    || fail "\"${summary_step_name}\" step's env is not exactly ${expected_summary_step_env} (got: ${summary_step_env})"
+
+summary_step_run="$(yq ".jobs.validate.steps[] | select(.name == \"${summary_step_name}\") | .run" "${wf}")"
+expected_summary_step_run="$(cat <<'SCRIPT_EOF'
+{
+  echo "Tag release: \`${RELEASE_TAG}\` — mode: \`${RELEASE_MODE}\`."
+  echo ""
+  if [ "${DRY_RUN}" = "true" ]; then
+    if [ "${RELEASE_MODE}" = "new" ]; then
+      echo "Dry run — would push tag \`${RELEASE_TAG}\` and create its GitHub release (not pushed/created)."
+    else
+      echo "Dry run — tag \`${RELEASE_TAG}\` already exists; would create its GitHub release only if missing (not created)."
+    fi
+  else
+    if [ "${RELEASE_MODE}" = "new" ]; then
+      echo "The \`tag\` job below is waiting for approval (environment: tag) to push this tag and create its GitHub release."
+    else
+      echo "The \`tag\` job below is waiting for approval (environment: tag) to (re)create this tag's GitHub release, if missing."
+    fi
+  fi
+  echo ""
+  echo "Extracted release notes:"
+  echo ""
+  printf '%s\n' "${RELEASE_BODY}"
+} >> "$GITHUB_STEP_SUMMARY"
+SCRIPT_EOF
+)"
+# Whole-block exact equality, not substring greps: a substring check on e.g. '>> "$GITHUB_STEP_SUMMARY"'
+# or 'printf ...RELEASE_BODY' would still pass if the real line were commented out and a decoy left
+# behind, or if RELEASE_TAG/RELEASE_MODE stayed wired in env: but were dropped from the script body.
+[ "${summary_step_run}" = "${expected_summary_step_run}" ] \
+    || fail "\"${summary_step_name}\" step's run: does not match the expected script exactly"
+
+echo "tag-release-workflow-check: OK — validate/tag/dry-run-summary permissions match exactly, tag holds contents: write behind environment: tag and needs: validate, trigger is exactly workflow_dispatch, if: conditions match exactly, exactly 2 'gh release create' invocations in the whole workflow match the two expected commands, approval-preview step exists with correct env wiring and writes GITHUB_STEP_SUMMARY"

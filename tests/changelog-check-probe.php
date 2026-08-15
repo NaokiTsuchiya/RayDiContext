@@ -23,11 +23,7 @@ if ($changelog === false) {
     exit(1);
 }
 
-/**
- * Independent oracle for extractChangelogSection(): locates the same heading with a plain regex
- * instead of going through parseChangelogSections(), so a boundary bug (body running past the
- * next heading, or truncated) shows up as a mismatch rather than passing both implementations.
- */
+/** Independent, regex-based re-implementation checked against extractChangelogSection(). */
 function oracleChangelogSection(string $version, string $changelog): string
 {
     $pattern = '/^## \[' . preg_quote($version, '/') . '\] - \d{4}-\d{2}-\d{2}$\n(.*?)(?=^## \[|\z)/ms';

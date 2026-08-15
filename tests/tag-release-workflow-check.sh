@@ -16,49 +16,77 @@ command -v yq >/dev/null 2>&1 || fail "yq was not found on PATH"
 top_permissions="$(yq -o=json '.permissions' "${wf}")"
 [ "${top_permissions}" = "{}" ] || fail "top-level permissions is not {} (got ${top_permissions})"
 
+# A job-level "write-all" grants everything at once and would not show up as contents: write
+# below, so it is checked separately rather than relying on the per-scope check to catch it.
+write_all_jobs="$(yq '.jobs | to_entries | .[] | select(.value.permissions == "write-all") | .key' "${wf}")"
+[ -z "${write_all_jobs}" ] || fail "job(s) use permissions: write-all instead of naming scopes: ${write_all_jobs}"
+
 # Exactly the tag job may hold contents: write.
 writers="$(yq '.jobs | to_entries | .[] | select(.value.permissions.contents == "write") | .key' "${wf}")"
 [ "${writers}" = "tag" ] || fail "expected only the 'tag' job to hold contents: write, got: '${writers}'"
 
-# workflow_dispatch can target any ref; validate must refuse anything but main so a tag can
-# never be resolved (or pushed) for a non-main commit.
+# The tag job's write access is gated behind the "tag" environment's required reviewers, and can
+# only run after validate's checks — both are load-bearing, not incidental.
+tag_environment="$(yq '.jobs.tag.environment' "${wf}")"
+[ "${tag_environment}" = "tag" ] || fail "jobs.tag.environment is not \"tag\" (got: ${tag_environment}) — the tag job's write access would have no approval gate"
+
+tag_needs="$(yq '.jobs.tag.needs' "${wf}")"
+[ "${tag_needs}" = "validate" ] || fail "jobs.tag.needs is not \"validate\" (got: ${tag_needs}) — the tag job could run without validate's checks"
+
+# Exactly one trigger, workflow_dispatch: GITHUB_TOKEN pushes never trigger another workflow, so
+# Release creation lives inside this workflow instead of a tag-triggered one (see
+# docs/decisions.md); a schedule/pull_request/push trigger added here would run this workflow
+# outside the approval-gated path that check exists to protect.
+trigger_keys="$(yq -o=json -I=0 '.on | keys' "${wf}")"
+[ "${trigger_keys}" = '["workflow_dispatch"]' ] \
+    || fail "workflow triggers are not exactly [\"workflow_dispatch\"] (got: ${trigger_keys})"
+
+# `if:` conditions are compared for exact equality, not substring containment — a substring check
+# would still pass a condition weakened by e.g. appending "|| true".
 validate_if="$(yq '.jobs.validate.if' "${wf}")"
-echo "${validate_if}" | grep -qF "github.ref == 'refs/heads/main'" \
-    || fail "jobs.validate.if does not look like it restricts to refs/heads/main (got: ${validate_if})"
+expected_validate_if="\${{ github.ref == 'refs/heads/main' }}"
+[ "${validate_if}" = "${expected_validate_if}" ] \
+    || fail "jobs.validate.if is not exactly \"${expected_validate_if}\" (got: ${validate_if})"
 
-triggers="$(yq '.on | keys | .[]' "${wf}")"
-echo "${triggers}" | grep -qx "workflow_dispatch" || fail "workflow_dispatch trigger missing"
-echo "${triggers}" | grep -qx "push" \
-    && fail "a push trigger is present — GITHUB_TOKEN pushes never trigger another workflow, so Release creation lives inside this workflow instead (see docs/decisions.md)"
-
-# The tag job must not run when dry_run is true, and dry-run-summary must run only then —
-# otherwise dry_run=true would still push a tag (acceptance 7), or a real run would silently
-# skip pushing (acceptance 1's "no human action, no tag").
 tag_if="$(yq '.jobs.tag.if' "${wf}")"
-echo "${tag_if}" | grep -qF 'inputs.dry_run != true' \
-    || fail "jobs.tag.if does not look like it skips when dry_run is true (got: ${tag_if})"
+expected_tag_if="\${{ inputs.dry_run != true }}"
+[ "${tag_if}" = "${expected_tag_if}" ] \
+    || fail "jobs.tag.if is not exactly \"${expected_tag_if}\" (got: ${tag_if})"
 
 summary_if="$(yq '.jobs["dry-run-summary"].if' "${wf}")"
-echo "${summary_if}" | grep -qF 'inputs.dry_run == true' \
-    || fail "jobs.\"dry-run-summary\".if does not look like it runs only when dry_run is true (got: ${summary_if})"
+expected_summary_if="\${{ inputs.dry_run == true }}"
+[ "${summary_if}" = "${expected_summary_if}" ] \
+    || fail "jobs.\"dry-run-summary\".if is not exactly \"${expected_summary_if}\" (got: ${summary_if})"
 
 # Only the tag job may create a GitHub Release.
 release_creators="$(yq '[.jobs | to_entries[] | select(.value.steps[].run // "" | test("gh release create")) | .key] | unique | .[]' "${wf}")"
 [ "${release_creators}" = "tag" ] || fail "expected only the 'tag' job to run 'gh release create', got: '${release_creators}'"
 
-# Every 'gh release create' call must carry --verify-tag, so a mistyped version can never make gh
-# silently create a lightweight tag on main HEAD instead of failing (see docs/decisions.md).
-missing_verify_tag="$(yq '.jobs.tag.steps[] | select(.run // "" | test("gh release create")) | select(.run | test("--verify-tag") | not) | .name // "unnamed step"' "${wf}")"
-[ -z "${missing_verify_tag}" ] || fail "found 'gh release create' step(s) without --verify-tag: ${missing_verify_tag}"
+# --verify-tag and --latest are checked on the exact line invoking `gh release create`, not
+# anywhere in the step's run: text — a substring-anywhere check would still pass if the flag were
+# dropped from the real command but left behind in a comment or echo.
+check_release_create_line() {
+    local step_name="$1" expected_latest="$2" run line found=0
 
-# --latest is decided statically per mode, never left to gh's own date/version-based guess: a new
-# release's requested version always equals main's latest confirmed section (--latest=true);
-# recovery mode fixes --latest=false unconditionally, a deliberate tradeoff even for the common
-# same-run retry case (see docs/decisions.md).
-new_latest="$(yq '.jobs.tag.steps[] | select(.name == "Create the GitHub release (new)") | .run | test("--latest=true")' "${wf}")"
-[ "${new_latest}" = "true" ] || fail "'Create the GitHub release (new)' step does not pass --latest=true"
+    run="$(yq ".jobs.tag.steps[] | select(.name == \"${step_name}\") | .run" "${wf}")"
+    [ -n "${run}" ] || fail "step \"${step_name}\" not found in jobs.tag.steps"
 
-recovery_latest="$(yq '.jobs.tag.steps[] | select(.name == "Create the GitHub release if missing (recovery)") | .run | test("--latest=false")' "${wf}")"
-[ "${recovery_latest}" = "true" ] || fail "'Create the GitHub release if missing (recovery)' step does not pass --latest=false"
+    while IFS= read -r line; do
+        case "${line}" in
+            *'gh release create'*)
+                found=1
+                echo "${line}" | grep -qF -- '--verify-tag' \
+                    || fail "\"${step_name}\": 'gh release create' line lacks --verify-tag: ${line}"
+                echo "${line}" | grep -qF -- "--latest=${expected_latest}" \
+                    || fail "\"${step_name}\": 'gh release create' line does not pass --latest=${expected_latest}: ${line}"
+                ;;
+        esac
+    done <<<"${run}"
 
-echo "tag-release-workflow-check: OK — only 'tag' holds contents: write and runs gh release create with --verify-tag, trigger is workflow_dispatch only, tag/dry-run-summary if: conditions are complementary on dry_run, --latest is fixed per mode"
+    [ "${found}" = "1" ] || fail "step \"${step_name}\" has no 'gh release create' line"
+}
+
+check_release_create_line "Create the GitHub release (new)" "true"
+check_release_create_line "Create the GitHub release if missing (recovery)" "false"
+
+echo "tag-release-workflow-check: OK — only 'tag' holds contents: write (no write-all) behind environment: tag and needs: validate, trigger is exactly workflow_dispatch, if: conditions match exactly, gh release create carries --verify-tag and the mode-fixed --latest on its own line"

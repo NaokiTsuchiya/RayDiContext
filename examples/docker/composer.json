@@ -1,5 +1,5 @@
 {
     "require": {
-        "naoki-tsuchiya/ray-di-context": "^0.1.0"
+        "naoki-tsuchiya/ray-di-context": "^0.3.0"
     }
 }

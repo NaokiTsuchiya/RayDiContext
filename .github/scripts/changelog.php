@@ -3,8 +3,9 @@
 declare(strict_types=1);
 
 /**
- * Pure CHANGELOG.md parsing shared by .github/workflows/tag-release.yml's tag-name resolution
- * and issue #155's Release-notes generation — see tests/changelog-check.sh.
+ * Pure CHANGELOG.md parsing shared by .github/workflows/tag-release.yml's tag-name resolution,
+ * recovery-mode version validation, and issue #155's Release-notes extraction — see
+ * tests/changelog-check.sh.
  */
 
 /**
@@ -58,15 +59,25 @@ function latestReleasedVersion(string $changelog): ?string
     return null;
 }
 
+/** @throws RuntimeException When $version is not a plain "x.y.z" version (three dot-separated non-negative integers). */
+function validateVersionFormat(string $version): void
+{
+    if (str_starts_with($version, 'v')) {
+        throw new RuntimeException(sprintf('Version must not carry a "v" prefix: "%s"', $version));
+    }
+
+    if (preg_match('/^\d+\.\d+\.\d+$/D', $version) !== 1) {
+        throw new RuntimeException(sprintf('Version must be a plain "x.y.z" version: "%s"', $version));
+    }
+}
+
 /**
- * @throws RuntimeException When $requestedVersion carries a "v" prefix, or does not match
- *     $changelog's latest confirmed version.
+ * @throws RuntimeException When $requestedVersion is not a plain "x.y.z" version (see
+ *     validateVersionFormat()), or does not match $changelog's latest confirmed version.
  */
 function resolveReleaseTag(string $requestedVersion, string $changelog): string
 {
-    if (str_starts_with($requestedVersion, 'v')) {
-        throw new RuntimeException(sprintf('Version must not carry a "v" prefix: "%s"', $requestedVersion));
-    }
+    validateVersionFormat($requestedVersion);
 
     $latest = latestReleasedVersion($changelog);
     if ($latest === null || $requestedVersion !== $latest) {
@@ -78,4 +89,30 @@ function resolveReleaseTag(string $requestedVersion, string $changelog): string
     }
 
     return $requestedVersion;
+}
+
+/**
+ * Body of $changelog's "## [$version] - YYYY-MM-DD" section, trimmed of leading/trailing blank lines.
+ *
+ * @throws RuntimeException When $version has no confirmed section, or the section's body is empty.
+ */
+function extractChangelogSection(string $version, string $changelog): string
+{
+    foreach (parseChangelogSections($changelog) as $section) {
+        if ($section['version'] !== $version) {
+            continue;
+        }
+
+        $body = trim($section['body']);
+        if ($body === '') {
+            throw new RuntimeException(sprintf(
+                'CHANGELOG.md\'s "%s" section has no body (blank between its heading and the next heading)',
+                $version,
+            ));
+        }
+
+        return $body;
+    }
+
+    throw new RuntimeException(sprintf('CHANGELOG.md has no confirmed section for version "%s"', $version));
 }

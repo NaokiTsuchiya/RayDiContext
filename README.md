@@ -377,16 +377,28 @@ the only thing that matters is not mixing the two.
 
 Once the CHANGELOG PR is merged, run the "Tag release" workflow
 (`.github/workflows/tag-release.yml`) from the Actions tab, or with
-`gh workflow run`, passing the version you just confirmed. It refuses to push
-a tag that does not match `CHANGELOG.md`'s latest confirmed section, refuses
-a `v`-prefixed input, and refuses to push if main's `ci` job is not green for
-the commit being tagged. Pass `dry_run=true` to run every check and see the
-tag name it would push, without pushing it.
+`gh workflow run`, passing the version you just confirmed:
 
 ```bash
 gh workflow run tag-release.yml -f version=0.1.0
-gh release create 0.1.0 --generate-notes
 ```
+
+For a version with no existing tag, it refuses to push a tag that does not
+match `CHANGELOG.md`'s latest confirmed section, refuses a `v`-prefixed
+input, and refuses to push if main's `ci` job is not green for the commit
+being tagged; once those pass it pushes the tag and creates the GitHub
+Release from that section's text (`gh release create --verify-tag`).
+Pass `dry_run=true` to run every check and see the extracted release notes
+without pushing a tag or creating a release.
+
+If the run fails or is interrupted after the tag is pushed but before the
+Release is created, run the same command with the same `version` again — the
+workflow detects that the tag already exists and only (re)creates the
+Release, reading `CHANGELOG.md` from that tag rather than from main. Running
+it again once the Release already exists is a no-op. A Release created this
+way is never marked "Latest" on the releases page, even if it is in fact the
+newest version — run `gh release edit <version> --latest` by hand afterward
+if that matters.
 
 Packagist builds the version from the git tag, not from the GitHub release —
 the release is for humans. A published tag is never re-pointed: the tag ruleset

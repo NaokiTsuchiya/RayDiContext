@@ -4,11 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to tag (must match CHANGELOG.md''s latest confirmed section, no "v" prefix)'
+        description: >-
+          Version to tag and release, or an existing tag whose GitHub Release only needs
+          (re)creating (no "v" prefix)
         required: true
         type: string
       dry_run:
-        description: 'Validate only — do not push the tag'
+        description: 'Validate and extract release notes only — do not push a tag or create a release'
         required: false
         type: boolean
         default: false
@@ -17,6 +19,8 @@ on:
 permissions: {}
 
 jobs:
+  # "new" vs "recovery" mode — see docs/decisions.md ("Release creation lives in
+  # `tag-release.yml`'s `tag` job, not a tag-triggered workflow").
   validate:
     name: validate
     # workflow_dispatch can target any ref; a tag must only ever be resolved and pushed for main.
@@ -26,7 +30,9 @@ jobs:
       contents: read
       checks: read # to read the "ci" check run's conclusion for this commit
     outputs:
-      tag: ${{ steps.resolve.outputs.tag }}
+      tag: ${{ steps.resolve.outputs.tag || steps.resolve-recovery.outputs.tag }}
+      mode: ${{ steps.mode.outputs.mode }}
+      body: ${{ steps.extract-new.outputs.body || steps.extract-recovery.outputs.body }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -35,14 +41,36 @@ jobs:
           php-version: '8.2'
           coverage: none
 
+      - name: Validate version format before it reaches any git command
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: php .github/scripts/validate-version-format.php "${VERSION_INPUT}" >/dev/null
+
+      - id: mode
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          status=0
+          git ls-remote --exit-code origin "refs/tags/${VERSION_INPUT}" >/dev/null 2>&1 || status=$?
+          case "${status}" in
+            0) echo "mode=recovery" >> "$GITHUB_OUTPUT" ;;
+            2) echo "mode=new" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "git ls-remote exited ${status} (network/auth failure, not \"no such tag\") — refusing to guess new vs recovery" >&2
+              exit 1
+              ;;
+          esac
+
       - id: resolve
+        if: ${{ steps.mode.outputs.mode == 'new' }}
         env:
           VERSION_INPUT: ${{ inputs.version }}
         run: |
           tag="$(php .github/scripts/resolve-release-tag.php "${VERSION_INPUT}" CHANGELOG.md)"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify main's ci aggregate job is green for this commit
+      - name: Verify main's ci aggregate job is green for this commit (new release only)
+        if: ${{ steps.mode.outputs.mode == 'new' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -50,9 +78,46 @@ jobs:
             --jq '[.check_runs[] | select(.name == "ci")][0].conclusion // ""')"
           .github/scripts/require-ci-success.sh "${conclusion}"
 
-  # Pushes the tag, so this is the only job in the workflow allowed to write to the repo.
-  # Gated behind the "tag" environment: workflow_dispatch can be triggered by API, so the
-  # environment's required reviewers are the only backstop against an accidental push.
+      - name: Confirm CHANGELOG.md's section extracts (new release, proof only — the tag job re-extracts for real)
+        id: extract-new
+        if: ${{ steps.mode.outputs.mode == 'new' }}
+        env:
+          RELEASE_TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          body="$(php .github/scripts/extract-changelog-section.php "${RELEASE_TAG}" CHANGELOG.md)"
+          {
+            echo "body<<CHANGELOG_EOF"
+            echo "${body}"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - id: resolve-recovery
+        if: ${{ steps.mode.outputs.mode == 'recovery' }}
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          tag="$(php .github/scripts/validate-version-format.php "${VERSION_INPUT}")"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the existing tag and confirm its own CHANGELOG.md's section extracts (recovery)
+        id: extract-recovery
+        if: ${{ steps.mode.outputs.mode == 'recovery' }}
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          git fetch --depth=1 origin "refs/tags/${VERSION_INPUT}:refs/tags/${VERSION_INPUT}"
+          git show "refs/tags/${VERSION_INPUT}:CHANGELOG.md" > /tmp/tag-changelog.md
+          body="$(php .github/scripts/extract-changelog-section.php "${VERSION_INPUT}" /tmp/tag-changelog.md)"
+          {
+            echo "body<<CHANGELOG_EOF"
+            echo "${body}"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  # Pushes the tag and creates the GitHub Release, so this is the only job in the workflow
+  # allowed to write to the repo. Gated behind the "tag" environment: workflow_dispatch can be
+  # triggered by API, so the environment's required reviewers are the only backstop against an
+  # accidental push or release.
   tag:
     name: tag
     needs: validate
@@ -64,13 +129,52 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - env:
+      - name: Push the tag (new release)
+        if: ${{ needs.validate.outputs.mode == 'new' }}
+        env:
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
           git push origin "${RELEASE_TAG}"
+
+      - name: Extract the release notes (new release, from this checkout)
+        if: ${{ needs.validate.outputs.mode == 'new' }}
+        env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: php .github/scripts/extract-changelog-section.php "${RELEASE_TAG}" CHANGELOG.md > /tmp/release-notes.md
+
+      # --latest and --verify-tag: see docs/decisions.md.
+      - name: Create the GitHub release (new)
+        if: ${{ needs.validate.outputs.mode == 'new' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          gh release create "${RELEASE_TAG}" --verify-tag --notes-file /tmp/release-notes.md --title "${RELEASE_TAG}" --latest=true
+
+      - name: Extract the release notes from the tag's own CHANGELOG.md (recovery)
+        if: ${{ needs.validate.outputs.mode == 'recovery' }}
+        env:
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          git fetch --depth=1 origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          git show "refs/tags/${RELEASE_TAG}:CHANGELOG.md" > /tmp/tag-changelog.md
+          php .github/scripts/extract-changelog-section.php "${RELEASE_TAG}" /tmp/tag-changelog.md > /tmp/release-notes.md
+
+      # --latest and --verify-tag: see docs/decisions.md.
+      - name: Create the GitHub release if missing (recovery)
+        if: ${{ needs.validate.outputs.mode == 'recovery' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} already exists; nothing to do."
+          else
+            gh release create "${RELEASE_TAG}" --verify-tag --notes-file /tmp/release-notes.md --title "${RELEASE_TAG}" --latest=false
+          fi
 
   dry-run-summary:
     name: dry-run-summary
@@ -81,4 +185,19 @@ jobs:
     steps:
       - env:
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
-        run: echo "Would push tag \`${RELEASE_TAG}\` (dry run — not pushed)." >> "$GITHUB_STEP_SUMMARY"
+          RELEASE_MODE: ${{ needs.validate.outputs.mode }}
+          RELEASE_BODY: ${{ needs.validate.outputs.body }}
+        run: |
+          {
+            echo "Dry run for \`${RELEASE_TAG}\` — mode: \`${RELEASE_MODE}\`."
+            echo ""
+            if [ "${RELEASE_MODE}" = "new" ]; then
+              echo "Would push tag \`${RELEASE_TAG}\` and create its GitHub release (not pushed/created — dry run)."
+            else
+              echo "Tag \`${RELEASE_TAG}\` already exists; would create its GitHub release only if missing (not created — dry run)."
+            fi
+            echo ""
+            echo "Extracted release notes:"
+            echo ""
+            echo "${RELEASE_BODY}"
+          } >> "$GITHUB_STEP_SUMMARY"

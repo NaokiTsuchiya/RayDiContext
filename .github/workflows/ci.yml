@@ -56,6 +56,13 @@ jobs:
       # upload step) has to equal the `test:` job's PHP matrix size.
       - run: composer ci-matrix-check
 
+      # Otherwise these three only run locally from `composer tests`.
+      - run: composer changelog-check
+
+      - run: composer ci-status-check
+
+      - run: composer tag-release-workflow-check
+
   # ubuntu-latest runs as a non-root user on purpose: tests that call
   # Support\PermissionBits::skipUnlessEnforced() rely on permission bits root ignores.
   # Do not move this job into a `container:` — it would silently weaken those tests.

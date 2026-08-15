@@ -28,7 +28,8 @@ echo "${validate_if}" | grep -qF "github.ref == 'refs/heads/main'" \
 
 triggers="$(yq '.on | keys | .[]' "${wf}")"
 echo "${triggers}" | grep -qx "workflow_dispatch" || fail "workflow_dispatch trigger missing"
-echo "${triggers}" | grep -qx "push" && fail "a push trigger is present — a tag push must not auto-run this workflow (that's #155's job)"
+echo "${triggers}" | grep -qx "push" \
+    && fail "a push trigger is present — GITHUB_TOKEN pushes never trigger another workflow, so Release creation lives inside this workflow instead (see docs/decisions.md)"
 
 # The tag job must not run when dry_run is true, and dry-run-summary must run only then —
 # otherwise dry_run=true would still push a tag (acceptance 7), or a real run would silently
@@ -41,4 +42,23 @@ summary_if="$(yq '.jobs["dry-run-summary"].if' "${wf}")"
 echo "${summary_if}" | grep -qF 'inputs.dry_run == true' \
     || fail "jobs.\"dry-run-summary\".if does not look like it runs only when dry_run is true (got: ${summary_if})"
 
-echo "tag-release-workflow-check: OK — only 'tag' holds contents: write, trigger is workflow_dispatch only, tag/dry-run-summary if: conditions are complementary on dry_run"
+# Only the tag job may create a GitHub Release.
+release_creators="$(yq '[.jobs | to_entries[] | select(.value.steps[].run // "" | test("gh release create")) | .key] | unique | .[]' "${wf}")"
+[ "${release_creators}" = "tag" ] || fail "expected only the 'tag' job to run 'gh release create', got: '${release_creators}'"
+
+# Every 'gh release create' call must carry --verify-tag, so a mistyped version can never make gh
+# silently create a lightweight tag on main HEAD instead of failing (see docs/decisions.md).
+missing_verify_tag="$(yq '.jobs.tag.steps[] | select(.run // "" | test("gh release create")) | select(.run | test("--verify-tag") | not) | .name // "unnamed step"' "${wf}")"
+[ -z "${missing_verify_tag}" ] || fail "found 'gh release create' step(s) without --verify-tag: ${missing_verify_tag}"
+
+# --latest is decided statically per mode, never left to gh's own date/version-based guess: a new
+# release's requested version always equals main's latest confirmed section (--latest=true);
+# recovery mode fixes --latest=false unconditionally, a deliberate tradeoff even for the common
+# same-run retry case (see docs/decisions.md).
+new_latest="$(yq '.jobs.tag.steps[] | select(.name == "Create the GitHub release (new)") | .run | test("--latest=true")' "${wf}")"
+[ "${new_latest}" = "true" ] || fail "'Create the GitHub release (new)' step does not pass --latest=true"
+
+recovery_latest="$(yq '.jobs.tag.steps[] | select(.name == "Create the GitHub release if missing (recovery)") | .run | test("--latest=false")' "${wf}")"
+[ "${recovery_latest}" = "true" ] || fail "'Create the GitHub release if missing (recovery)' step does not pass --latest=false"
+
+echo "tag-release-workflow-check: OK — only 'tag' holds contents: write and runs gh release create with --verify-tag, trigger is workflow_dispatch only, tag/dry-run-summary if: conditions are complementary on dry_run, --latest is fixed per mode"

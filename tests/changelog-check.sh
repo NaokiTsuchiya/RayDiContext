@@ -5,6 +5,8 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 support="${root}/.github/scripts/changelog.php"
 cli="${root}/.github/scripts/resolve-release-tag.php"
+extract_cli="${root}/.github/scripts/extract-changelog-section.php"
+format_cli="${root}/.github/scripts/validate-version-format.php"
 changelog="${root}/CHANGELOG.md"
 
 fail() {
@@ -27,6 +29,26 @@ cli_out="$(php "${cli}" "${expected}" "${changelog}")" \
 
 if php "${cli}" "9.9.9" "${changelog}" >/dev/null 2>&1; then
     fail "resolve-release-tag.php accepted a version that does not match CHANGELOG.md"
+fi
+
+# Entry-point check: extract-changelog-section.php against the current CHANGELOG.md's own latest
+# section.
+extract_out="$(php "${extract_cli}" "${expected}" "${changelog}")" \
+    || fail "extract-changelog-section.php failed for the current CHANGELOG.md's own latest version"
+[ -n "${extract_out}" ] || fail "extract-changelog-section.php printed an empty body for '${expected}'"
+
+if php "${extract_cli}" "9.9.9" "${changelog}" >/dev/null 2>&1; then
+    fail "extract-changelog-section.php accepted a version with no CHANGELOG.md section"
+fi
+
+# Entry-point check: validate-version-format.php accepts the current latest version and rejects
+# a "v"-prefixed one — recovery mode's only guard once a tag already exists.
+format_out="$(php "${format_cli}" "${expected}")" \
+    || fail "validate-version-format.php rejected the current CHANGELOG.md's own latest version"
+[ "${format_out}" = "${expected}" ] || fail "validate-version-format.php printed '${format_out}', expected '${expected}'"
+
+if php "${format_cli}" "v${expected}" >/dev/null 2>&1; then
+    fail "validate-version-format.php accepted a \"v\"-prefixed version"
 fi
 
 echo "changelog-check: OK — latestReleasedVersion()/resolveReleaseTag() and the CLI agree with CHANGELOG.md (${expected})"

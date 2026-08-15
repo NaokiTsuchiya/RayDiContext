@@ -620,6 +620,74 @@ achieved level regress on a future PR without failing CI. `codecov.yml`'s `targe
 equivalent ratchet: it is already the ceiling. This issue does not change either file's current
 value.
 
+### Release creation lives in `tag-release.yml`'s `tag` job, not a tag-triggered workflow — [#155][155]
+
+A separate `on: push: tags:` workflow was the first shape considered, and rejected: a push made
+with the workflow's own `GITHUB_TOKEN` never triggers another workflow run — this is documented
+GitHub behaviour, with the sole exceptions being a `workflow_dispatch`/`repository_dispatch` API
+call. `tag`'s job pushes the tag with `GITHUB_TOKEN`, so a tag-triggered workflow watching for that
+push would be dead wiring on the one path that actually creates a release; making it fire would
+need a PAT or GitHub App token, i.e. a second standing write credential. That is the same shape
+"### Release automation with release-drafter" above rejected — "a standing `contents: write`
+grant" — so introducing one just to make a second workflow trigger is worse than the rejected
+option, not a way around it. This design keeps a single write credential (`GITHUB_TOKEN`, scoped
+to the `tag` job alone) and a single `environment: tag` approval gate covering both the tag push
+and the Release creation in the same run, rather than splitting the same authorization across two
+workflows and two approvals.
+
+**What replaced the earlier "re-run `composer tests` on the tag" idea.** An earlier draft of this
+acceptance criteria called for re-running the equivalent of `composer tests` once a tag existed.
+`validate`'s existing check already does the equivalent for new releases without a second run: it
+reads the target commit's `ci` aggregate job conclusion (`[lint, test, lowest, dist,
+docker-example, gitattributes-check, infection]`, which is `composer tests`'s content) via the
+GitHub API and refuses to proceed unless it is green. Re-running the suite at tag time would only
+re-verify a commit that CI had already verified identically, for a real cost — the full matrix
+takes minutes, gates the same `environment: tag` approval, and a second run *could* diverge from
+the first only if `composer update`'s resolution changed between the two runs, which is itself a
+result the `test` job's weekly schedule exists to catch, not something a release should re-litigate
+synchronously.
+
+**Recovery mode's release notes come from the tag's own `CHANGELOG.md`, never `main`'s.** A tag is
+immutable once pushed (the tag ruleset restricts update and deletion), but `main` keeps moving —
+by the time a failed release is retried, `main`'s `CHANGELOG.md` may already hold a newer confirmed
+section, or none matching the tag's version at all. Recovery mode's `tag` job step fetches
+`refs/tags/<version>` and reads `CHANGELOG.md` from *that* ref with `git show`, so the extracted
+body always matches what the tag actually shipped — the workflow's own scripts (`changelog.php`,
+`extract-changelog-section.php`) still come from `main`'s checkout, never from the tag, so a
+historical tag can never smuggle in different extraction logic.
+
+**`--verify-tag` is mandatory on every `gh release create` call.** Without it, `gh` creates a
+missing tag itself — a lightweight tag on whatever `HEAD` the runner has checked out — rather than
+failing. A mistyped or unexpected version would then create a lightweight tag on `main` HEAD,
+which Packagist ingests as a release the moment it exists and the tag ruleset then makes
+undeletable. `--verify-tag` turns that into a normal command failure instead.
+
+**`--latest` is fixed per mode, not computed from `latestReleasedVersion()` at `tag`-job time.**
+New releases always pass `--latest=true`: `resolve-release-tag.php` already enforces that the
+requested version equals `main`'s latest confirmed section before a tag is ever pushed, so it is
+true by construction. Recovery mode always passes `--latest=false`, even though the most common
+recovery case — the tag pushed, `gh release create` failed, the same `version` re-run — is one
+where the tag *is* still `main`'s latest confirmed section at that moment. This is accepted, not
+overlooked: re-running `workflow_dispatch` again does not fix it either (`gh release view` finds
+the Release already created and skips straight to the no-op branch, `--latest` and all), so the
+published Release is left not marked latest until someone runs `gh release edit <version> --latest`
+by hand — a one-line manual step, not a silent gap. The alternative, re-deriving "is this still
+latest" from `main`'s checkout at recovery time, makes the one job with `contents: write` also read
+`main`'s HEAD state to decide a cosmetic flag, for a case this workflow already treats as
+exceptional.
+
+**`validate` writes the tag/mode/release-notes preview to `$GITHUB_STEP_SUMMARY` unconditionally,
+not only in `dry-run-summary`.** A GitHub Actions job summary is visible on the run page as soon
+as the job that wrote it finishes, independent of whether a later job in the same run is paused on
+an `environment:` approval gate — so a step at the end of `validate` (which always runs before
+`tag`, dry run or not) is what actually gives the `tag` environment's required reviewers something
+to read before they approve: the resolved tag, new-vs-recovery mode, and the exact release-notes
+body about to ship. Before this, that information only existed for `dry_run: true` runs, in
+`dry-run-summary` — the one case nobody needs to approve anything for. `dry-run-summary` keeps its
+existing job, `if:`, and permissions unchanged (see acceptance criterion 6) precisely because
+`tests/tag-release-workflow-check.sh` pins that shape; the two summaries overlap on a `dry_run:
+true` run, which costs nothing.
+
 ## Declined for cost
 
 ### Release automation with release-drafter — [#26][26]
@@ -630,6 +698,13 @@ hand, and a standing `contents: write` grant, and what it produces is what `gh r
 
 **Would change it:** a cadence that makes the manual step frequent, or generated notes that need
 hand-editing every time.
+
+**Reaffirmed by [#155][155]:** `tag-release.yml`'s `tag` job now runs `gh release create` itself,
+with the notes body extracted from `CHANGELOG.md` rather than generated from merged PRs — a
+workflow, a config file and PR labels are still not needed — and `contents: write` is still scoped
+to that one job behind the `environment: tag` approval gate, not standing. See "Release creation
+lives in `tag-release.yml`'s `tag` job, not a tag-triggered workflow" above for why a second,
+tag-triggered workflow was rejected in favor of this.
 
 ### `ext-posix` to detect root in tests
 
@@ -807,6 +882,7 @@ cannot fail it. Implementable; nobody has needed it. Would be a separate issue.
 [142]: https://github.com/NaokiTsuchiya/RayDiContext/issues/142
 [143]: https://github.com/NaokiTsuchiya/RayDiContext/issues/143
 [148]: https://github.com/NaokiTsuchiya/RayDiContext/pull/148
+[155]: https://github.com/NaokiTsuchiya/RayDiContext/issues/155
 [28ea330]: https://github.com/NaokiTsuchiya/RayDiContext/commit/28ea330
 [34f6a95]: https://github.com/NaokiTsuchiya/RayDiContext/commit/34f6a95
 [888a9b1]: https://github.com/NaokiTsuchiya/RayDiContext/commit/888a9b1

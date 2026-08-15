@@ -676,6 +676,18 @@ latest" from `main`'s checkout at recovery time, makes the one job with `content
 `main`'s HEAD state to decide a cosmetic flag, for a case this workflow already treats as
 exceptional.
 
+**`validate` writes the tag/mode/release-notes preview to `$GITHUB_STEP_SUMMARY` unconditionally,
+not only in `dry-run-summary`.** A GitHub Actions job summary is visible on the run page as soon
+as the job that wrote it finishes, independent of whether a later job in the same run is paused on
+an `environment:` approval gate — so a step at the end of `validate` (which always runs before
+`tag`, dry run or not) is what actually gives the `tag` environment's required reviewers something
+to read before they approve: the resolved tag, new-vs-recovery mode, and the exact release-notes
+body about to ship. Before this, that information only existed for `dry_run: true` runs, in
+`dry-run-summary` — the one case nobody needs to approve anything for. `dry-run-summary` keeps its
+existing job, `if:`, and permissions unchanged (see acceptance criterion 6) precisely because
+`tests/tag-release-workflow-check.sh` pins that shape; the two summaries overlap on a `dry_run:
+true` run, which costs nothing.
+
 ## Declined for cost
 
 ### Release automation with release-drafter — [#26][26]

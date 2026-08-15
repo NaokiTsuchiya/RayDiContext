@@ -388,6 +388,10 @@ match `CHANGELOG.md`'s latest confirmed section, refuses a `v`-prefixed
 input, and refuses to push if main's `ci` job is not green for the commit
 being tagged; once those pass it pushes the tag and creates the GitHub
 Release from that section's text (`gh release create --verify-tag`).
+Pushing the tag and creating the Release both need approval from the `tag`
+environment's required reviewers; before approving, the workflow run's
+summary page already shows the resolved version, mode, and the exact release
+notes about to be published — no need to dig through job logs first.
 Pass `dry_run=true` to run every check and see the extracted release notes
 without pushing a tag or creating a release.
 

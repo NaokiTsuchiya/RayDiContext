@@ -116,6 +116,35 @@ jobs:
             echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Summarize the resolved tag, mode, and release notes
+        env:
+          RELEASE_TAG: ${{ steps.resolve.outputs.tag || steps.resolve-recovery.outputs.tag }}
+          RELEASE_MODE: ${{ steps.mode.outputs.mode }}
+          RELEASE_BODY: ${{ steps.extract-new.outputs.body || steps.extract-recovery.outputs.body }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "Tag release: \`${RELEASE_TAG}\` — mode: \`${RELEASE_MODE}\`."
+            echo ""
+            if [ "${DRY_RUN}" = "true" ]; then
+              if [ "${RELEASE_MODE}" = "new" ]; then
+                echo "Dry run — would push tag \`${RELEASE_TAG}\` and create its GitHub release (not pushed/created)."
+              else
+                echo "Dry run — tag \`${RELEASE_TAG}\` already exists; would create its GitHub release only if missing (not created)."
+              fi
+            else
+              if [ "${RELEASE_MODE}" = "new" ]; then
+                echo "The \`tag\` job below is waiting for approval (environment: tag) to push this tag and create its GitHub release."
+              else
+                echo "The \`tag\` job below is waiting for approval (environment: tag) to (re)create this tag's GitHub release, if missing."
+              fi
+            fi
+            echo ""
+            echo "Extracted release notes:"
+            echo ""
+            printf '%s\n' "${RELEASE_BODY}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # Pushes the tag and creates the GitHub Release, so this is the only job in the workflow
   # allowed to write to the repo. Gated behind the "tag" environment: workflow_dispatch can be
   # triggered by API, so the environment's required reviewers are the only backstop against an

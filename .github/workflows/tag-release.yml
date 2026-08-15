@@ -85,10 +85,11 @@ jobs:
           RELEASE_TAG: ${{ steps.resolve.outputs.tag }}
         run: |
           body="$(php .github/scripts/extract-changelog-section.php "${RELEASE_TAG}" CHANGELOG.md)"
+          delimiter="CHANGELOG_EOF_$(openssl rand -hex 8)"
           {
-            echo "body<<CHANGELOG_EOF"
+            echo "body<<${delimiter}"
             echo "${body}"
-            echo "CHANGELOG_EOF"
+            echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
       - id: resolve-recovery
@@ -108,10 +109,11 @@ jobs:
           git fetch --depth=1 origin "refs/tags/${VERSION_INPUT}:refs/tags/${VERSION_INPUT}"
           git show "refs/tags/${VERSION_INPUT}:CHANGELOG.md" > /tmp/tag-changelog.md
           body="$(php .github/scripts/extract-changelog-section.php "${VERSION_INPUT}" /tmp/tag-changelog.md)"
+          delimiter="CHANGELOG_EOF_$(openssl rand -hex 8)"
           {
-            echo "body<<CHANGELOG_EOF"
+            echo "body<<${delimiter}"
             echo "${body}"
-            echo "CHANGELOG_EOF"
+            echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
   # Pushes the tag and creates the GitHub Release, so this is the only job in the workflow

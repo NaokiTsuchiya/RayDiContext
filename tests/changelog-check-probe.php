@@ -33,7 +33,15 @@ function oracleChangelogSection(string $version, string $changelog): string
         exit(1);
     }
 
-    return trim($matches[1]);
+    $lines = explode("\n", $matches[1]);
+    while ($lines !== [] && trim($lines[0]) === '') {
+        array_shift($lines);
+    }
+    while ($lines !== [] && trim($lines[count($lines) - 1]) === '') {
+        array_pop($lines);
+    }
+
+    return implode("\n", $lines);
 }
 
 $latest = latestReleasedVersion($changelog);
@@ -233,6 +241,28 @@ try {
 
 if (!$whitespaceBodyThrew) {
     fwrite(STDERR, "extractChangelogSection: expected a RuntimeException for a whitespace-only confirmed section, none thrown\n");
+
+    exit(1);
+}
+
+$formattingChangelog = "## [Unreleased]\n\n## [9.9.9] - 2026-08-05\n    indented code\nplain line  \n\n## [0.2.0] - 2026-08-05\n\nBody.\n";
+$formattingSection = extractChangelogSection('9.9.9', $formattingChangelog);
+$expectedFormattingSection = "    indented code\nplain line  ";
+if ($formattingSection !== $expectedFormattingSection) {
+    fwrite(STDERR, sprintf(
+        "extractChangelogSection: expected leading indentation and a trailing Markdown hard break to survive extraction, got %s\n",
+        var_export($formattingSection, true),
+    ));
+
+    exit(1);
+}
+
+$oracleFormattingSection = oracleChangelogSection('9.9.9', $formattingChangelog);
+if ($oracleFormattingSection !== $expectedFormattingSection) {
+    fwrite(STDERR, sprintf(
+        "oracleChangelogSection: expected leading indentation and a trailing Markdown hard break to survive extraction, got %s\n",
+        var_export($oracleFormattingSection, true),
+    ));
 
     exit(1);
 }

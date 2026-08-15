@@ -92,9 +92,12 @@ function resolveReleaseTag(string $requestedVersion, string $changelog): string
 }
 
 /**
- * Body of $changelog's "## [$version] - YYYY-MM-DD" section, trimmed of leading/trailing blank lines.
+ * Body of $changelog's "## [$version] - YYYY-MM-DD" section, with blank lines dropped from the
+ * front and back only — internal indentation and trailing Markdown hard-break spaces on content
+ * lines are preserved.
  *
- * @throws RuntimeException When $version has no confirmed section, or the section's body is empty.
+ * @throws RuntimeException When $version has no confirmed section, or the section's body is
+ *     entirely blank lines.
  */
 function extractChangelogSection(string $version, string $changelog): string
 {
@@ -103,15 +106,22 @@ function extractChangelogSection(string $version, string $changelog): string
             continue;
         }
 
-        $body = trim($section['body']);
-        if ($body === '') {
+        $lines = explode("\n", $section['body']);
+        while ($lines !== [] && trim($lines[0]) === '') {
+            array_shift($lines);
+        }
+        while ($lines !== [] && trim($lines[count($lines) - 1]) === '') {
+            array_pop($lines);
+        }
+
+        if ($lines === []) {
             throw new RuntimeException(sprintf(
                 'CHANGELOG.md\'s "%s" section has no body (blank between its heading and the next heading)',
                 $version,
             ));
         }
 
-        return $body;
+        return implode("\n", $lines);
     }
 
     throw new RuntimeException(sprintf('CHANGELOG.md has no confirmed section for version "%s"', $version));

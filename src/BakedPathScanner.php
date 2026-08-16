@@ -16,8 +16,8 @@ use function strtr;
  */
 final class BakedPathScanner
 {
-    /** A character that continues a path segment; "/" is absent because it ends one */
-    private const SEGMENT_CHAR = '/\A[A-Za-z0-9_.\-]\z/';
+    /** A character that continues a path segment; "/" ends one, and "'" is indistinguishable from a delimiter */
+    private const SEGMENT_CHAR = '/\A[A-Za-z0-9_.\-\\\\]\z/';
 
     /** The two escape sequences a single-quoted PHP literal can carry, mapped back to their bytes */
     private const UNESCAPED = ['\\\\' => '\\', "\\'" => "'"];

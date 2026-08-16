@@ -95,12 +95,28 @@ final class BakedPathScannerTest extends TestCase
             self::COMPILE_DIR,
             "/app/qu'ote",
         ];
+
+        yield 'quote after the needle, a byte a delimiter cannot be told from' => [
+            "<?php return '/app\\'cache/config';",
+            self::COMPILE_DIR,
+            '/app',
+        ];
     }
 
     /** @return iterable<string, array{string, non-empty-string, non-empty-string}> */
     public static function allowedCases(): iterable
     {
         yield 'letter after the needle' => ["<?php return '/appdata/config.php';", self::COMPILE_DIR, '/app'];
+        yield 'backslash after the needle' => [
+            "<?php return '/app\\\\cache/config';",
+            self::COMPILE_DIR,
+            '/app',
+        ];
+        yield 'backslash before the needle' => [
+            "<?php return '/srv/data\\\\/app/var';",
+            self::COMPILE_DIR,
+            '/app',
+        ];
         yield 'word continuing the needle' => ["<?php return '/application/config';", self::COMPILE_DIR, '/app'];
         yield 'digit after the needle' => ["<?php return '/app2/var';", self::COMPILE_DIR, '/app'];
         yield 'underscore after the needle' => ["<?php return '/app_old/var';", self::COMPILE_DIR, '/app'];

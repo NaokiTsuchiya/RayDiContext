@@ -20,6 +20,12 @@ README's Versioning section).
   those two sequences before scanning, which also stops the mirror-image false positive: a
   `compileDir` spelled with either byte was not recognised as an allowed range, so any needle
   inside it was reported as baked.
+- `BakedPathScanner` now treats `\` as a byte that continues a path segment, so `/app` no longer
+  reports a sibling directory named `/app\cache` as baked. The OS does not resolve a backslash
+  inside a segment — the reason `CONTEXT_PATTERN` accepts one — so such a path is a sibling rather
+  than a child, as `/appdata` already was. `'` is deliberately left out: unescaping cannot tell it
+  from the delimiter that closes a literal, so accepting it would hide every path baked as a
+  literal.
 
 ## [0.3.0] - 2026-08-15
 

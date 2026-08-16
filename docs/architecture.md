@@ -69,6 +69,17 @@ AppMeta::fromAppDir(appDir, context, compileDir?, tmpDir?)
    It happens once in the constructor, which keeps every offset the class computes — needle hits,
    `compileDir` ranges, segment-boundary lookups — in one coordinate space; unescaping per lookup
    instead would need an index map to keep those three in agreement.
+
+   **`\` counts as a segment byte, `'` cannot.** Once unescaped, both are ordinary path bytes, and
+   `SEGMENT_CHAR` includes `\` for the same reason `CONTEXT_PATTERN` does: the OS does not resolve a
+   backslash inside a segment, so `/app\cache` is a sibling of `/app`, not a child, and must not
+   match — exactly like `/appdata`. `'` gets no such treatment, because unescaping erases the one
+   thing that distinguished a `\'` inside a literal from the `'` that delimits it. Adding `'` to
+   `SEGMENT_CHAR` therefore reads every closing delimiter as segment-continuation and stops the
+   guard seeing any path baked as a literal at all — measured as 17 failing cases, `appDir` itself
+   among them. So a needle abutting a quote is reported, and `/app` over-reports on a sibling named
+   `/app'cache`. That is the safe direction for a guard whose failure mode is shipping a secret, and
+   the bakedCases entry named for the delimiter pins it against a well-meant "fix".
 5. **`PermissionNormalizer`** (`@internal`) normalizes files to `0644` and directories to `0755`,
    skipping symlinks and anything that already grants the needed world-bit, so it does not fight a
    pre-configured volume. Runs only after the guard passes.

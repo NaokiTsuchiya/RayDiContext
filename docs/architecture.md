@@ -58,6 +58,17 @@ AppMeta::fromAppDir(appDir, context, compileDir?, tmpDir?)
    occurrences lying entirely inside a `compileDir` literal, which *is* meant to be baked in. Only
    those two paths are known here — an app passes `$extraNeedles` for anything else that must not
    ship, such as a secret. A rejection never echoes an extra needle's value, only the script.
+
+   **The scanner unescapes `\\` and `\'` before it scans.** Ray.Compiler emits a `toInstance()`
+   object or array as `unserialize(var_export(serialize($value), true))` and a plain value as
+   `var_export($value)`, so every needle byte arrives escaped for a single-quoted PHP literal. A
+   raw byte comparison therefore missed any path or secret containing `'` or `\` — the guard failed
+   open on exactly the values most likely to hold them, and symmetrically failed closed when the
+   `compileDir` held one, because its allowed range went unrecognised. Those two sequences are the
+   only escapes a single-quoted literal has, so unescaping them is exact rather than a heuristic.
+   It happens once in the constructor, which keeps every offset the class computes — needle hits,
+   `compileDir` ranges, segment-boundary lookups — in one coordinate space; unescaping per lookup
+   instead would need an index map to keep those three in agreement.
 5. **`PermissionNormalizer`** (`@internal`) normalizes files to `0644` and directories to `0755`,
    skipping symlinks and anything that already grants the needed world-bit, so it does not fight a
    pre-configured volume. Runs only after the guard passes.

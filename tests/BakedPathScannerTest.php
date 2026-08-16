@@ -77,6 +77,24 @@ final class BakedPathScannerTest extends TestCase
             'deploy/app/var/di/prod',
             'app',
         ];
+
+        yield 'needle whose quote var_export escaped in a serialized blob' => [
+            "<?php return unserialize('a:1:{s:6:\"appDir\";s:11:\"/app/qu\\'ote\";}');",
+            self::COMPILE_DIR,
+            "/app/qu'ote",
+        ];
+
+        yield 'needle whose backslash var_export escaped in a serialized blob' => [
+            "<?php return unserialize('a:1:{s:6:\"appDir\";s:15:\"/app/back\\\\slash\";}');",
+            self::COMPILE_DIR,
+            '/app/back\slash',
+        ];
+
+        yield 'needle escaped in a plain literal argument' => [
+            "<?php return new stdClass('/app/qu\\'ote/src');",
+            self::COMPILE_DIR,
+            "/app/qu'ote",
+        ];
     }
 
     /** @return iterable<string, array{string, non-empty-string, non-empty-string}> */
@@ -114,6 +132,12 @@ final class BakedPathScannerTest extends TestCase
         yield 'two compile dir literals' => [
             "<?php return ['/app/var/di/prod/a.php', '/app/var/di/prod/b.php'];",
             self::COMPILE_DIR,
+            '/app',
+        ];
+
+        yield 'needle inside an escaped compile dir literal' => [
+            "<?php return '/app/qu\\'ote/di/scripts/x.php';",
+            "/app/qu'ote/di",
             '/app',
         ];
     }

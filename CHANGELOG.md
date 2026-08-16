@@ -9,6 +9,18 @@ README's Versioning section).
 
 ## [Unreleased]
 
+### Fixed
+
+- `BakedPathGuard` no longer misses a baked path or configured literal that holds `'` or `\`.
+  Ray.Compiler writes a `toInstance()` object or array into its script as
+  `unserialize(var_export(serialize($value), true))`, and a plain value as `var_export($value)`, so
+  both bytes arrive escaped for a single-quoted PHP literal — `\\` and `\'`. `BakedPathScanner`
+  compared raw bytes against that escaped text, so a path such as `/srv/it's/app` or a password
+  such as `p@ss'w\rd` passed the guard and shipped inside the image. The scanner now unescapes
+  those two sequences before scanning, which also stops the mirror-image false positive: a
+  `compileDir` spelled with either byte was not recognised as an allowed range, so any needle
+  inside it was reported as baked.
+
 ## [0.3.0] - 2026-08-15
 
 ### Added

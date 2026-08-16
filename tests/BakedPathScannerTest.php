@@ -77,12 +77,46 @@ final class BakedPathScannerTest extends TestCase
             'deploy/app/var/di/prod',
             'app',
         ];
+
+        yield 'needle whose quote var_export escaped in a serialized blob' => [
+            "<?php return unserialize('a:1:{s:6:\"appDir\";s:11:\"/app/qu\\'ote\";}');",
+            self::COMPILE_DIR,
+            "/app/qu'ote",
+        ];
+
+        yield 'needle whose backslash var_export escaped in a serialized blob' => [
+            "<?php return unserialize('a:1:{s:6:\"appDir\";s:15:\"/app/back\\\\slash\";}');",
+            self::COMPILE_DIR,
+            '/app/back\slash',
+        ];
+
+        yield 'needle escaped in a plain literal argument' => [
+            "<?php return new stdClass('/app/qu\\'ote/src');",
+            self::COMPILE_DIR,
+            "/app/qu'ote",
+        ];
+
+        yield 'quote after the needle, a byte a delimiter cannot be told from' => [
+            "<?php return '/app\\'cache/config';",
+            self::COMPILE_DIR,
+            '/app',
+        ];
     }
 
     /** @return iterable<string, array{string, non-empty-string, non-empty-string}> */
     public static function allowedCases(): iterable
     {
         yield 'letter after the needle' => ["<?php return '/appdata/config.php';", self::COMPILE_DIR, '/app'];
+        yield 'backslash after the needle' => [
+            "<?php return '/app\\\\cache/config';",
+            self::COMPILE_DIR,
+            '/app',
+        ];
+        yield 'backslash before the needle' => [
+            "<?php return '/srv/data\\\\/app/var';",
+            self::COMPILE_DIR,
+            '/app',
+        ];
         yield 'word continuing the needle' => ["<?php return '/application/config';", self::COMPILE_DIR, '/app'];
         yield 'digit after the needle' => ["<?php return '/app2/var';", self::COMPILE_DIR, '/app'];
         yield 'underscore after the needle' => ["<?php return '/app_old/var';", self::COMPILE_DIR, '/app'];
@@ -114,6 +148,12 @@ final class BakedPathScannerTest extends TestCase
         yield 'two compile dir literals' => [
             "<?php return ['/app/var/di/prod/a.php', '/app/var/di/prod/b.php'];",
             self::COMPILE_DIR,
+            '/app',
+        ];
+
+        yield 'needle inside an escaped compile dir literal' => [
+            "<?php return '/app/qu\\'ote/di/scripts/x.php';",
+            "/app/qu'ote/di",
             '/app',
         ];
     }

@@ -24,6 +24,7 @@ use function mkdir;
 use function serialize;
 use function sprintf;
 use function symlink;
+use function var_export;
 
 #[CoversClass(BakedPathGuard::class)]
 #[CoversClass(InvalidExtraNeedle::class)]
@@ -31,6 +32,9 @@ final class BakedPathGuardTest extends TestCase
 {
     /** Stands in for whatever an application knows must not reach a shipped script */
     private const CONFIGURED = 'zqx-must-not-ship-4f1c';
+
+    /** The same, holding the two bytes a single-quoted literal escapes; secrets routinely carry both */
+    private const CONFIGURED_ESCAPED = 'zqx-must\'not\\ship-4f1c';
 
     /** Working directory and meta shared by most tests in this class */
     private SeparatedDirFixture $fixture;
@@ -283,6 +287,32 @@ final class BakedPathGuardTest extends TestCase
         $this->expectNotToPerformAssertions();
 
         (new BakedPathGuard([self::CONFIGURED]))($this->meta);
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsAConfiguredLiteralEscapedInAPlainLiteral(): void
+    {
+        $script = "{$this->meta->compileDir}/-db_password.php";
+        $literal = var_export(self::CONFIGURED_ESCAPED, return: true);
+        file_put_contents($script, data: sprintf('<?php return %s;', $literal));
+
+        $this->expectException(BakedPathFound::class);
+
+        (new BakedPathGuard([self::CONFIGURED_ESCAPED]))($this->meta);
+    }
+
+    /** @throws ExceptionInterface */
+    #[Test]
+    public function rejectsAConfiguredLiteralEscapedInASerializedInstance(): void
+    {
+        $script = "{$this->meta->compileDir}/-db_password.php";
+        $blob = var_export(serialize(['password' => self::CONFIGURED_ESCAPED]), return: true);
+        file_put_contents($script, data: sprintf('<?php return unserialize(%s);', $blob));
+
+        $this->expectException(BakedPathFound::class);
+
+        (new BakedPathGuard([self::CONFIGURED_ESCAPED]))($this->meta);
     }
 
     /** @throws ExceptionInterface */

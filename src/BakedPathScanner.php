@@ -7,6 +7,7 @@ namespace NaokiTsuchiya\RayDiContext;
 use function preg_match;
 use function strlen;
 use function strpos;
+use function strtr;
 
 /**
  * Scans one compiled script for baked path literals
@@ -15,8 +16,14 @@ use function strpos;
  */
 final class BakedPathScanner
 {
-    /** A character that continues a path segment; "/" is absent because it ends one */
-    private const SEGMENT_CHAR = '/\A[A-Za-z0-9_.\-]\z/';
+    /** A character that continues a path segment; "/" ends one, and "'" is indistinguishable from a delimiter */
+    private const SEGMENT_CHAR = '/\A[A-Za-z0-9_.\-\\\\]\z/';
+
+    /** The two escape sequences a single-quoted PHP literal can carry, mapped back to their bytes */
+    private const UNESCAPED = ['\\\\' => '\\', "\\'" => "'"];
+
+    /** The script with every single-quoted literal unescaped */
+    private readonly string $script;
 
     /** @var list<array{int, int}> [start, end) ranges of compile dir literals */
     private readonly array $allowedRanges;
@@ -25,10 +32,9 @@ final class BakedPathScanner
      * @param string           $script     Contents of one compiled script
      * @param non-empty-string $compileDir The baked, read-only compile dir
      */
-    public function __construct(
-        private readonly string $script,
-        string $compileDir,
-    ) {
+    public function __construct(string $script, string $compileDir)
+    {
+        $this->script = strtr($script, self::UNESCAPED);
         $this->allowedRanges = $this->compileDirRanges($compileDir);
     }
 

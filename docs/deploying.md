@@ -16,9 +16,15 @@ compiles to:
 $meta = AppMeta::fromAppDir(dirname(__DIR__), 'prod', '/app/var/di/prod');
 ```
 
-`APP_TMP_DIR` doesn't fail this loudly at compile time — a `tmpDir` that doesn't exist yet only
-surfaces once something tries to write to it, silently, in `sys_get_temp_dir()` (see the README) —
-but resolve it to the runtime path for the same reason.
+`tmpDir` doesn't need to match the compile-time value the way `compileDir` does — Ray.Compiler
+never bakes it into a script, and a `CompiledContextInterface` context's runtime injector never
+reads it at all. It only matters once something actually reaches `Ray\Di\Injector`: a non-compiled
+context, or [`examples/docker/bin/build-check`](../examples/docker/bin/build-check) verifying the
+compile. Point it at a real, writable directory there, or Ray.Di silently falls back to
+`sys_get_temp_dir()` (see the README). `build-check` deliberately points `tmpDir` *outside*
+`/app` rather than reusing `bin/console`'s runtime value — see its own comment — because the build
+stage's `/app` gets `COPY`-ed wholesale into the runtime image, and anything written under
+`/app/var/tmp` during the check would get baked in.
 
 `APP_COMPILE_DIR`/`APP_TMP_DIR` override the whole directory, not just the `appDir` they're derived
 from, so they ignore `context` entirely. One override can only ever serve one context: baking

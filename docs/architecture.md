@@ -102,13 +102,16 @@ execute it opens fine and every per-entry `stat()` fails instead, leaking one wa
 ## Runtime resolution (no compile step)
 
 At runtime the application never touches `Cleaner`, `BakedPathGuard` or the compiler. It builds an
-`AppMeta` with the *same* `compileDir`/`tmpDir` used at compile time, looks up the `ContextInterface`
+`AppMeta` with the *same* `compileDir` used at compile time — `tmpDir` needs no such match: a
+`CompiledContextInterface` context's `CompiledInjector` never reads it at all, and any other
+context only needs it to point at a real writable directory when that process runs, independent of
+whatever value (if any) a separate compile invocation used. It looks up the `ContextInterface`
 through its own `ContextProviderInterface`, and hands both to `InjectorBuilder`. The builder reads
 one thing — whether the context carries `CompiledContextInterface` — and returns a read-only
 `Ray\Compiler\CompiledInjector($meta->compileDir)` for a marked context or a runtime
 `Ray\Di\Injector($context(), $meta->tmpDir)` otherwise, rethrowing ray/compiler's own
 directory-check failure as `Exception\CompileDirUnavailable` on the marked path. No `Ray\Compiler`
-class name reaches application code. Getting the two directories out of sync between compile time and
+class name reaches application code. Getting `compileDir` out of sync between compile time and
 runtime is the main way to misuse this package.
 
 The compile side never wraps the module in `DiCompileModule`: measured against `ray/compiler`

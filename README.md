@@ -17,8 +17,8 @@ tried and rejected, see [docs/decisions.md](docs/decisions.md).
 A container running with a read-only root filesystem (Docker `--read-only`, Kubernetes
 `securityContext.readOnlyRootFilesystem: true`) has nowhere writable for Ray.Di's first
 request-time compile to land. Compiling ahead of time with `Ray\Compiler` solves the write, but the
-compiled scripts and the running app still have to resolve `compileDir`/`tmpDir` to the exact same
-strings, and nothing stops a runtime-only path from getting frozen into a script by accident.
+compiled scripts and the running app still have to resolve `compileDir` to the exact same string,
+and nothing stops a runtime-only path from getting frozen into a script by accident.
 `AppMeta`, `ContextInterface`, and `BakedPathGuard` exist to make that separation safe — see
 [docs/architecture.md](docs/architecture.md) for how.
 
@@ -151,7 +151,8 @@ The exit status is a public contract — gate your CI on it.
 | `1`  | The compile failed — this package's own exceptions, a wrapped `ray/di`/`ray/compiler` error (`Exception\CompileFailed`), or anything the bootstrap itself throws. The message goes to STDERR as one line, no stack trace |
 | `2`  | Usage error: wrong argument count, `appDir` missing, bootstrap not found, or a bootstrap not returning `ContextProviderInterface` |
 
-Bootstrap at runtime, resolving `compileDir`/`tmpDir` to the **same** values passed to the CLI above:
+Bootstrap at runtime, resolving `compileDir` to the **same** value passed to the CLI above
+(`tmpDir` doesn't need to match — see [docs/deploying.md](docs/deploying.md)):
 
 ```php
 use NaokiTsuchiya\RayDiContext\AppMeta;
@@ -170,8 +171,9 @@ $injector = (new InjectorBuilder())($context, $meta);
 $injector->warmup();
 ```
 
-`InjectorBuilder` returns a read-only `CompiledInjector` for a `CompiledContextInterface` context, a
-runtime `Injector` otherwise — one bootstrap serves every environment. Call `warmup()` at worker
+`InjectorBuilder` returns a `WarmableInjectorInterface` wrapping a read-only `CompiledInjector` for a
+`CompiledContextInterface` context, a runtime `Injector` otherwise — one bootstrap serves every
+environment. Call `warmup()` at worker
 start under Swoole and friends to instantiate every compiled singleton up front; **skip it in a
 PHP-FPM or short-lived-CLI bootstrap**, where warming everything costs more than resolving lazily.
 Build once per process and reuse the result — singletons are cached per injector instance. See

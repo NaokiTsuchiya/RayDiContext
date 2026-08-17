@@ -21,8 +21,8 @@ Before tagging, move the entries from `CHANGELOG.md`'s `## [Unreleased]` section
 `## [x.y.z] - <date>` section. Keep an empty `## [Unreleased]` section at the top. The tag is never
 re-pointed, so the changelog entry has to be right the first time.
 
-Tags carry no `v` prefix — `0.1.0`, not `v0.1.0`. Composer accepts either, so the only thing that
-matters is not mixing the two.
+Tags carry no `v` prefix — `0.1.0`, not `v0.1.0`. The release workflow enforces this: it refuses a
+`v`-prefixed `version` input outright (Composer's own tolerance of either form doesn't apply here).
 
 Once the CHANGELOG PR is merged, run the "Tag release" workflow
 (`.github/workflows/tag-release.yml`) from the Actions tab, or with `gh workflow run`, passing the

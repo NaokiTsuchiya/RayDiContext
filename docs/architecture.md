@@ -102,13 +102,16 @@ execute it opens fine and every per-entry `stat()` fails instead, leaking one wa
 ## Runtime resolution (no compile step)
 
 At runtime the application never touches `Cleaner`, `BakedPathGuard` or the compiler. It builds an
-`AppMeta` with the *same* `compileDir`/`tmpDir` used at compile time, looks up the `ContextInterface`
+`AppMeta` with the *same* `compileDir` used at compile time — `tmpDir` needs no such match: a
+`CompiledContextInterface` context's `CompiledInjector` never reads it at all, and any other
+context only needs it to point at a real writable directory when that process runs, independent of
+whatever value (if any) a separate compile invocation used. It looks up the `ContextInterface`
 through its own `ContextProviderInterface`, and hands both to `InjectorBuilder`. The builder reads
 one thing — whether the context carries `CompiledContextInterface` — and returns a read-only
 `Ray\Compiler\CompiledInjector($meta->compileDir)` for a marked context or a runtime
 `Ray\Di\Injector($context(), $meta->tmpDir)` otherwise, rethrowing ray/compiler's own
 directory-check failure as `Exception\CompileDirUnavailable` on the marked path. No `Ray\Compiler`
-class name reaches application code. Getting the two directories out of sync between compile time and
+class name reaches application code. Getting `compileDir` out of sync between compile time and
 runtime is the main way to misuse this package.
 
 The compile side never wraps the module in `DiCompileModule`: measured against `ray/compiler`
@@ -132,6 +135,28 @@ wrapper — warm the instance the builder returned. Build once per process and r
 `CompiledInjector` caches singletons in an instance property, so warming one injector and serving
 requests from another warms nothing.
 
+## Verifying the compile (`examples/docker/bin/build-check`)
+
+Compiling only proves the binding graph is internally consistent — every constructor argument
+resolves to something bound. It never calls any of it, so a `Provider::get()` body, a
+`#[Set(...)]` multibinding target that was never separately bound, and a compiled script missing
+from an incomplete `COPY` all compile clean and fail only once something actually resolves them.
+[`examples/docker/bin/build-check`](../examples/docker/bin/build-check) calls `warmup()` and
+resolves the app's own entry point through the compiled injector — the same way `bin/console` does
+at container start, except a failure here fails `docker build` instead of only surfacing once the
+image is already running. This is the deliberate exception to skipping `warmup()` in a PHP-FPM or
+short-lived-CLI bootstrap (see the README): there the cost of eagerly resolving every singleton is
+the point — catching a broken binding before the image ships, not before serving a request.
+
+The same run doubles as a preload collector: an `spl_autoload_register` spy, registered
+`prepend: true` *after* `vendor/autoload.php` (register it before, or without `prepend: true`, and
+Composer's own loader resolves classmap classes first, so the spy only ever sees what Composer's
+classmap doesn't already cover), records the one asset unique to a Ray.Di compile that Composer's
+classmap can't list: AOP proxy classes materialized into `compileDir`, which `CompiledInjector`'s
+own autoloader resolves at `{compileDir}/{Class_Name}.php`. It writes what it finds to
+`preload.php` in `appDir`, with `__DIR__`-relative paths — an absolute path baked in there would be
+rejected by `BakedPathGuard` if it were written into `compileDir` instead.
+
 ## Extension points applications implement
 
 - **`ContextInterface`** — one per environment, and one method: `__invoke(): AbstractModule`.
@@ -144,6 +169,33 @@ requests from another warms nothing.
   validates the whole map at construction (see its docblock). A context whose constructor takes
   more than `AppMeta` does not fit that map — the application implements this interface directly
   (a `match` over `$meta->context`), keeping every construction a statically checked call.
+
+  ```php
+  use NaokiTsuchiya\RayDiContext\AppMeta;
+  use NaokiTsuchiya\RayDiContext\ContextInterface;
+  use NaokiTsuchiya\RayDiContext\ContextProviderInterface;
+  use NaokiTsuchiya\RayDiContext\Exception\UnknownContext;
+
+  final class AppContextProvider implements ContextProviderInterface
+  {
+      public function __construct(private readonly SecretsLoader $secrets)
+      {
+      }
+
+      public function get(AppMeta $meta): ContextInterface
+      {
+          return match ($meta->context) {
+              'prod' => new SecretAwareProdContext($meta, $this->secrets),
+              'dev' => new DevContext($meta),
+              default => throw new UnknownContext(sprintf('Unknown context "%s"', $meta->context)),
+          };
+      }
+  }
+  ```
+
+  `SecretAwareProdContext` implements `ContextInterface` directly, its constructor taking the
+  `AppMeta` and the loader — unlike `AbstractContext`'s subclasses, whose constructor takes
+  `AppMeta` alone.
 - **`CompileDirGuardInterface`** — only needed when the bundled guard's two checks (filesystem root,
   compile dir containing the app dir) are not strict enough for an app's layout.
 - **`BakedPathGuardInterface`** — the same idea on the verification side. For the common case pass

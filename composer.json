@@ -24,7 +24,7 @@
         "ray/compiler": "^1.15"
     },
     "require-dev": {
-        "carthage-software/mago": "1.46.0",
+        "carthage-software/mago": "1.47.1",
         "infection/infection": "0.32.6",
         "phpunit/phpunit": "11.5.56"
     },

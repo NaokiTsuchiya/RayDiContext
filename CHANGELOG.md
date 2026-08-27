@@ -9,6 +9,8 @@ README's Versioning section).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-08-27
+
 ### Fixed
 
 - `BakedPathGuard` no longer misses a baked path or configured literal that holds `'` or `\`.
